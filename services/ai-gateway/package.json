@@ -1,0 +1,14 @@
+{
+  "name": "@kerala-lottery/service-ai-gateway",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "dependencies": {
+    "@kerala-lottery/domain": "*",
+    "@kerala-lottery/ai": "*"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}
