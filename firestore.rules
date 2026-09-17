@@ -1,0 +1,170 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    function hasRole(role) {
+      return isAuthenticated() && getUserData().role == role;
+    }
+    
+    function isAdmin() {
+      return hasRole('ADMIN');
+    }
+    
+    function isResearcher() {
+      return hasRole('RESEARCHER') || isAdmin();
+    }
+    
+    function isAnalyst() {
+      return hasRole('ANALYST') || isResearcher() || isAdmin();
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Users collection
+    match /users/{userId} {
+      // Any authenticated user can read their own profile; Admins can read all profiles
+      allow read: if isOwner(userId) || isAdmin();
+      
+      // User can create their initial profile ONLY as VIEWER and matching their auth UID
+      allow create: if isOwner(userId)
+                    && request.resource.data.uid == userId
+                    && request.resource.data.role == 'VIEWER'
+                    && request.resource.data.status == 'ACTIVE';
+      
+      // Only ADMIN can update role or status. Users can only update their own displayName.
+      allow update: if isAdmin() || (
+        isOwner(userId) 
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.status == resource.data.status
+      );
+      
+      // Only ADMIN can delete users
+      allow delete: if isAdmin();
+    }
+
+    // Source documents and provenance
+    match /documents/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+    
+    match /document_pages/{pageId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+    
+    match /document_extractions/{extractionId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+    
+    match /source_evidence/{evidenceId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+
+    // Canonical Lottery entities
+    match /lotteries/{lotteryId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+
+    match /schemes/{schemeId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+
+    match /draws/{drawId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+
+    match /series/{seriesId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+
+    match /prizeStructures/{prizeStructureId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+
+    match /prizeResults/{prizeResultId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+
+    match /winningNumbers/{winningNumberId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+
+    // Knowledge Graph & Legal Rules
+    match /acts/{actId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+
+    match /legalRules/{ruleId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+
+    match /legalAmendments/{amendmentId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+
+    match /knowledgeGraph/{nodeId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+
+    // Dataset Versions & Experiments
+    match /datasetVersions/{versionId} {
+      allow read: if isAuthenticated();
+      // Immutable dataset versions can only be committed by Researchers or Admins
+      allow create: if isResearcher();
+      allow update, delete: if isAdmin();
+    }
+
+    match /experiments/{experimentId} {
+      allow read: if isAuthenticated();
+      allow write: if isAnalyst();
+    }
+
+    match /experimentRuns/{runId} {
+      allow read: if isAuthenticated();
+      allow write: if isAnalyst();
+    }
+
+    match /predictions/{predId} {
+      allow read: if isAuthenticated();
+      allow write: if isAnalyst();
+    }
+
+    // Data Quality Issues
+    match /dataQualityIssues/{issueId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+
+    // Audit logs are append-only by backend/admin, never modified or deleted
+    match /auditLogs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated();
+      allow update, delete: if false;
+    }
+  }
+}

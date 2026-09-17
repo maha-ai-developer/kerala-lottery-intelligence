@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "default": "kerala-lottery-intelligence",
+    "development": "kerala-lottery-intelligence",
+    "staging": "kerala-lottery-intelligence-staging",
+    "production": "kerala-lottery-intelligence"
+  }
+}

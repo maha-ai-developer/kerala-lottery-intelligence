@@ -1,0 +1,61 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "draws",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "lotteryId", "order": "ASCENDING" },
+        { "fieldPath": "drawDate", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "winningNumbers",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "drawId", "order": "ASCENDING" },
+        { "fieldPath": "rank", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "winningNumbers",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "canonicalNumber", "order": "ASCENDING" },
+        { "fieldPath": "drawId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "prizeResults",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "drawId", "order": "ASCENDING" },
+        { "fieldPath": "rank", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "legalRules",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "ruleNumber", "order": "ASCENDING" },
+        { "fieldPath": "effectiveFrom", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "documents",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "type", "order": "ASCENDING" },
+        { "fieldPath": "publishedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "experiments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "datasetVersion", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
