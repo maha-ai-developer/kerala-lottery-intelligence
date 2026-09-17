@@ -1,0 +1,57 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing and Coverage
+coverage/
+*.lcov
+.nyc_output
+
+# Next.js Build Outputs
+apps/web/.next/
+apps/web/out/
+.next/
+out/
+
+# Production & Build Artifacts
+build/
+dist/
+*.tsbuildinfo
+.turbo/
+
+# Environment Variables & Secrets (CRITICAL)
+.env
+.env*.local
+.env.development
+.env.test
+.env.production
+*.env
+!*.env.example
+*.pem
+*.key
+*.cert
+service-account*.json
+*-service-account.json
+credentials.json
+client_secret*.json
+
+# Firebase Cache & Emulators
+.firebase/
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*
+
+# OS & IDE Files
+.DS_Store
+*.pem
+.idea/
+.vscode/
+*.vsix
+*.swp
+*.swo
+
+# Temporary and Scratch Directories
+scratch/
+tmp/
+*.tmp
