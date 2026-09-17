@@ -12,14 +12,16 @@
     "dev": "npm run dev --workspace=apps/web",
     "build": "npm run build --workspaces --if-present",
     "test": "vitest run",
+    "test:rules": "npx firebase-tools emulators:exec --only firestore \"vitest run tests/firestore-rules.test.ts\"",
     "test:watch": "vitest",
     "lint": "eslint . --ext .ts,.tsx,.js",
     "typecheck": "tsc --noEmit --project tsconfig.base.json"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.2",
+    "@types/node": "^22.13.0",
     "typescript": "^5.7.3",
-    "vitest": "^2.1.8",
-    "@types/node": "^22.13.0"
+    "vitest": "^2.1.8"
   },
   "engines": {
     "node": ">=20.0.0",

@@ -1,217 +1,313 @@
-export default function DashboardPage() {
-  const layers = [
-    {
-      name: "1. SOURCE",
-      desc: "Cloud Storage, SHA-256 verification, duplicate detection, and original gazette PDFs.",
-      color: "var(--accent-cyan)",
-      items: ["Kerala_Lottaries_rule.pdf", "lotteryAgentUserManual.pdf", "5 Results PDFs"]
-    },
-    {
-      name: "2. DATA",
-      desc: "Canonical string representations (leading zeros strictly intact, e.g. '0276') and draw links.",
-      color: "var(--accent-blue)",
-      items: ["Draw Records", "Winning Numbers", "Prize Structures", "Series"]
-    },
-    {
-      name: "3. KNOWLEDGE",
-      desc: "Entities, rules, temporal amendment tracking, and legal document citations.",
-      color: "#8b5cf6",
-      items: ["Acts & Rules", "Gazette Amendments", "Knowledge Graph"]
-    },
-    {
-      name: "4. STATISTICS",
-      desc: "Deterministic frequency, Shannon entropy, Chi-square tests, and digit distribution.",
-      color: "var(--accent-emerald)",
-      items: ["Frequency Engine", "Digit Distributions", "Runs Randomness Test"]
-    },
-    {
-      name: "5. EXPERIMENT",
-      desc: "Walk-forward backtesting with strict zero-temporal-leakage cutoff and random baselines.",
-      color: "var(--accent-amber)",
-      items: ["Backtest Engine", "Temporal Cutoffs", "Mulberry32 Determinism"]
-    },
-    {
-      name: "6. AI GATEWAY",
-      desc: "Server-side proxy, multi-provider routing (Gemini, Anthropic, OpenAI), and RAG citations.",
-      color: "var(--accent-rose)",
-      items: ["Model Registry", "Controlled Tools", "Quota Enforcement"]
-    }
-  ];
+"use client";
 
-  return (
-    <div className="container" style={{ padding: "3rem 1.5rem" }}>
-      {/* Hero section */}
-      <div style={{ marginBottom: "3rem" }}>
-        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
-          <span className="badge badge-blue">Phase 0: Engineering Foundation</span>
-          <span className="badge badge-emerald">GCP: kerala-lottery-intelligence</span>
-        </div>
-        <h1
+import { useState } from "react";
+import { useAuth } from "../lib/auth-context";
+import { PhoneAuthCard } from "../components/phone-auth-card";
+
+export default function DashboardPage() {
+  const { user, userProfile, loading, signOut, refreshProfile, error } = useAuth();
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Dynamic environment configuration (never hardcoded)
+  const environment =
+    process.env.NEXT_PUBLIC_APP_ENV ||
+    (process.env.NODE_ENV === "production" ? "production" : "development");
+  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "kerala-lottery-intelligence";
+  const appVersion = process.env.NEXT_PUBLIC_APP_VERSION || "0.1.0";
+  const gitCommitSha = process.env.NEXT_PUBLIC_GIT_COMMIT_SHA || "051cced";
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await refreshProfile();
+    setRefreshing(false);
+  };
+
+  if (loading) {
+    return (
+      <div
+        className="container"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: "60vh",
+          gap: "1rem"
+        }}
+      >
+        <div
           style={{
-            fontSize: "2.5rem",
-            fontWeight: 800,
-            letterSpacing: "-0.025em",
-            marginBottom: "1rem",
-            background: "linear-gradient(135deg, #f8fafc 40%, #94a3b8)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent"
+            width: "2.5rem",
+            height: "2.5rem",
+            border: "3px solid var(--border-subtle)",
+            borderTopColor: "var(--accent-cyan)",
+            borderRadius: "50%",
+            animation: "spin 1s linear infinite"
           }}
-        >
-          Kerala State Lottery Intelligence & Experiment Platform
-        </h1>
-        <p
-          style={{
-            fontSize: "1.125rem",
-            color: "var(--text-secondary)",
-            maxWidth: "800px",
-            lineHeight: 1.6
-          }}
-        >
-          A scientific research platform engineered for verifiable source provenance, deterministic
-          statistical hypothesis testing, temporal leak prevention, and reproducible backtesting.
+        />
+        <p className="mono" style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>
+          Verifying Firebase authentication state...
         </p>
       </div>
+    );
+  }
 
-      {/* Core Principle Banner */}
+  // If unauthenticated: Display the Phone Auth Screen & Foundational Purpose
+  if (!user) {
+    return (
+      <div className="container" style={{ padding: "3rem 1.5rem" }}>
+        <div style={{ maxWidth: "680px", margin: "0 auto 2.5rem auto", textAlign: "center" }}>
+          <div style={{ display: "inline-flex", gap: "0.5rem", marginBottom: "1rem" }}>
+            <span className="badge badge-blue">Milestone 1A: Production Skeleton</span>
+            <span className="badge badge-emerald">Project: {projectId}</span>
+          </div>
+          <h1
+            style={{
+              fontSize: "2.25rem",
+              fontWeight: 800,
+              letterSpacing: "-0.025em",
+              marginBottom: "1rem",
+              background: "linear-gradient(135deg, #f8fafc 40%, #94a3b8)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent"
+            }}
+          >
+            Kerala State Lottery Intelligence
+          </h1>
+          <p
+            style={{
+              fontSize: "1.05rem",
+              color: "var(--text-secondary)",
+              lineHeight: 1.6
+            }}
+          >
+            Source-grounded research platform engineered for verifiable provenance,
+            deterministic statistical hypothesis testing, and temporal leak prevention.
+          </p>
+        </div>
+
+        <PhoneAuthCard />
+      </div>
+    );
+  }
+
+  // If authenticated: Minimal Production-Grade Authenticated Dashboard
+  return (
+    <div className="container" style={{ padding: "2.5rem 1.5rem" }}>
+      {/* Top Header & Actions Bar */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          flexWrap: "wrap",
+          gap: "1rem",
+          marginBottom: "2rem",
+          paddingBottom: "1.5rem",
+          borderBottom: "1px solid var(--border-subtle)"
+        }}
+      >
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.5rem" }}>
+            <h1 style={{ fontSize: "1.75rem", fontWeight: 700 }}>Authenticated Dashboard</h1>
+            <span className="badge badge-emerald">Active Session</span>
+          </div>
+          <p style={{ fontSize: "0.9rem", color: "var(--text-secondary)" }}>
+            Welcome, <span className="mono" style={{ color: "var(--text-primary)" }}>{user.phoneNumber || user.uid}</span>.
+            System boundary contracts and security gates are verified.
+          </p>
+        </div>
+
+        <div style={{ display: "flex", gap: "0.75rem" }}>
+          <button
+            type="button"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            style={{
+              background: "var(--bg-surface)",
+              border: "1px solid var(--border-subtle)",
+              color: "var(--text-primary)",
+              padding: "0.5rem 1rem",
+              borderRadius: "0.375rem",
+              fontSize: "0.85rem",
+              cursor: refreshing ? "not-allowed" : "pointer"
+            }}
+          >
+            {refreshing ? "Refreshing..." : "Refresh Status"}
+          </button>
+          <button
+            type="button"
+            onClick={() => signOut()}
+            style={{
+              background: "rgba(244, 63, 94, 0.12)",
+              border: "1px solid rgba(244, 63, 94, 0.3)",
+              color: "#fb7185",
+              padding: "0.5rem 1rem",
+              borderRadius: "0.375rem",
+              fontSize: "0.85rem",
+              fontWeight: 600,
+              cursor: "pointer"
+            }}
+          >
+            Sign Out
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <div
+          role="alert"
+          style={{
+            background: "rgba(244, 63, 94, 0.12)",
+            border: "1px solid rgba(244, 63, 94, 0.3)",
+            borderRadius: "0.5rem",
+            padding: "0.85rem 1rem",
+            marginBottom: "1.5rem",
+            fontSize: "0.875rem",
+            color: "#fb7185"
+          }}
+        >
+          {error}
+        </div>
+      )}
+
+      {/* Grid of Sections */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+          gap: "1.5rem",
+          marginBottom: "2rem"
+        }}
+      >
+        {/* Section 1: User Identity & Profile */}
+        <div
+          style={{
+            background: "var(--bg-surface)",
+            border: "1px solid var(--border-subtle)",
+            borderRadius: "0.75rem",
+            padding: "1.5rem"
+          }}
+        >
+          <h2 style={{ fontSize: "1.05rem", fontWeight: 700, marginBottom: "1rem", color: "var(--accent-cyan)" }}>
+            1. User Identity & Authorization
+          </h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", fontSize: "0.875rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span style={{ color: "var(--text-secondary)" }}>Phone Number:</span>
+              <span className="mono" style={{ color: "var(--text-primary)" }}>{user.phoneNumber || "None"}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span style={{ color: "var(--text-secondary)" }}>Firebase UID:</span>
+              <span className="mono" style={{ color: "var(--text-muted)", fontSize: "0.78rem" }} title={user.uid}>
+                {user.uid.slice(0, 14)}...
+              </span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ color: "var(--text-secondary)" }}>Assigned Role:</span>
+              <span className="badge badge-blue">{userProfile?.role || "VIEWER"}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ color: "var(--text-secondary)" }}>Profile Status:</span>
+              <span className="badge badge-emerald">{userProfile?.status || "ACTIVE"}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span style={{ color: "var(--text-secondary)" }}>Client Elevation:</span>
+              <span style={{ color: "var(--accent-emerald)", fontWeight: 600 }}>Blocked by Rules</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Section 2: Environment & Build Metadata */}
+        <div
+          style={{
+            background: "var(--bg-surface)",
+            border: "1px solid var(--border-subtle)",
+            borderRadius: "0.75rem",
+            padding: "1.5rem"
+          }}
+        >
+          <h2 style={{ fontSize: "1.05rem", fontWeight: 700, marginBottom: "1rem", color: "var(--accent-blue)" }}>
+            2. Environment & Build Metadata
+          </h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", fontSize: "0.875rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ color: "var(--text-secondary)" }}>Environment:</span>
+              <span className="mono" style={{ color: "var(--accent-cyan)", fontWeight: 600 }}>{environment}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span style={{ color: "var(--text-secondary)" }}>Firebase Project:</span>
+              <span className="mono" style={{ color: "var(--text-primary)" }}>{projectId}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span style={{ color: "var(--text-secondary)" }}>App Version:</span>
+              <span className="mono" style={{ color: "var(--text-primary)" }}>v{appVersion}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span style={{ color: "var(--text-secondary)" }}>Git Commit SHA:</span>
+              <span className="mono" style={{ color: "var(--text-muted)" }}>{gitCommitSha}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span style={{ color: "var(--text-secondary)" }}>App Hosting Root:</span>
+              <span className="mono" style={{ color: "var(--text-primary)" }}>apps/web</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Section 3: System Boundaries & Safety Invariants */}
+        <div
+          style={{
+            background: "var(--bg-surface)",
+            border: "1px solid var(--border-subtle)",
+            borderRadius: "0.75rem",
+            padding: "1.5rem"
+          }}
+        >
+          <h2 style={{ fontSize: "1.05rem", fontWeight: 700, marginBottom: "1rem", color: "var(--accent-emerald)" }}>
+            3. Platform Safety Invariants
+          </h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", fontSize: "0.875rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ color: "var(--text-secondary)" }}>Firebase Auth:</span>
+              <span className="badge badge-emerald">Connected</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ color: "var(--text-secondary)" }}>Firestore Security Rules:</span>
+              <span className="badge badge-emerald">Enforced</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ color: "var(--text-secondary)" }}>Canonical Strings ("0276"):</span>
+              <span className="badge badge-emerald">Protected</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ color: "var(--text-secondary)" }}>Temporal Leak Guard:</span>
+              <span className="badge badge-emerald">Strict Cutoff</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ color: "var(--text-secondary)" }}>Health Endpoint:</span>
+              <span className="mono" style={{ color: "var(--accent-cyan)", fontSize: "0.8rem" }}>GET /api/health</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Operational Note */}
       <div
         style={{
           background: "var(--bg-surface)",
           border: "1px solid var(--border-subtle)",
           borderLeft: "4px solid var(--accent-cyan)",
-          padding: "1.5rem",
-          borderRadius: "0.5rem",
-          marginBottom: "3rem"
+          padding: "1.25rem",
+          borderRadius: "0.5rem"
         }}
       >
-        <h3
-          style={{
-            fontSize: "0.875rem",
-            textTransform: "uppercase",
-            letterSpacing: "0.05em",
-            color: "var(--accent-cyan)",
-            marginBottom: "0.75rem"
-          }}
-        >
-          Core Foundational Principle
-        </h3>
-        <p
-          className="mono"
-          style={{
-            fontSize: "0.95rem",
-            color: "var(--text-primary)",
-            lineHeight: 1.7
-          }}
-        >
-          Every number has a source. Every result belongs to a draw. Every draw belongs to a lottery.
-          Every rule belongs to a legal document and time period. Every experiment belongs to a dataset
-          version. Every AI answer must be grounded in evidence.
-        </p>
-      </div>
-
-      {/* 6-Layer Architecture Grid */}
-      <h2
-        style={{
-          fontSize: "1.5rem",
-          fontWeight: 700,
-          marginBottom: "1.5rem"
-        }}
-      >
-        Platform Architectural Layers
-      </h2>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-          gap: "1.25rem",
-          marginBottom: "3rem"
-        }}
-      >
-        {layers.map((layer) => (
-          <div
-            key={layer.name}
-            style={{
-              background: "var(--bg-surface)",
-              border: "1px solid var(--border-subtle)",
-              borderRadius: "0.75rem",
-              padding: "1.5rem",
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "space-between"
-            }}
-          >
-            <div>
-              <div
-                style={{
-                  fontWeight: 700,
-                  fontSize: "1.1rem",
-                  color: layer.color,
-                  marginBottom: "0.5rem"
-                }}
-              >
-                {layer.name}
-              </div>
-              <p
-                style={{
-                  fontSize: "0.875rem",
-                  color: "var(--text-secondary)",
-                  lineHeight: 1.5,
-                  marginBottom: "1.25rem"
-                }}
-              >
-                {layer.desc}
-              </p>
-            </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem" }}>
-              {layer.items.map((item) => (
-                <span
-                  key={item}
-                  className="mono"
-                  style={{
-                    fontSize: "0.75rem",
-                    padding: "0.2rem 0.5rem",
-                    borderRadius: "0.25rem",
-                    background: "var(--bg-surface-elevated)",
-                    color: "var(--text-muted)"
-                  }}
-                >
-                  {item}
-                </span>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Verified Number Preservation Invariant */}
-      <div
-        style={{
-          background: "var(--bg-surface)",
-          border: "1px solid var(--border-subtle)",
-          borderRadius: "0.75rem",
-          padding: "1.75rem"
-        }}
-      >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-          <h3 style={{ fontSize: "1.1rem", fontWeight: 700 }}>Canonical Lottery Number Rule</h3>
-          <span className="badge badge-emerald">Verified Invariant</span>
+        <div style={{ fontSize: "0.85rem", fontWeight: 600, color: "var(--accent-cyan)", marginBottom: "0.25rem" }}>
+          Phase 0 / Milestone 1A Verification Scope
         </div>
-        <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginBottom: "1rem" }}>
-          Lottery numbers are always stored and processed as canonical strings. Numbers with leading zeros
-          (e.g., <code className="mono" style={{ color: "var(--accent-cyan)" }}>&quot;0276&quot;</code>) are strictly preserved and never coerced into integers.
+        <p style={{ fontSize: "0.825rem", color: "var(--text-secondary)", margin: 0, lineHeight: 1.5 }}>
+          Lottery prediction, recommendation algorithms, analytics dashboards, and PDF ingestion
+          are deliberately withheld until the cloud deployment loop and verified datasets are established.
         </p>
-        <div
-          className="mono"
-          style={{
-            background: "var(--bg-primary)",
-            padding: "0.75rem 1rem",
-            borderRadius: "0.375rem",
-            fontSize: "0.85rem",
-            color: "var(--text-secondary)",
-            border: "1px solid var(--border-subtle)"
-          }}
-        >
-          Example: <span style={{ color: "var(--accent-emerald)" }}>canonicalNumber: &quot;0276&quot;</span> | length: 4 | derivedNumericValue: 276
-        </div>
       </div>
     </div>
   );

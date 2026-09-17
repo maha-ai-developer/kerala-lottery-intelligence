@@ -1,14 +1,31 @@
-# Firebase App Hosting Configuration
-# https://firebase.google.com/docs/app-hosting/configure
+# ==============================================================================
+# Kerala State Lottery Intelligence & Experiment Platform
+# Firebase App Hosting Configuration (Authoritative)
+# Location: apps/web/apphosting.yaml
+# App Root: apps/web
+# Documentation: https://firebase.google.com/docs/app-hosting/configure
+# ==============================================================================
 
+# Cloud Run Container Configuration
 runConfig:
   cpu: 1
   memoryMiB: 512
   minInstances: 0
-  maxInstances: 20
+  maxInstances: 10
   concurrency: 80
 
+# Environment Variables
 env:
+  - variable: NEXT_PUBLIC_APP_ENV
+    value: production
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_APP_VERSION
+    value: "0.1.0"
+    availability:
+      - BUILD
+      - RUNTIME
   - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
     value: kerala-lottery-intelligence
     availability:
