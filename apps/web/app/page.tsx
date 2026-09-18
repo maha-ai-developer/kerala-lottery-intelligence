@@ -14,7 +14,10 @@ export default function DashboardPage() {
     (process.env.NODE_ENV === "production" ? "production" : "development");
   const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "kerala-lottery-intelligence";
   const appVersion = process.env.NEXT_PUBLIC_APP_VERSION || "0.1.0";
-  const gitCommitSha = process.env.NEXT_PUBLIC_GIT_COMMIT_SHA || "051cced";
+  const gitCommitSha =
+    process.env.NEXT_PUBLIC_GIT_COMMIT_SHA ||
+    process.env.NEXT_PUBLIC_COMMIT_SHA ||
+    "unknown";
 
   const handleRefresh = async () => {
     setRefreshing(true);

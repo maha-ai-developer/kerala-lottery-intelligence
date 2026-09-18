@@ -12,7 +12,7 @@
     "dev": "npm run dev --workspace=apps/web",
     "build": "npm run build --workspaces --if-present",
     "test": "vitest run",
-    "test:rules": "npx firebase-tools emulators:exec --only firestore \"vitest run tests/firestore-rules.test.ts\"",
+    "test:rules": "npx -y firebase-tools emulators:exec --only firestore \"vitest run tests/firestore-rules.test.ts\"",
     "test:watch": "vitest",
     "lint": "eslint . --ext .ts,.tsx,.js",
     "typecheck": "tsc --noEmit --project tsconfig.base.json"
