@@ -66,6 +66,8 @@ The Kerala State Lottery Intelligence & Experiment Platform follows a strict lay
 
 Development and production environments must be completely isolated to ensure development experiments never connect to production Firestore or affect production user data.
 
+Web API keys identify the Firebase project, while Firestore/Storage authorization is enforced by Security Rules and privileged server access is controlled by IAM/service credentials.
+
 | Environment | Git Branch | Target Firebase Project | Intended Usage |
 | :--- | :--- | :--- | :--- |
 | **Development** | `develop` | `kerala-lottery-intel-dev` | Feature development, sandbox experiments, fictional test phones, CI testing |
@@ -201,13 +203,13 @@ Firebase App Hosting automatically deploys the Next.js application from GitHub c
 | :--- | :--- | :--- | :--- | :--- |
 | `NEXT_PUBLIC_APP_ENV` | Browser & Server | `BUILD`, `RUNTIME` | `production` / `development` | Deployment environment identifier |
 | `NEXT_PUBLIC_APP_VERSION` | Browser & Server | `BUILD`, `RUNTIME` | `0.1.0` | Application release version |
-| `NEXT_PUBLIC_GIT_COMMIT_SHA` | Browser & Server | `BUILD`, `RUNTIME` | `051cced` | Deployed git commit hash |
-| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | Browser & Server | `BUILD`, `RUNTIME` | `kerala-lottery-intelligence` | Firebase project identifier |
-| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`| Browser & Server | `BUILD`, `RUNTIME` | `kerala-lottery-intelligence.firebaseapp.com` | Auth redirect domain |
-| `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`| Browser & Server | `BUILD`, `RUNTIME`| `kerala-lottery-intelligence.firebasestorage.app` | Cloud Storage bucket |
+| `NEXT_PUBLIC_GIT_COMMIT_SHA` | Browser & Server | `BUILD`, `RUNTIME` | *(Environment / CI build SHA)* | Deployed git commit hash |
+| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | Browser & Server | `BUILD`, `RUNTIME` | `kerala-lottery-intel-dev` / `kerala-lottery-intelligence` | Firebase project identifier |
+| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`| Browser & Server | `BUILD`, `RUNTIME` | `<project-id>.firebaseapp.com` | Auth redirect domain |
+| `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`| Browser & Server | `BUILD`, `RUNTIME`| `<project-id>.firebasestorage.app` | Cloud Storage bucket |
 | `NEXT_PUBLIC_FIREBASE_API_KEY` | Browser & Server | `BUILD`, `RUNTIME` | *(Project Web API Key)* | Public Firebase Client SDK key |
-| `NEXT_PUBLIC_FIREBASE_APP_ID` | Browser & Server | `BUILD`, `RUNTIME` | `1:660682986882:web:...` | Firebase Web App ID |
-| `GCP_PROJECT_ID` | Server only | `RUNTIME` | `kerala-lottery-intelligence` | Cloud project for backend SDKs |
+| `NEXT_PUBLIC_FIREBASE_APP_ID` | Browser & Server | `BUILD`, `RUNTIME` | `1:<project-number>:web:...` | Firebase Web App ID |
+| `GCP_PROJECT_ID` | Server only | `RUNTIME` | `kerala-lottery-intel-dev` / `kerala-lottery-intelligence` | Cloud project for backend SDKs |
 | `GCS_BUCKET_DOCUMENTS` | Server only | `RUNTIME` | `...-documents` | Raw document storage bucket |
 | `GEMINI_API_KEY` | Secret Manager | Server Secret | `secret:gemini-api-key` | AI Gateway API Key |
 
