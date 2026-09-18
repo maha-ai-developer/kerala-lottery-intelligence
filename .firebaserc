@@ -1,8 +1,7 @@
 {
   "projects": {
-    "default": "kerala-lottery-intelligence",
-    "dev": "kerala-lottery-intelligence-dev",
-    "prod": "kerala-lottery-intelligence-prod",
-    "current": "kerala-lottery-intelligence"
+    "default": "kerala-lottery-intel-dev",
+    "dev": "kerala-lottery-intel-dev",
+    "prod": "kerala-lottery-intelligence"
   }
 }

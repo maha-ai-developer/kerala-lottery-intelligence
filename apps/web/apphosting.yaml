@@ -14,45 +14,12 @@ runConfig:
   maxInstances: 10
   concurrency: 80
 
-# Environment Variables
+# Environment-Independent Application Metadata
+# Target-specific Firebase Web configurations (NEXT_PUBLIC_APP_ENV, NEXT_PUBLIC_FIREBASE_*)
+# are provided via App Hosting Backend Environment Variables in the Firebase Console.
 env:
-  - variable: NEXT_PUBLIC_APP_ENV
-    value: production
-    availability:
-      - BUILD
-      - RUNTIME
   - variable: NEXT_PUBLIC_APP_VERSION
     value: "0.1.0"
-    availability:
-      - BUILD
-      - RUNTIME
-  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
-    value: kerala-lottery-intelligence
-    availability:
-      - BUILD
-      - RUNTIME
-  - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-    value: kerala-lottery-intelligence.firebaseapp.com
-    availability:
-      - BUILD
-      - RUNTIME
-  - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-    value: kerala-lottery-intelligence.firebasestorage.app
-    availability:
-      - BUILD
-      - RUNTIME
-  - variable: NEXT_PUBLIC_FIREBASE_API_KEY
-    value: AIzaSyCpxJlxYaM2eVK2NG0pB0-7yLBITsLoBok
-    availability:
-      - BUILD
-      - RUNTIME
-  - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
-    value: "660682986882"
-    availability:
-      - BUILD
-      - RUNTIME
-  - variable: NEXT_PUBLIC_FIREBASE_APP_ID
-    value: "1:660682986882:web:32a1f0c4549be1f68e2b9b"
     availability:
       - BUILD
       - RUNTIME

@@ -12,7 +12,7 @@ export default function DashboardPage() {
   const environment =
     process.env.NEXT_PUBLIC_APP_ENV ||
     (process.env.NODE_ENV === "production" ? "production" : "development");
-  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "kerala-lottery-intelligence";
+  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "unconfigured";
   const appVersion = process.env.NEXT_PUBLIC_APP_VERSION || "0.1.0";
   const gitCommitSha =
     process.env.NEXT_PUBLIC_GIT_COMMIT_SHA ||

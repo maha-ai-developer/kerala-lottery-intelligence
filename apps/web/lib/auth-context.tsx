@@ -11,7 +11,7 @@ import {
   UserCredential
 } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import { auth, db } from "./firebase";
+import { auth, db, isFirebaseConfigured, firebaseClientStatus } from "./firebase";
 
 export type UserRole = "VIEWER" | "RESEARCHER" | "ANALYST" | "ADMIN";
 export type UserStatus = "ACTIVE" | "SUSPENDED";
@@ -85,6 +85,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user, fetchOrCreateProfile]);
 
   useEffect(() => {
+    if (!isFirebaseConfigured) {
+      setError(firebaseClientStatus.error || "Firebase environment is unconfigured.");
+      setLoading(false);
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(
       auth,
       async (firebaseUser) => {

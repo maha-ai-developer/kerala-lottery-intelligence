@@ -40,14 +40,16 @@ To deploy rules and static assets directly:
 # Ensure you are logged into Firebase
 npx -y firebase-tools@latest login
 
-# Target project
-npx -y firebase-tools@latest use kerala-lottery-intelligence
+# Target project (dev is default alias, prod requires explicit selection)
+npx -y firebase-tools@latest use dev
+# or for production:
+# npx -y firebase-tools@latest use prod
 
 # Deploy Firestore rules and indexes
-npx -y firebase-tools@latest deploy --only firestore --project kerala-lottery-intelligence
+npx -y firebase-tools@latest deploy --only firestore --project dev
 
-# Deploy App Hosting backend (or push to main branch)
-npx -y firebase-tools@latest apphosting:backends:create --project kerala-lottery-intelligence
+# Deploy App Hosting backend (or push to appropriate branch: develop -> DEV, main -> PROD)
+npx -y firebase-tools@latest apphosting:backends:create --project dev
 ```
 
 ---
