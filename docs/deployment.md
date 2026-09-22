@@ -59,3 +59,12 @@ npx -y firebase-tools@latest apphosting:backends:create --project dev
 2. Select the previously verified successful build.
 3. Click **Rollback to this version**.
 4. Cloud Run instantly shifts traffic back to the prior stable revision with zero downtime.
+
+---
+
+## Continuous Deployment Verification
+
+DEV deployment is connected to the `develop` branch.
+
+This is only a deployment-pipeline verification marker.
+
