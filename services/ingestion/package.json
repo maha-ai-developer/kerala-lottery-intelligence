@@ -7,7 +7,8 @@
   "dependencies": {
     "@kerala-lottery/domain": "*",
     "@kerala-lottery/documents": "*",
-    "@kerala-lottery/validation": "*"
+    "@kerala-lottery/validation": "*",
+    "@kerala-lottery/data": "*"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

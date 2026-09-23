@@ -44,20 +44,21 @@ export type DocumentStatus =
   | "REJECTED";
 
 export interface SourceDocument {
-  id: string;
+  id: string; // 64-character lowercase SHA-256 hash
   type: DocumentType;
   title: string;
   sourceUrl?: string;
-  storagePath: string; // Cloud Storage URI (gs://...)
-  sha256: string;
-  mimeType: string;
-  fileSize: number;
-  sourceOrganization: string;
-  publishedAt?: string;
-  retrievedAt: string;
-  parserVersion: string;
+  storagePath: string; // Cloud Storage path: source-documents/${sha256}.pdf
+  sha256: string; // 64-character lowercase hex SHA-256
+  mimeType: string; // e.g. "application/pdf"
+  fileSize: number; // byte size of the raw source file
+  sourceOrganization: string; // e.g. "Directorate of Kerala State Lotteries"
+  publishedAt?: string; // ISO 8601
+  retrievedAt: string; // ISO 8601
+  ingestionVersion: string; // Ingestion pipeline version, e.g. "v1.0.0-source-foundation"
+  parserVersion?: string; // Optional parser version when semantic parsing is added in later milestones
   status: DocumentStatus;
-  createdAt: string;
+  createdAt: string; // ISO 8601
 }
 
 export interface SourceEvidence {
