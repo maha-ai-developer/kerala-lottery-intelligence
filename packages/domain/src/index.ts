@@ -43,6 +43,43 @@ export type DocumentStatus =
   | "APPROVED"
   | "REJECTED";
 
+export interface OfficialSource {
+  sourceId: string;
+  sourceName: string;
+  organization: string;
+  baseUrl: string;
+  discoveryUrl: string;
+  allowedDomains: string[];
+  authorityEvidence: string[];
+  enabled: boolean;
+  notes?: string;
+}
+
+export interface HttpProvenanceMetadata {
+  statusCode: number;
+  contentType: string;
+  contentLength?: number;
+  etag?: string;
+  lastModified?: string;
+  server?: string;
+  sha256: string;
+  byteSize: number;
+}
+
+export interface DocumentProvenance {
+  sourceId: string;
+  sourceOrganization: string;
+  discoveryUrl?: string;
+  requestedUrl: string;
+  finalUrl: string;
+  redirectCount: number;
+  retrievedAt: string; // ISO 8601
+  originalFileName?: string;
+  httpMetadata: HttpProvenanceMetadata;
+  contentTypeMismatch?: boolean;
+  declaredContentType?: string;
+}
+
 export interface SourceDocument {
   id: string; // 64-character lowercase SHA-256 hash
   type: DocumentType;
@@ -59,6 +96,7 @@ export interface SourceDocument {
   parserVersion?: string; // Optional parser version when semantic parsing is added in later milestones
   status: DocumentStatus;
   createdAt: string; // ISO 8601
+  provenance?: DocumentProvenance;
 }
 
 export interface SourceEvidence {

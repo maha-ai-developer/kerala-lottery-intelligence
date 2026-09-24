@@ -1,6 +1,6 @@
 /**
  * Kerala State Lottery Intelligence & Experiment Platform
- * Milestone 3A — Official PDF SOURCE Ingestion Foundation
+ * Milestone 3A & 3B — Official Source Acquisition & Ingestion Pipeline
  *
  * CORE PRINCIPLE:
  * The PDF is treated as an opaque, immutable source artifact.
@@ -10,7 +10,7 @@
  *   Firestore: documents/{sha256}
  */
 
-import type { SourceDocument, DocumentType } from "@kerala-lottery/domain";
+import type { SourceDocument, DocumentType, DocumentProvenance } from "@kerala-lottery/domain";
 import {
   computeSha256,
   getSourceStoragePath,
@@ -25,6 +25,10 @@ import {
   DocumentAlreadyExistsError
 } from "@kerala-lottery/data";
 
+export * from "./errors";
+export * from "./acquisition";
+export * from "./discovery";
+
 export interface IngestDocumentInput {
   fileBuffer: Uint8Array;
   fileName: string;
@@ -35,6 +39,7 @@ export interface IngestDocumentInput {
   sourceOrganization?: string; // defaults to "Directorate of Kerala State Lotteries"
   publishedAt?: string; // ISO 8601
   retrievedAt?: string; // defaults to current ISO 8601 timestamp
+  provenance?: DocumentProvenance;
 }
 
 export type IngestionAction = "CREATED" | "EXISTING";
@@ -106,16 +111,26 @@ export class SourceIngestionService {
     // 7. Atomic Storage putIfAbsent (Precondition-enforced)
     // Never overwrite an existing object in storage.
     try {
+      const customMetadata: Record<string, string> = {
+        sourceOrganization:
+          input.sourceOrganization ||
+          "Directorate of Kerala State Lotteries"
+      };
+      if (input.provenance) {
+        customMetadata.sourceId = input.provenance.sourceId;
+        customMetadata.requestedUrl = input.provenance.requestedUrl;
+        customMetadata.finalUrl = input.provenance.finalUrl;
+        if (input.provenance.discoveryUrl) {
+          customMetadata.discoveryUrl = input.provenance.discoveryUrl;
+        }
+      }
+
       await this.deps.storageService.putIfAbsent(storagePath, input.fileBuffer, {
         sha256,
         originalFileName: input.fileName,
         retrievedAt,
         contentType: "application/pdf",
-        customMetadata: {
-          sourceOrganization:
-            input.sourceOrganization ||
-            "Directorate of Kerala State Lotteries"
-        }
+        customMetadata
       });
     } catch (err: unknown) {
       if (err instanceof StorageAlreadyExistsError) {
@@ -142,7 +157,8 @@ export class SourceIngestionService {
       retrievedAt,
       ingestionVersion,
       status: "UPLOADED",
-      createdAt
+      createdAt,
+      provenance: input.provenance
     };
 
     // Validate domain invariants before persistence

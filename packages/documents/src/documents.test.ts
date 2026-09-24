@@ -6,7 +6,10 @@ import {
   validateSourceDocument,
   DocumentValidationError,
   DEV_SYNTHETIC_FIXTURE_BYTES,
-  DEV_SYNTHETIC_FIXTURE_SHA256
+  DEV_SYNTHETIC_FIXTURE_SHA256,
+  validateOfficialSource,
+  KERALA_STATE_LOTTERY_PORTAL,
+  validateSafeUrl
 } from "./index";
 import type { SourceDocument } from "@kerala-lottery/domain";
 
@@ -151,5 +154,123 @@ describe("packages/documents: Cryptographic Identity & Invariant Validation", ()
     expect(computed).toBe(DEV_SYNTHETIC_FIXTURE_SHA256);
     expect(computed).toBe("2b8ed894e0e6da419e81b54d760322c574cf88a61f8d892bd309ad9148fc3acf");
     expect(DEV_SYNTHETIC_FIXTURE_BYTES.byteLength).toBe(331);
+  });
+
+  it("Invariant: validateOfficialSource validates official source configurations", () => {
+    expect(() => validateOfficialSource(KERALA_STATE_LOTTERY_PORTAL)).not.toThrow();
+
+    // Invalid sourceId
+    expect(() =>
+      validateOfficialSource({ ...KERALA_STATE_LOTTERY_PORTAL, sourceId: "" })
+    ).toThrow(DocumentValidationError);
+
+    // Invalid allowedDomains
+    expect(() =>
+      validateOfficialSource({ ...KERALA_STATE_LOTTERY_PORTAL, allowedDomains: [] })
+    ).toThrow(DocumentValidationError);
+
+    // Invalid baseUrl
+    expect(() =>
+      validateOfficialSource({ ...KERALA_STATE_LOTTERY_PORTAL, baseUrl: "not-a-url" })
+    ).toThrow(DocumentValidationError);
+  });
+
+  it("Invariant: validateSafeUrl enforces allowed domains and prevents SSRF", () => {
+    const allowed = ["statelottery.kerala.gov.in"];
+
+    // Allowed domain succeeds
+    expect(() =>
+      validateSafeUrl("https://statelottery.kerala.gov.in/images/pdf/test.pdf", allowed)
+    ).not.toThrow();
+
+    // Unauthorized domain throws
+    expect(() =>
+      validateSafeUrl("https://evil-unauthorized-site.com/fake.pdf", allowed)
+    ).toThrow(DocumentValidationError);
+
+    // SSRF / Private network targets strictly blocked
+    expect(() =>
+      validateSafeUrl("http://localhost:8080/secret", allowed)
+    ).toThrow(DocumentValidationError);
+    expect(() =>
+      validateSafeUrl("http://127.0.0.1/admin", allowed)
+    ).toThrow(DocumentValidationError);
+    expect(() =>
+      validateSafeUrl("http://169.254.169.254/computeMetadata/v1", allowed)
+    ).toThrow(DocumentValidationError);
+    expect(() =>
+      validateSafeUrl("http://10.0.0.1/internal", allowed)
+    ).toThrow(DocumentValidationError);
+    expect(() =>
+      validateSafeUrl("http://192.168.1.1/router", allowed)
+    ).toThrow(DocumentValidationError);
+
+    // Non-HTTP protocols blocked
+    expect(() =>
+      validateSafeUrl("ftp://statelottery.kerala.gov.in/test.pdf", allowed)
+    ).toThrow(DocumentValidationError);
+    expect(() =>
+      validateSafeUrl("file:///etc/passwd", allowed)
+    ).toThrow(DocumentValidationError);
+  });
+
+  it("Invariant: validateSourceDocument verifies provenance invariants when present", () => {
+    const sha256 = computeSha256(samplePdfBytes);
+    const validDoc: SourceDocument = {
+      id: sha256,
+      type: "LOTTERY_RESULT",
+      title: "Sample Gazette Result",
+      storagePath: `source-documents/${sha256}.pdf`,
+      sha256,
+      mimeType: "application/pdf",
+      fileSize: samplePdfBytes.byteLength,
+      sourceOrganization: "Directorate of Kerala State Lotteries",
+      retrievedAt: new Date().toISOString(),
+      ingestionVersion: "v1.0.0-source-foundation",
+      status: "UPLOADED",
+      createdAt: new Date().toISOString(),
+      provenance: {
+        sourceId: "KERALA_STATE_LOTTERY_PORTAL",
+        sourceOrganization: "Directorate of Kerala State Lotteries",
+        requestedUrl: "https://statelottery.kerala.gov.in/images/pdf/test.pdf",
+        finalUrl: "https://statelottery.kerala.gov.in/images/pdf/test.pdf",
+        redirectCount: 0,
+        retrievedAt: new Date().toISOString(),
+        httpMetadata: {
+          statusCode: 200,
+          contentType: "application/pdf",
+          sha256,
+          byteSize: samplePdfBytes.byteLength
+        }
+      }
+    };
+
+    expect(() => validateSourceDocument(validDoc)).not.toThrow();
+
+    // Mismatched provenance sha256 must throw
+    const mismatchedShaDoc: SourceDocument = {
+      ...validDoc,
+      provenance: {
+        ...validDoc.provenance!,
+        httpMetadata: {
+          ...validDoc.provenance!.httpMetadata,
+          sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+        }
+      }
+    };
+    expect(() => validateSourceDocument(mismatchedShaDoc)).toThrow(DocumentValidationError);
+
+    // Mismatched provenance byteSize must throw
+    const mismatchedSizeDoc: SourceDocument = {
+      ...validDoc,
+      provenance: {
+        ...validDoc.provenance!,
+        httpMetadata: {
+          ...validDoc.provenance!.httpMetadata,
+          byteSize: 999999
+        }
+      }
+    };
+    expect(() => validateSourceDocument(mismatchedSizeDoc)).toThrow(DocumentValidationError);
   });
 });

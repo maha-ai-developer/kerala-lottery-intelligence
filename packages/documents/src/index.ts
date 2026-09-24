@@ -1,7 +1,158 @@
 import { createHash } from "node:crypto";
-import type { DocumentType, SourceDocument } from "@kerala-lottery/domain";
+import type {
+  DocumentType,
+  SourceDocument,
+  OfficialSource,
+  DocumentProvenance,
+  HttpProvenanceMetadata
+} from "@kerala-lottery/domain";
 
-export type { SourceDocument, DocumentType };
+export type {
+  SourceDocument,
+  DocumentType,
+  OfficialSource,
+  DocumentProvenance,
+  HttpProvenanceMetadata
+};
+
+/**
+ * Official Kerala State Lottery Government Portal Descriptor.
+ * Primary authoritative source for official result publications.
+ */
+export const KERALA_STATE_LOTTERY_PORTAL: OfficialSource = {
+  sourceId: "KERALA_STATE_LOTTERY_PORTAL",
+  sourceName: "Directorate of Kerala State Lotteries Official Portal",
+  organization: "Directorate of Kerala State Lotteries",
+  baseUrl: "https://statelottery.kerala.gov.in",
+  discoveryUrl: "https://statelottery.kerala.gov.in/English/index.php/lottery-result-view",
+  allowedDomains: [
+    "statelottery.kerala.gov.in",
+    "www.statelottery.kerala.gov.in"
+  ],
+  authorityEvidence: [
+    "Domain registered under apex Government of Kerala namespace (.kerala.gov.in) managed by National Informatics Centre (NIC) and Government of India",
+    "Official administrative body: Directorate of Kerala State Lotteries, Vikas Bhavan, Thiruvananthapuram, Kerala 695033",
+    "Developed and maintained by KELTRON (Kerala State Electronics Development Corporation Limited, a Government of Kerala undertaking) Software Group",
+    "Referenced by apex Kerala Government portal (https://kerala.gov.in) as the official Directorate portal",
+    "Official contact and notification endpoint: cru.dir.lotteries@kerala.gov.in, Ph: 0471-2305193"
+  ],
+  enabled: true,
+  notes: "Primary official web portal publishing daily and bumper draw results under the Lotteries (Regulation) Act, 1998 and Kerala Paper Lotteries (Regulation) Rules, 2005."
+};
+
+export const OFFICIAL_SOURCES: Record<string, OfficialSource> = {
+  [KERALA_STATE_LOTTERY_PORTAL.sourceId]: KERALA_STATE_LOTTERY_PORTAL
+};
+
+/**
+ * Validates an OfficialSource descriptor ensuring all required authority and network fields are valid.
+ */
+export function validateOfficialSource(source: OfficialSource): void {
+  if (!source || typeof source !== "object") {
+    throw new DocumentValidationError("OfficialSource must be a valid object", "INVALID_SOURCE");
+  }
+  if (!source.sourceId || typeof source.sourceId !== "string" || source.sourceId.trim() === "") {
+    throw new DocumentValidationError("OfficialSource sourceId must be a non-empty string", "INVALID_SOURCE_ID");
+  }
+  if (!source.organization || typeof source.organization !== "string" || source.organization.trim() === "") {
+    throw new DocumentValidationError("OfficialSource organization must be a non-empty string", "INVALID_ORGANIZATION");
+  }
+  if (!source.sourceName || typeof source.sourceName !== "string" || source.sourceName.trim() === "") {
+    throw new DocumentValidationError("OfficialSource sourceName must be a non-empty string", "INVALID_SOURCE_NAME");
+  }
+  if (!source.baseUrl || typeof source.baseUrl !== "string") {
+    throw new DocumentValidationError("OfficialSource baseUrl must be a valid URL string", "INVALID_BASE_URL");
+  }
+  try {
+    const parsedBase = new URL(source.baseUrl);
+    if (!["http:", "https:"].includes(parsedBase.protocol)) {
+      throw new Error("Invalid protocol");
+    }
+  } catch {
+    throw new DocumentValidationError(`OfficialSource baseUrl '${source.baseUrl}' is not a valid HTTP(S) URL`, "INVALID_BASE_URL");
+  }
+  if (!source.discoveryUrl || typeof source.discoveryUrl !== "string") {
+    throw new DocumentValidationError("OfficialSource discoveryUrl must be a valid URL string", "INVALID_DISCOVERY_URL");
+  }
+  try {
+    const parsedDisc = new URL(source.discoveryUrl);
+    if (!["http:", "https:"].includes(parsedDisc.protocol)) {
+      throw new Error("Invalid protocol");
+    }
+  } catch {
+    throw new DocumentValidationError(`OfficialSource discoveryUrl '${source.discoveryUrl}' is not a valid HTTP(S) URL`, "INVALID_DISCOVERY_URL");
+  }
+  if (!Array.isArray(source.allowedDomains) || source.allowedDomains.length === 0) {
+    throw new DocumentValidationError("OfficialSource allowedDomains must be a non-empty array of domain strings", "INVALID_ALLOWED_DOMAINS");
+  }
+  for (const domain of source.allowedDomains) {
+    if (typeof domain !== "string" || domain.trim() === "") {
+      throw new DocumentValidationError("Each allowedDomain must be a non-empty string", "INVALID_ALLOWED_DOMAINS");
+    }
+  }
+  if (!Array.isArray(source.authorityEvidence) || source.authorityEvidence.length === 0) {
+    throw new DocumentValidationError("OfficialSource authorityEvidence must be a non-empty array of evidence statements", "INVALID_AUTHORITY_EVIDENCE");
+  }
+}
+
+/**
+ * Validates a target URL against SSRF, private networks, unsupported protocols,
+ * and restricts requests strictly to configured official allowed domains.
+ */
+export function validateSafeUrl(urlStr: string, allowedDomains: string[]): URL {
+  if (typeof urlStr !== "string" || urlStr.trim() === "") {
+    throw new DocumentValidationError("Target URL must be a non-empty string", "INVALID_URL");
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(urlStr.trim());
+  } catch {
+    throw new DocumentValidationError(`Malformed URL: '${urlStr}'`, "MALFORMED_URL");
+  }
+
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+    throw new DocumentValidationError(
+      `Unsupported protocol '${parsed.protocol}'. Only HTTP and HTTPS are permitted.`,
+      "UNSUPPORTED_PROTOCOL"
+    );
+  }
+
+  const hostname = parsed.hostname.toLowerCase();
+
+  // SSRF & Private Network Protection
+  if (
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname === "0.0.0.0" ||
+    hostname === "::1" ||
+    hostname === "metadata.google.internal" ||
+    /^10\./.test(hostname) ||
+    /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname) ||
+    /^192\.168\./.test(hostname) ||
+    /^169\.254\./.test(hostname)
+  ) {
+    throw new DocumentValidationError(
+      `Access to private/loopback network address '${hostname}' is strictly forbidden`,
+      "SSRF_PROHIBITED_HOST"
+    );
+  }
+
+  // Restrict to allowed domains
+  const normalizedAllowed = allowedDomains.map((d) => d.toLowerCase().trim());
+  const isAllowed = normalizedAllowed.some(
+    (allowed) => hostname === allowed || hostname.endsWith(`.${allowed}`)
+  );
+
+  if (!isAllowed) {
+    throw new DocumentValidationError(
+      `Host '${hostname}' is not in the list of verified official allowed domains: [${allowedDomains.join(", ")}]`,
+      "UNAUTHORIZED_HOST"
+    );
+  }
+
+  return parsed;
+}
 
 /**
  * Deterministic synthetic PDF fixture for DEV testing & integration verification.
@@ -163,6 +314,35 @@ export function validateSourceDocument(doc: SourceDocument): void {
       `Document createdAt must be a valid ISO 8601 timestamp, received '${doc.createdAt}'`,
       "INVALID_CREATED_AT"
     );
+  }
+  if (doc.provenance) {
+    if (typeof doc.provenance !== "object") {
+      throw new DocumentValidationError("Document provenance must be an object", "INVALID_PROVENANCE");
+    }
+    if (!doc.provenance.sourceId || typeof doc.provenance.sourceId !== "string") {
+      throw new DocumentValidationError("Provenance sourceId must be a non-empty string", "INVALID_PROVENANCE_SOURCE_ID");
+    }
+    if (!doc.provenance.requestedUrl || typeof doc.provenance.requestedUrl !== "string") {
+      throw new DocumentValidationError("Provenance requestedUrl must be a non-empty string", "INVALID_PROVENANCE_URL");
+    }
+    if (!doc.provenance.finalUrl || typeof doc.provenance.finalUrl !== "string") {
+      throw new DocumentValidationError("Provenance finalUrl must be a non-empty string", "INVALID_PROVENANCE_URL");
+    }
+    if (!doc.provenance.httpMetadata || typeof doc.provenance.httpMetadata !== "object") {
+      throw new DocumentValidationError("Provenance httpMetadata must be an object", "INVALID_PROVENANCE_HTTP_META");
+    }
+    if (doc.provenance.httpMetadata.sha256 !== doc.sha256) {
+      throw new DocumentValidationError(
+        `Provenance httpMetadata sha256 ('${doc.provenance.httpMetadata.sha256}') must match document sha256 ('${doc.sha256}')`,
+        "PROVENANCE_SHA_MISMATCH"
+      );
+    }
+    if (doc.provenance.httpMetadata.byteSize !== doc.fileSize) {
+      throw new DocumentValidationError(
+        `Provenance httpMetadata byteSize (${doc.provenance.httpMetadata.byteSize}) must match document fileSize (${doc.fileSize})`,
+        "PROVENANCE_SIZE_MISMATCH"
+      );
+    }
   }
 }
 

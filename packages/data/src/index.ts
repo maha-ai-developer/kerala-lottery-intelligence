@@ -9,7 +9,9 @@ import type {
   SourceDocument,
   DatasetVersion,
   AuditLog,
-  UserProfile
+  UserProfile,
+  DocumentProvenance,
+  HttpProvenanceMetadata
 } from "@kerala-lottery/domain";
 
 export interface DrawRepository {
@@ -437,10 +439,77 @@ export class FirestoreRestDocumentRepository implements DocumentRepository {
     if (doc.sourceUrl) fields.sourceUrl = { stringValue: doc.sourceUrl };
     if (doc.publishedAt) fields.publishedAt = { stringValue: doc.publishedAt };
     if (doc.parserVersion) fields.parserVersion = { stringValue: doc.parserVersion };
+    if (doc.provenance) {
+      const p = doc.provenance;
+      const provFields: Record<string, any> = {
+        sourceId: { stringValue: p.sourceId },
+        sourceOrganization: { stringValue: p.sourceOrganization },
+        requestedUrl: { stringValue: p.requestedUrl },
+        finalUrl: { stringValue: p.finalUrl },
+        redirectCount: { integerValue: p.redirectCount.toString() },
+        retrievedAt: { stringValue: p.retrievedAt }
+      };
+      if (p.discoveryUrl) provFields.discoveryUrl = { stringValue: p.discoveryUrl };
+      if (p.originalFileName) provFields.originalFileName = { stringValue: p.originalFileName };
+      if (p.contentTypeMismatch !== undefined) provFields.contentTypeMismatch = { booleanValue: p.contentTypeMismatch };
+      if (p.declaredContentType) provFields.declaredContentType = { stringValue: p.declaredContentType };
+      if (p.httpMetadata) {
+        const h = p.httpMetadata;
+        const httpFields: Record<string, any> = {
+          statusCode: { integerValue: h.statusCode.toString() },
+          contentType: { stringValue: h.contentType },
+          sha256: { stringValue: h.sha256 },
+          byteSize: { integerValue: h.byteSize.toString() }
+        };
+        if (h.contentLength !== undefined) httpFields.contentLength = { integerValue: h.contentLength.toString() };
+        if (h.etag) httpFields.etag = { stringValue: h.etag };
+        if (h.lastModified) httpFields.lastModified = { stringValue: h.lastModified };
+        if (h.server) httpFields.server = { stringValue: h.server };
+        provFields.httpMetadata = { mapValue: { fields: httpFields } };
+      }
+      fields.provenance = { mapValue: { fields: provFields } };
+    }
     return fields;
   }
 
   private fromFirestoreFields(fields: Record<string, any>): SourceDocument {
+    let provenance: DocumentProvenance | undefined;
+    if (fields.provenance?.mapValue?.fields) {
+      const pf = fields.provenance.mapValue.fields;
+      let httpMetadata: HttpProvenanceMetadata = {
+        statusCode: 200,
+        contentType: "application/pdf",
+        sha256: fields.sha256?.stringValue || "",
+        byteSize: parseInt(fields.fileSize?.integerValue || "0", 10)
+      };
+      if (pf.httpMetadata?.mapValue?.fields) {
+        const hf = pf.httpMetadata.mapValue.fields;
+        httpMetadata = {
+          statusCode: parseInt(hf.statusCode?.integerValue || "200", 10),
+          contentType: hf.contentType?.stringValue || "application/pdf",
+          contentLength: hf.contentLength?.integerValue ? parseInt(hf.contentLength.integerValue, 10) : undefined,
+          etag: hf.etag?.stringValue,
+          lastModified: hf.lastModified?.stringValue,
+          server: hf.server?.stringValue,
+          sha256: hf.sha256?.stringValue || "",
+          byteSize: parseInt(hf.byteSize?.integerValue || "0", 10)
+        };
+      }
+      provenance = {
+        sourceId: pf.sourceId?.stringValue || "",
+        sourceOrganization: pf.sourceOrganization?.stringValue || "",
+        discoveryUrl: pf.discoveryUrl?.stringValue,
+        requestedUrl: pf.requestedUrl?.stringValue || "",
+        finalUrl: pf.finalUrl?.stringValue || "",
+        redirectCount: parseInt(pf.redirectCount?.integerValue || "0", 10),
+        retrievedAt: pf.retrievedAt?.stringValue || "",
+        originalFileName: pf.originalFileName?.stringValue,
+        contentTypeMismatch: pf.contentTypeMismatch?.booleanValue,
+        declaredContentType: pf.declaredContentType?.stringValue,
+        httpMetadata
+      };
+    }
+
     return {
       id: fields.id?.stringValue || "",
       type: (fields.type?.stringValue || "LOTTERY_RESULT") as any,
@@ -456,7 +525,8 @@ export class FirestoreRestDocumentRepository implements DocumentRepository {
       ingestionVersion: fields.ingestionVersion?.stringValue || "v1.0.0-source-foundation",
       parserVersion: fields.parserVersion?.stringValue,
       status: (fields.status?.stringValue || "UPLOADED") as any,
-      createdAt: fields.createdAt?.stringValue || ""
+      createdAt: fields.createdAt?.stringValue || "",
+      provenance
     };
   }
 }
