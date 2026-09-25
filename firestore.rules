@@ -144,6 +144,21 @@ service cloud.firestore {
       allow write: if isResearcher();
     }
 
+    match /knowledge_nodes/{nodeId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+
+    match /knowledge_edges/{edgeId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+
+    match /lottery_knowledge_graphs/{graphId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+
     // Dataset Versions & Experiments
     match /datasetVersions/{versionId} {
       allow read: if isAuthenticated();

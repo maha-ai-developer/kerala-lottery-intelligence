@@ -179,6 +179,14 @@ describe.skipIf(!isEmulatorActive)("Firestore Security Rules Authorization Verif
       await assertFails(setDoc(doc(viewerDb, "documents", "doc-01"), { title: "Illegal Write" }));
       await assertFails(setDoc(doc(viewerDb, "draws", "draw-01"), { drawNumber: "DL-69" }));
       await assertFails(setDoc(doc(viewerDb, "experiments", "exp-01"), { name: "Illegal Experiment" }));
+      await assertFails(setDoc(doc(viewerDb, "knowledge_nodes", "node-01"), { label: "Illegal Node" }));
+      await assertFails(setDoc(doc(viewerDb, "knowledge_edges", "edge-01"), { relation: "HAS_DRAW" }));
+      await assertFails(setDoc(doc(viewerDb, "lottery_knowledge_graphs", "graph-01"), { documentSha256: "abc" }));
+
+      // Authenticated read is allowed
+      await assertSucceeds(getDoc(doc(viewerDb, "knowledge_nodes", "node-01")));
+      await assertSucceeds(getDoc(doc(viewerDb, "knowledge_edges", "edge-01")));
+      await assertSucceeds(getDoc(doc(viewerDb, "lottery_knowledge_graphs", "graph-01")));
     });
   });
 
@@ -214,6 +222,25 @@ describe.skipIf(!isEmulatorActive)("Firestore Security Rules Authorization Verif
         setDoc(doc(researcherDb, "winningNumbers", "wn-01"), {
           canonicalNumber: "0276",
           series: "DL"
+        })
+      );
+      await assertSucceeds(
+        setDoc(doc(researcherDb, "knowledge_nodes", "node-doc-01"), {
+          type: "SourceDocument",
+          label: "Document 01"
+        })
+      );
+      await assertSucceeds(
+        setDoc(doc(researcherDb, "knowledge_edges", "edge-01"), {
+          relation: "HAS_LOTTERY",
+          sourceId: "doc-01",
+          targetId: "lottery-01"
+        })
+      );
+      await assertSucceeds(
+        setDoc(doc(researcherDb, "lottery_knowledge_graphs", "graph-doc-01"), {
+          documentSha256: "abcdef123456",
+          nodes: []
         })
       );
     });

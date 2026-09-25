@@ -5,7 +5,9 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "dependencies": {
-    "@kerala-lottery/domain": "*"
+    "@kerala-lottery/domain": "*",
+    "@kerala-lottery/documents": "*",
+    "@kerala-lottery/validation": "*"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

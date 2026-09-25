@@ -1845,4 +1845,40 @@ export class FirestoreRestWinningResultRepository implements WinningResultReposi
   }
 }
 
+// ============================================================================
+// Milestone 4A: Knowledge Graph Re-exports
+// ============================================================================
+export type {
+  KnowledgeEntityType,
+  KnowledgeRelationType,
+  EdgeProvenance,
+  KnowledgeNode,
+  KnowledgeEdge,
+  LotteryKnowledgeGraph,
+  KnowledgeGraphRepository,
+  FirestoreRestKnowledgeGraphRepositoryOptions
+} from "@kerala-lottery/knowledge";
 
+export {
+  DEFAULT_GRAPH_VERSION,
+  getDocumentNodeId,
+  getLotteryNodeId,
+  getDrawNodeId,
+  getPrizeTierNodeId,
+  getWinningResultNodeId,
+  getSeriesNodeId,
+  getWinningNumberNodeId,
+  getKnowledgeEdgeId,
+  buildLotteryKnowledgeGraph,
+  LotteryKnowledgeGraphBuilder,
+  getNode,
+  getOutEdges,
+  getInEdges,
+  getTargetNodes,
+  getSourceNodes,
+  findPaths,
+  validateLotteryKnowledgeGraph,
+  KnowledgeGraphValidationError,
+  InMemoryKnowledgeGraphRepository,
+  FirestoreRestKnowledgeGraphRepository
+} from "@kerala-lottery/knowledge";
