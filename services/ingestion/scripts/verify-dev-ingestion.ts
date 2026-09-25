@@ -36,24 +36,14 @@ export async function runDevIntegrationVerification() {
   console.log("Target Project: kerala-lottery-intel-dev (DEV ONLY)");
   console.log("============================================================");
 
-  // 1. Obtain authenticated credentials via normal Firebase CLI tooling
-  let token = process.env.GCP_ACCESS_TOKEN;
-  if (!token) {
-    try {
-      const fbPath = "/home/pi/.npm/_npx/ba4f1959e38407b5/node_modules/firebase-tools";
-      const auth = require(fbPath + "/lib/auth");
-      const account = auth.getGlobalDefaultAccount();
-      if (account?.tokens?.refresh_token) {
-        const tokenRes = await auth.getAccessToken(account.tokens.refresh_token, []);
-        token = tokenRes.access_token;
-      }
-    } catch (err) {
-      console.warn("Could not load credentials via firebase-tools auth module:", err);
-    }
-  }
+  // 1. Safe runtime authentication via standard environment variables
+  // (e.g. GCP_ACCESS_TOKEN or FIREBASE_TOKEN provided by the execution environment)
+  const token = process.env.GCP_ACCESS_TOKEN || process.env.FIREBASE_TOKEN;
 
   if (!token) {
-    throw new Error("Unable to obtain authenticated credentials for DEV verification");
+    throw new Error(
+      "Safe runtime authentication: GCP_ACCESS_TOKEN or FIREBASE_TOKEN environment variable is required to authenticate against DEV Cloud resources."
+    );
   }
 
   // 2. Validate synthetic fixture
