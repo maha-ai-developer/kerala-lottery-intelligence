@@ -67,6 +67,11 @@ service cloud.firestore {
       allow write: if isResearcher();
     }
     
+    match /document_segmentations/{segmentationId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+    
     match /source_evidence/{evidenceId} {
       allow read: if isAuthenticated();
       allow write: if isResearcher();

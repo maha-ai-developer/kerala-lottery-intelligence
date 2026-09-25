@@ -356,7 +356,7 @@ export function validateSourceDocument(doc: SourceDocument): void {
 }
 
 
-export interface DocumentClassificationResult {
+export interface HeuristicClassificationResult {
   detectedType: DocumentType;
   confidence: number;
   extractedTitle?: string;
@@ -368,7 +368,7 @@ export interface DocumentClassificationResult {
 /**
  * Heuristic document classifier based on text snippets and layout markers.
  */
-export function classifyDocumentText(extractedText: string): DocumentClassificationResult {
+export function classifyDocumentText(extractedText: string): HeuristicClassificationResult {
   const upper = extractedText.toUpperCase();
 
   if (
@@ -857,4 +857,41 @@ export async function extractPdfPages(
   );
   return extractor.extractPages(pdfBuffer, documentSha256, options);
 }
+
+// ============================================================================
+// Milestone 3D Re-Exports: Semantic Classification & Region Segmentation
+// ============================================================================
+
+export {
+  classifyDocumentPages,
+  extractDrawMetadata,
+  segmentDocumentRegions,
+  DocumentSemanticSegmentationService,
+  validateSemanticRegion,
+  validateSemanticField,
+  validateDocumentSemanticSegmentation,
+  RULE_CLASSIFICATION_HEADER,
+  RULE_CLASSIFICATION_DRAW_HEADING,
+  RULE_CLASSIFICATION_PORTAL,
+  RULE_REGION_HEADER,
+  RULE_REGION_DRAW_METADATA,
+  RULE_REGION_PRIZE_STRUCTURE,
+  RULE_REGION_LEGAL_CLAIMS_FOOTER,
+  RULE_REGION_CERTIFICATION,
+  RULE_DRAW_METADATA_REGEX,
+  DEFAULT_SEMANTIC_VERSION
+} from "./semantic-segmentation";
+
+export type {
+  SemanticSegmentationOptions,
+  SemanticDocumentKind,
+  SemanticRegionType,
+  RegionBoundingBox,
+  SemanticRegion,
+  SemanticField,
+  DrawMetadata,
+  ClassificationEvidence,
+  DocumentClassificationResult,
+  DocumentSemanticSegmentation
+} from "./semantic-segmentation";
 

@@ -194,6 +194,99 @@ export interface DocumentPage {
   errorMessage?: string; // Descriptive error message if extractionStatus === "FAILED"
 }
 
+// ============================================================================
+// Milestone 3D: Semantic Document Classification & Region Segmentation Contracts
+// ============================================================================
+
+export type SemanticDocumentKind = "LOTTERY_RESULT" | "UNCLASSIFIED";
+
+export type SemanticRegionType =
+  | "HEADER"
+  | "DRAW_METADATA"
+  | "PRIZE_STRUCTURE"
+  | "CERTIFICATION"
+  | "LEGAL_CLAIMS_FOOTER";
+
+export interface RegionBoundingBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  top?: number;
+  unit: "pt";
+}
+
+export interface SemanticRegion {
+  id: string; // Deterministic: `${pageId}_${type}` or `${pageId}_${type}_${index}`
+  documentSha256: string;
+  pageId: string; // `${documentSha256}_${pageNumber}`
+  pageNumber: number; // 1-based page number
+  type: SemanticRegionType;
+  textBlockOrders: number[]; // 0-based order indices of member TextBlocks
+  boundingBox: RegionBoundingBox;
+  confidence: number; // 1.0 for deterministic rule matches
+  ruleId: string;
+  evidence: string[]; // Structural tokens or markers that triggered this region
+  summaryText?: string; // Text excerpt
+}
+
+export interface SemanticField<T = string> {
+  name: string;
+  value: T;
+  rawText: string;
+  sourceDocumentSha256: string;
+  sourcePageId: string;
+  sourcePageNumber: number;
+  textBlockOrder: number;
+  boundingBox: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    top?: number;
+  };
+  ruleId: string;
+  confidence: number;
+}
+
+export interface DrawMetadata {
+  lotteryName?: SemanticField<string>;
+  drawNumber?: SemanticField<string>;
+  drawDate?: SemanticField<string>;
+  drawTime?: SemanticField<string>;
+  location?: SemanticField<string>;
+}
+
+export interface ClassificationEvidence {
+  ruleId: string;
+  description: string;
+  matchedText: string;
+  pageNumber: number;
+  textBlockOrder: number;
+}
+
+export interface DocumentClassificationResult {
+  documentSha256: string;
+  kind: SemanticDocumentKind;
+  confidence: number;
+  evidence: ClassificationEvidence[];
+  ruleId: string;
+  semanticVersion: string;
+}
+
+export interface DocumentSemanticSegmentation {
+  id: string; // Deterministic: `${documentSha256}`
+  documentSha256: string;
+  classification: DocumentClassificationResult;
+  regions: SemanticRegion[];
+  drawMetadata?: DrawMetadata;
+  pageCount: number;
+  extractionVersion: string;
+  semanticVersion: string;
+  createdAt: string;
+}
+
+export const DEFAULT_SEMANTIC_VERSION = "v1.0.0-semantic-regions";
 
 // ============================================================================
 // Kerala Lottery Core Data Model

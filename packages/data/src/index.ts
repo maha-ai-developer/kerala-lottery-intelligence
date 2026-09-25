@@ -14,11 +14,39 @@ import type {
   HttpProvenanceMetadata,
   DocumentPage,
   TextBlock,
-  PageExtractionStatus
+  PageExtractionStatus,
+  SemanticDocumentKind,
+  SemanticRegionType,
+  RegionBoundingBox,
+  SemanticRegion,
+  SemanticField,
+  DrawMetadata,
+  ClassificationEvidence,
+  DocumentClassificationResult,
+  DocumentSemanticSegmentation
 } from "@kerala-lottery/domain";
-import { getDocumentPageId, validateDocumentPage } from "@kerala-lottery/documents";
+import {
+  getDocumentPageId,
+  validateDocumentPage,
+  validateDocumentSemanticSegmentation,
+  DEFAULT_SEMANTIC_VERSION
+} from "@kerala-lottery/documents";
 
-export type { DocumentPage, TextBlock, PageExtractionStatus };
+export type {
+  DocumentPage,
+  TextBlock,
+  PageExtractionStatus,
+  SemanticDocumentKind,
+  SemanticRegionType,
+  RegionBoundingBox,
+  SemanticRegion,
+  SemanticField,
+  DrawMetadata,
+  ClassificationEvidence,
+  DocumentClassificationResult,
+  DocumentSemanticSegmentation
+};
+export { DEFAULT_SEMANTIC_VERSION };
 
 export interface DrawRepository {
   findById(id: string): Promise<Draw | null>;
@@ -957,3 +985,350 @@ export interface UserRepository {
   findById(uid: string): Promise<UserProfile | null>;
   saveProfile(profile: UserProfile): Promise<void>;
 }
+
+// ============================================================================
+// Milestone 3D: Semantic Document Segmentation Repositories
+// ============================================================================
+
+export interface DocumentSegmentationRepository {
+  getByDocumentSha256(documentSha256: string): Promise<DocumentSemanticSegmentation | null>;
+  save(segmentation: DocumentSemanticSegmentation): Promise<void>;
+}
+
+export class InMemoryDocumentSegmentationRepository implements DocumentSegmentationRepository {
+  private readonly storage = new Map<string, DocumentSemanticSegmentation>();
+
+  async getByDocumentSha256(documentSha256: string): Promise<DocumentSemanticSegmentation | null> {
+    const found = this.storage.get(documentSha256.toLowerCase());
+    return found ? { ...found } : null;
+  }
+
+  async save(segmentation: DocumentSemanticSegmentation): Promise<void> {
+    validateDocumentSemanticSegmentation(segmentation);
+    this.storage.set(segmentation.documentSha256.toLowerCase(), { ...segmentation });
+  }
+
+  clear(): void {
+    this.storage.clear();
+  }
+}
+
+export class FirestoreDocumentSegmentationRepository implements DocumentSegmentationRepository {
+  constructor(
+    private readonly firestore: Firestore,
+    private readonly collectionName: string = "document_segmentations"
+  ) {}
+
+  async getByDocumentSha256(documentSha256: string): Promise<DocumentSemanticSegmentation | null> {
+    const docRef = doc(this.firestore, this.collectionName, documentSha256.toLowerCase());
+    const snap = await getDoc(docRef);
+    if (!snap.exists()) return null;
+    return snap.data() as DocumentSemanticSegmentation;
+  }
+
+  async save(segmentation: DocumentSemanticSegmentation): Promise<void> {
+    validateDocumentSemanticSegmentation(segmentation);
+    const docRef = doc(this.firestore, this.collectionName, segmentation.documentSha256.toLowerCase());
+    await setDoc(docRef, segmentation);
+  }
+}
+
+export class FirestoreRestDocumentSegmentationRepository implements DocumentSegmentationRepository {
+  private readonly projectId: string;
+  private readonly databaseId: string;
+  private readonly collectionName: string;
+  private readonly getAccessToken: () => Promise<string> | string;
+
+  constructor(options: {
+    projectId: string;
+    databaseId?: string;
+    collectionName?: string;
+    getAccessToken: () => Promise<string> | string;
+  }) {
+    this.projectId = options.projectId;
+    this.databaseId = options.databaseId || "(default)";
+    this.collectionName = options.collectionName || "document_segmentations";
+    this.getAccessToken = options.getAccessToken;
+  }
+
+  private async getHeaders(): Promise<Record<string, string>> {
+    const token = await this.getAccessToken();
+    return {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json"
+    };
+  }
+
+  private get baseUrl(): string {
+    return `https://firestore.googleapis.com/v1/projects/${this.projectId}/databases/${this.databaseId}/documents`;
+  }
+
+  async getByDocumentSha256(documentSha256: string): Promise<DocumentSemanticSegmentation | null> {
+    const url = `${this.baseUrl}/${this.collectionName}/${documentSha256.toLowerCase()}`;
+    const headers = await this.getHeaders();
+    const res = await fetch(url, { headers });
+
+    if (res.status === 404) return null;
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Firestore REST GET failed (${res.status}): ${errText}`);
+    }
+
+    const data = await res.json();
+    if (!data.fields) return null;
+    return this.fromFirestoreFields(data.fields);
+  }
+
+  async save(segmentation: DocumentSemanticSegmentation): Promise<void> {
+    validateDocumentSemanticSegmentation(segmentation);
+    const url = `${this.baseUrl}/${this.collectionName}/${segmentation.documentSha256.toLowerCase()}`;
+    const headers = await this.getHeaders();
+    const body = JSON.stringify({ fields: this.toFirestoreFields(segmentation) });
+
+    const res = await fetch(url, {
+      method: "PATCH",
+      headers,
+      body
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Firestore REST PATCH failed (${res.status}): ${errText}`);
+    }
+  }
+
+  private toFirestoreFields(seg: DocumentSemanticSegmentation): Record<string, any> {
+    const fields: Record<string, any> = {
+      id: { stringValue: seg.id },
+      documentSha256: { stringValue: seg.documentSha256 },
+      pageCount: { integerValue: seg.pageCount.toString() },
+      extractionVersion: { stringValue: seg.extractionVersion },
+      semanticVersion: { stringValue: seg.semanticVersion },
+      createdAt: { stringValue: seg.createdAt },
+      classification: {
+        mapValue: {
+          fields: {
+            documentSha256: { stringValue: seg.classification.documentSha256 },
+            kind: { stringValue: seg.classification.kind },
+            confidence: { doubleValue: seg.classification.confidence },
+            ruleId: { stringValue: seg.classification.ruleId },
+            semanticVersion: { stringValue: seg.classification.semanticVersion },
+            evidence: {
+              arrayValue: {
+                values: seg.classification.evidence.map((e) => ({
+                  mapValue: {
+                    fields: {
+                      ruleId: { stringValue: e.ruleId },
+                      description: { stringValue: e.description },
+                      matchedText: { stringValue: e.matchedText },
+                      pageNumber: { integerValue: e.pageNumber.toString() },
+                      textBlockOrder: { integerValue: e.textBlockOrder.toString() }
+                    }
+                  }
+                }))
+              }
+            }
+          }
+        }
+      },
+      regions: {
+        arrayValue: {
+          values: seg.regions.map((r) => {
+            const rf: Record<string, any> = {
+              id: { stringValue: r.id },
+              documentSha256: { stringValue: r.documentSha256 },
+              pageId: { stringValue: r.pageId },
+              pageNumber: { integerValue: r.pageNumber.toString() },
+              type: { stringValue: r.type },
+              textBlockOrders: {
+                arrayValue: {
+                  values: r.textBlockOrders.map((o) => ({ integerValue: o.toString() }))
+                }
+              },
+              boundingBox: {
+                mapValue: {
+                  fields: {
+                    x: { doubleValue: r.boundingBox.x },
+                    y: { doubleValue: r.boundingBox.y },
+                    width: { doubleValue: r.boundingBox.width },
+                    height: { doubleValue: r.boundingBox.height },
+                    top: { doubleValue: r.boundingBox.top ?? 0 },
+                    unit: { stringValue: r.boundingBox.unit }
+                  }
+                }
+              },
+              confidence: { doubleValue: r.confidence },
+              ruleId: { stringValue: r.ruleId },
+              evidence: {
+                arrayValue: {
+                  values: r.evidence.map((ev) => ({ stringValue: ev }))
+                }
+              }
+            };
+            if (r.summaryText) rf.summaryText = { stringValue: r.summaryText };
+            return { mapValue: { fields: rf } };
+          })
+        }
+      }
+    };
+
+    if (seg.drawMetadata) {
+      const dmFields: Record<string, any> = {};
+      const mapField = (f?: SemanticField<string>) => {
+        if (!f) return undefined;
+        return {
+          mapValue: {
+            fields: {
+              name: { stringValue: f.name },
+              value: { stringValue: f.value },
+              rawText: { stringValue: f.rawText },
+              sourceDocumentSha256: { stringValue: f.sourceDocumentSha256 },
+              sourcePageId: { stringValue: f.sourcePageId },
+              sourcePageNumber: { integerValue: f.sourcePageNumber.toString() },
+              textBlockOrder: { integerValue: f.textBlockOrder.toString() },
+              boundingBox: {
+                mapValue: {
+                  fields: {
+                    x: { doubleValue: f.boundingBox.x },
+                    y: { doubleValue: f.boundingBox.y },
+                    width: { doubleValue: f.boundingBox.width },
+                    height: { doubleValue: f.boundingBox.height },
+                    top: { doubleValue: f.boundingBox.top ?? 0 }
+                  }
+                }
+              },
+              ruleId: { stringValue: f.ruleId },
+              confidence: { doubleValue: f.confidence }
+            }
+          }
+        };
+      };
+
+      if (seg.drawMetadata.lotteryName) dmFields.lotteryName = mapField(seg.drawMetadata.lotteryName);
+      if (seg.drawMetadata.drawNumber) dmFields.drawNumber = mapField(seg.drawMetadata.drawNumber);
+      if (seg.drawMetadata.drawDate) dmFields.drawDate = mapField(seg.drawMetadata.drawDate);
+      if (seg.drawMetadata.drawTime) dmFields.drawTime = mapField(seg.drawMetadata.drawTime);
+      if (seg.drawMetadata.location) dmFields.location = mapField(seg.drawMetadata.location);
+
+      fields.drawMetadata = { mapValue: { fields: dmFields } };
+    }
+
+    return fields;
+  }
+
+  private fromFirestoreFields(fields: Record<string, any>): DocumentSemanticSegmentation {
+    const cf = fields.classification?.mapValue?.fields || {};
+    const evidence: ClassificationEvidence[] = [];
+    if (cf.evidence?.arrayValue?.values) {
+      for (const ev of cf.evidence.arrayValue.values) {
+        const ef = ev.mapValue?.fields || {};
+        evidence.push({
+          ruleId: ef.ruleId?.stringValue || "",
+          description: ef.description?.stringValue || "",
+          matchedText: ef.matchedText?.stringValue || "",
+          pageNumber: parseInt(ef.pageNumber?.integerValue || "1", 10),
+          textBlockOrder: parseInt(ef.textBlockOrder?.integerValue || "0", 10)
+        });
+      }
+    }
+
+    const classification: DocumentClassificationResult = {
+      documentSha256: cf.documentSha256?.stringValue || fields.documentSha256?.stringValue || "",
+      kind: (cf.kind?.stringValue || "UNCLASSIFIED") as SemanticDocumentKind,
+      confidence: parseFloat(cf.confidence?.doubleValue || cf.confidence?.integerValue || "0"),
+      ruleId: cf.ruleId?.stringValue || "",
+      semanticVersion: cf.semanticVersion?.stringValue || "v1.0.0-semantic-regions",
+      evidence
+    };
+
+    const regions: SemanticRegion[] = [];
+    if (fields.regions?.arrayValue?.values) {
+      for (const rv of fields.regions.arrayValue.values) {
+        const rf = rv.mapValue?.fields || {};
+        const bbf = rf.boundingBox?.mapValue?.fields || {};
+        const blockOrders: number[] = [];
+        if (rf.textBlockOrders?.arrayValue?.values) {
+          for (const ov of rf.textBlockOrders.arrayValue.values) {
+            blockOrders.push(parseInt(ov.integerValue || "0", 10));
+          }
+        }
+        const evList: string[] = [];
+        if (rf.evidence?.arrayValue?.values) {
+          for (const ev of rf.evidence.arrayValue.values) {
+            if (ev.stringValue) evList.push(ev.stringValue);
+          }
+        }
+
+        regions.push({
+          id: rf.id?.stringValue || "",
+          documentSha256: rf.documentSha256?.stringValue || "",
+          pageId: rf.pageId?.stringValue || "",
+          pageNumber: parseInt(rf.pageNumber?.integerValue || "1", 10),
+          type: (rf.type?.stringValue || "HEADER") as SemanticRegionType,
+          textBlockOrders: blockOrders,
+          boundingBox: {
+            x: parseFloat(bbf.x?.doubleValue || bbf.x?.integerValue || "0"),
+            y: parseFloat(bbf.y?.doubleValue || bbf.y?.integerValue || "0"),
+            width: parseFloat(bbf.width?.doubleValue || bbf.width?.integerValue || "0"),
+            height: parseFloat(bbf.height?.doubleValue || bbf.height?.integerValue || "0"),
+            top: bbf.top ? parseFloat(bbf.top.doubleValue || bbf.top.integerValue || "0") : undefined,
+            unit: "pt"
+          },
+          confidence: parseFloat(rf.confidence?.doubleValue || rf.confidence?.integerValue || "1.0"),
+          ruleId: rf.ruleId?.stringValue || "",
+          evidence: evList,
+          summaryText: rf.summaryText?.stringValue
+        });
+      }
+    }
+
+    let drawMetadata: DrawMetadata | undefined;
+    if (fields.drawMetadata?.mapValue?.fields) {
+      const dmf = fields.drawMetadata.mapValue.fields;
+      const parseField = (fVal?: any): SemanticField<string> | undefined => {
+        if (!fVal?.mapValue?.fields) return undefined;
+        const ff = fVal.mapValue.fields;
+        const bbf = ff.boundingBox?.mapValue?.fields || {};
+        return {
+          name: ff.name?.stringValue || "",
+          value: ff.value?.stringValue || "",
+          rawText: ff.rawText?.stringValue || "",
+          sourceDocumentSha256: ff.sourceDocumentSha256?.stringValue || "",
+          sourcePageId: ff.sourcePageId?.stringValue || "",
+          sourcePageNumber: parseInt(ff.sourcePageNumber?.integerValue || "1", 10),
+          textBlockOrder: parseInt(ff.textBlockOrder?.integerValue || "0", 10),
+          boundingBox: {
+            x: parseFloat(bbf.x?.doubleValue || bbf.x?.integerValue || "0"),
+            y: parseFloat(bbf.y?.doubleValue || bbf.y?.integerValue || "0"),
+            width: parseFloat(bbf.width?.doubleValue || bbf.width?.integerValue || "0"),
+            height: parseFloat(bbf.height?.doubleValue || bbf.height?.integerValue || "0"),
+            top: bbf.top ? parseFloat(bbf.top.doubleValue || bbf.top.integerValue || "0") : undefined
+          },
+          ruleId: ff.ruleId?.stringValue || "",
+          confidence: parseFloat(ff.confidence?.doubleValue || ff.confidence?.integerValue || "1.0")
+        };
+      };
+
+      drawMetadata = {
+        lotteryName: parseField(dmf.lotteryName),
+        drawNumber: parseField(dmf.drawNumber),
+        drawDate: parseField(dmf.drawDate),
+        drawTime: parseField(dmf.drawTime),
+        location: parseField(dmf.location)
+      };
+    }
+
+    return {
+      id: fields.id?.stringValue || "",
+      documentSha256: fields.documentSha256?.stringValue || "",
+      classification,
+      regions,
+      drawMetadata,
+      pageCount: parseInt(fields.pageCount?.integerValue || "1", 10),
+      extractionVersion: fields.extractionVersion?.stringValue || "v1.0.0-text-layout",
+      semanticVersion: fields.semanticVersion?.stringValue || "v1.0.0-semantic-regions",
+      createdAt: fields.createdAt?.stringValue || ""
+    };
+  }
+}
+
