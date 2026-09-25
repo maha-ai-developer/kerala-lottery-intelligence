@@ -113,6 +113,16 @@ service cloud.firestore {
       allow write: if isResearcher();
     }
 
+    match /prize_tiers/{tierId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+
+    match /winning_results/{resultId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+
     // Knowledge Graph & Legal Rules
     match /acts/{actId} {
       allow read: if isAuthenticated();

@@ -895,3 +895,28 @@ export type {
   DocumentSemanticSegmentation
 } from "./semantic-segmentation";
 
+// ============================================================================
+// Milestone 3E Re-Exports: Validated Lottery Entities & Provenance
+// ============================================================================
+
+export {
+  extractLotteryEntitiesFromDocument,
+  LotteryEntityExtractorService,
+  validatePrizeTier,
+  validateSeries,
+  validateWinningResult,
+  validateLotteryEntityExtractionResult,
+  RULE_TIER_DECLARATION,
+  RULE_SERIES_EXTRACTION,
+  RULE_RESULT_FULL_TICKET,
+  RULE_RESULT_SUFFIX_NUMBER,
+  RULE_VALIDATION_REGION,
+  RULE_VALIDATION_FORMAT,
+  DEFAULT_ENTITY_PARSER_VERSION
+} from "./lottery-entity-extraction";
+
+export type {
+  LotteryEntityExtractionOptions
+} from "./lottery-entity-extraction";
+
+

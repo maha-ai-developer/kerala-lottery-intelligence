@@ -23,13 +23,18 @@ import type {
   DrawMetadata,
   ClassificationEvidence,
   DocumentClassificationResult,
-  DocumentSemanticSegmentation
+  DocumentSemanticSegmentation,
+  PrizeTier,
+  WinningResult,
+  Series
 } from "@kerala-lottery/domain";
 import {
   getDocumentPageId,
   validateDocumentPage,
   validateDocumentSemanticSegmentation,
-  DEFAULT_SEMANTIC_VERSION
+  DEFAULT_SEMANTIC_VERSION,
+  validatePrizeTier,
+  validateWinningResult
 } from "@kerala-lottery/documents";
 
 export type {
@@ -44,7 +49,10 @@ export type {
   DrawMetadata,
   ClassificationEvidence,
   DocumentClassificationResult,
-  DocumentSemanticSegmentation
+  DocumentSemanticSegmentation,
+  PrizeTier,
+  WinningResult,
+  Series
 };
 export { DEFAULT_SEMANTIC_VERSION };
 
@@ -59,6 +67,21 @@ export interface WinningNumberRepository {
   findByDrawId(drawId: string): Promise<WinningNumber[]>;
   findByCanonicalNumber(canonicalNumber: string): Promise<WinningNumber[]>;
   saveMany(numbers: WinningNumber[]): Promise<void>;
+}
+
+export interface PrizeTierRepository {
+  getById(id: string): Promise<PrizeTier | null>;
+  getByDocumentSha256(documentSha256: string): Promise<PrizeTier[]>;
+  save(tier: PrizeTier): Promise<void>;
+  saveBatch(tiers: PrizeTier[]): Promise<void>;
+}
+
+export interface WinningResultRepository {
+  getById(id: string): Promise<WinningResult | null>;
+  getByDocumentSha256(documentSha256: string): Promise<WinningResult[]>;
+  getByPrizeTierId(prizeTierId: string): Promise<WinningResult[]>;
+  save(result: WinningResult): Promise<void>;
+  saveBatch(results: WinningResult[]): Promise<void>;
 }
 
 import {
@@ -1331,4 +1354,495 @@ export class FirestoreRestDocumentSegmentationRepository implements DocumentSegm
     };
   }
 }
+
+// ============================================================================
+// Milestone 3E: Validated Lottery Entity Repositories
+// ============================================================================
+
+export class InMemoryPrizeTierRepository implements PrizeTierRepository {
+  private readonly storage = new Map<string, PrizeTier>();
+
+  async getById(id: string): Promise<PrizeTier | null> {
+    const found = this.storage.get(id);
+    return found ? { ...found } : null;
+  }
+
+  async getByDocumentSha256(documentSha256: string): Promise<PrizeTier[]> {
+    const normalized = documentSha256.toLowerCase();
+    const result: PrizeTier[] = [];
+    for (const tier of this.storage.values()) {
+      if (tier.documentSha256.toLowerCase() === normalized) {
+        result.push({ ...tier });
+      }
+    }
+    return result.sort((a, b) => a.rank - b.rank);
+  }
+
+  async save(tier: PrizeTier): Promise<void> {
+    validatePrizeTier(tier);
+    this.storage.set(tier.id, { ...tier });
+  }
+
+  async saveBatch(tiers: PrizeTier[]): Promise<void> {
+    for (const t of tiers) {
+      await this.save(t);
+    }
+  }
+
+  clear(): void {
+    this.storage.clear();
+  }
+}
+
+export class InMemoryWinningResultRepository implements WinningResultRepository {
+  private readonly storage = new Map<string, WinningResult>();
+
+  async getById(id: string): Promise<WinningResult | null> {
+    const found = this.storage.get(id);
+    return found ? { ...found } : null;
+  }
+
+  async getByDocumentSha256(documentSha256: string): Promise<WinningResult[]> {
+    const normalized = documentSha256.toLowerCase();
+    const result: WinningResult[] = [];
+    for (const r of this.storage.values()) {
+      if (r.documentSha256.toLowerCase() === normalized) {
+        result.push({ ...r });
+      }
+    }
+    return result;
+  }
+
+  async getByPrizeTierId(prizeTierId: string): Promise<WinningResult[]> {
+    const result: WinningResult[] = [];
+    for (const r of this.storage.values()) {
+      if (r.prizeTierId === prizeTierId) {
+        result.push({ ...r });
+      }
+    }
+    return result;
+  }
+
+  async save(result: WinningResult): Promise<void> {
+    validateWinningResult(result);
+    this.storage.set(result.id, { ...result });
+  }
+
+  async saveBatch(results: WinningResult[]): Promise<void> {
+    for (const r of results) {
+      await this.save(r);
+    }
+  }
+
+  clear(): void {
+    this.storage.clear();
+  }
+}
+
+export class FirestoreRestPrizeTierRepository implements PrizeTierRepository {
+  private readonly projectId: string;
+  private readonly databaseId: string;
+  private readonly collectionName: string;
+  private readonly getAccessToken: () => Promise<string> | string;
+
+  constructor(options: {
+    projectId: string;
+    databaseId?: string;
+    collectionName?: string;
+    getAccessToken: () => Promise<string> | string;
+  }) {
+    this.projectId = options.projectId;
+    this.databaseId = options.databaseId || "(default)";
+    this.collectionName = options.collectionName || "prize_tiers";
+    this.getAccessToken = options.getAccessToken;
+  }
+
+  private async getHeaders(): Promise<Record<string, string>> {
+    const token = await this.getAccessToken();
+    return {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json"
+    };
+  }
+
+  private get baseUrl(): string {
+    return `https://firestore.googleapis.com/v1/projects/${this.projectId}/databases/${this.databaseId}/documents`;
+  }
+
+  async getById(id: string): Promise<PrizeTier | null> {
+    const url = `${this.baseUrl}/${this.collectionName}/${encodeURIComponent(id)}`;
+    const headers = await this.getHeaders();
+    const res = await fetch(url, { headers });
+
+    if (res.status === 404) return null;
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Firestore REST GET failed (${res.status}): ${errText}`);
+    }
+
+    const data = await res.json();
+    if (!data.fields) return null;
+    return this.fromFirestoreFields(data.fields);
+  }
+
+  async getByDocumentSha256(documentSha256: string): Promise<PrizeTier[]> {
+    const normalized = documentSha256.trim().toLowerCase();
+    const url = `${this.baseUrl}:runQuery`;
+    const headers = await this.getHeaders();
+    const body = JSON.stringify({
+      structuredQuery: {
+        from: [{ collectionId: this.collectionName }],
+        where: {
+          fieldFilter: {
+            field: { fieldPath: "documentSha256" },
+            op: "EQUAL",
+            value: { stringValue: normalized }
+          }
+        }
+      }
+    });
+
+    const res = await fetch(url, { method: "POST", headers, body });
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`Failed to query prize tiers for ${normalized}: HTTP ${res.status} - ${err}`);
+    }
+
+    const data = (await res.json()) as Array<{ document?: { fields: Record<string, any> } }>;
+    const tiers: PrizeTier[] = [];
+    for (const item of data) {
+      if (item.document?.fields) {
+        tiers.push(this.fromFirestoreFields(item.document.fields));
+      }
+    }
+    return tiers.sort((a, b) => a.rank - b.rank);
+  }
+
+  async save(tier: PrizeTier): Promise<void> {
+    validatePrizeTier(tier);
+    const url = `${this.baseUrl}/${this.collectionName}/${encodeURIComponent(tier.id)}`;
+    const headers = await this.getHeaders();
+    const body = JSON.stringify({ fields: this.toFirestoreFields(tier) });
+
+    const res = await fetch(url, {
+      method: "PATCH",
+      headers,
+      body
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Firestore REST PATCH failed (${res.status}): ${errText}`);
+    }
+  }
+
+  async saveBatch(tiers: PrizeTier[]): Promise<void> {
+    for (const tier of tiers) {
+      await this.save(tier);
+    }
+  }
+
+  private toFirestoreFields(tier: PrizeTier): Record<string, any> {
+    const fields: Record<string, any> = {
+      id: { stringValue: tier.id },
+      documentSha256: { stringValue: tier.documentSha256 },
+      pageId: { stringValue: tier.pageId },
+      pageNumber: { integerValue: tier.pageNumber.toString() },
+      sourceTextBlockOrders: {
+        arrayValue: {
+          values: tier.sourceTextBlockOrders.map((o) => ({ integerValue: o.toString() }))
+        }
+      },
+      rawSourceText: { stringValue: tier.rawSourceText },
+      boundingBox: {
+        mapValue: {
+          fields: {
+            x: { doubleValue: tier.boundingBox.x },
+            y: { doubleValue: tier.boundingBox.y },
+            width: { doubleValue: tier.boundingBox.width },
+            height: { doubleValue: tier.boundingBox.height },
+            top: { doubleValue: tier.boundingBox.top ?? 0 },
+            unit: { stringValue: tier.boundingBox.unit }
+          }
+        }
+      },
+      parserRule: { stringValue: tier.parserRule },
+      parserVersion: { stringValue: tier.parserVersion },
+      name: { stringValue: tier.name },
+      rank: { integerValue: tier.rank.toString() },
+      tierType: { stringValue: tier.tierType },
+      isSuffix: { booleanValue: tier.isSuffix },
+      expectedLength: { integerValue: tier.expectedLength.toString() },
+      confidence: { doubleValue: tier.confidence },
+      createdAt: { stringValue: tier.createdAt }
+    };
+    if (tier.amount !== undefined) {
+      fields.amount = { integerValue: tier.amount.toString() };
+    }
+    if (tier.currency) {
+      fields.currency = { stringValue: tier.currency };
+    }
+    return fields;
+  }
+
+  private fromFirestoreFields(fields: Record<string, any>): PrizeTier {
+    const bbf = fields.boundingBox?.mapValue?.fields || {};
+    const orders: number[] = [];
+    if (fields.sourceTextBlockOrders?.arrayValue?.values) {
+      for (const v of fields.sourceTextBlockOrders.arrayValue.values) {
+        orders.push(parseInt(v.integerValue || "0", 10));
+      }
+    }
+
+    return {
+      id: fields.id?.stringValue || "",
+      documentSha256: fields.documentSha256?.stringValue || "",
+      pageId: fields.pageId?.stringValue || "",
+      pageNumber: parseInt(fields.pageNumber?.integerValue || "1", 10),
+      sourceTextBlockOrders: orders,
+      rawSourceText: fields.rawSourceText?.stringValue || "",
+      boundingBox: {
+        x: parseFloat(bbf.x?.doubleValue || bbf.x?.integerValue || "0"),
+        y: parseFloat(bbf.y?.doubleValue || bbf.y?.integerValue || "0"),
+        width: parseFloat(bbf.width?.doubleValue || bbf.width?.integerValue || "0"),
+        height: parseFloat(bbf.height?.doubleValue || bbf.height?.integerValue || "0"),
+        top: bbf.top ? parseFloat(bbf.top.doubleValue || bbf.top.integerValue || "0") : undefined,
+        unit: "pt"
+      },
+      parserRule: fields.parserRule?.stringValue || "",
+      parserVersion: fields.parserVersion?.stringValue || "",
+      name: fields.name?.stringValue || "",
+      rank: parseInt(fields.rank?.integerValue || "0", 10),
+      tierType: (fields.tierType?.stringValue || "OTHER") as any,
+      amount: fields.amount?.integerValue ? parseInt(fields.amount.integerValue, 10) : undefined,
+      currency: fields.currency?.stringValue as "INR" | undefined,
+      isSuffix: fields.isSuffix?.booleanValue ?? false,
+      expectedLength: parseInt(fields.expectedLength?.integerValue || "6", 10),
+      confidence: parseFloat(fields.confidence?.doubleValue || fields.confidence?.integerValue || "1.0"),
+      createdAt: fields.createdAt?.stringValue || ""
+    };
+  }
+}
+
+export class FirestoreRestWinningResultRepository implements WinningResultRepository {
+  private readonly projectId: string;
+  private readonly databaseId: string;
+  private readonly collectionName: string;
+  private readonly getAccessToken: () => Promise<string> | string;
+
+  constructor(options: {
+    projectId: string;
+    databaseId?: string;
+    collectionName?: string;
+    getAccessToken: () => Promise<string> | string;
+  }) {
+    this.projectId = options.projectId;
+    this.databaseId = options.databaseId || "(default)";
+    this.collectionName = options.collectionName || "winning_results";
+    this.getAccessToken = options.getAccessToken;
+  }
+
+  private async getHeaders(): Promise<Record<string, string>> {
+    const token = await this.getAccessToken();
+    return {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json"
+    };
+  }
+
+  private get baseUrl(): string {
+    return `https://firestore.googleapis.com/v1/projects/${this.projectId}/databases/${this.databaseId}/documents`;
+  }
+
+  async getById(id: string): Promise<WinningResult | null> {
+    const url = `${this.baseUrl}/${this.collectionName}/${encodeURIComponent(id)}`;
+    const headers = await this.getHeaders();
+    const res = await fetch(url, { headers });
+
+    if (res.status === 404) return null;
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Firestore REST GET failed (${res.status}): ${errText}`);
+    }
+
+    const data = await res.json();
+    if (!data.fields) return null;
+    return this.fromFirestoreFields(data.fields);
+  }
+
+  async getByDocumentSha256(documentSha256: string): Promise<WinningResult[]> {
+    const normalized = documentSha256.trim().toLowerCase();
+    const url = `${this.baseUrl}:runQuery`;
+    const headers = await this.getHeaders();
+    const body = JSON.stringify({
+      structuredQuery: {
+        from: [{ collectionId: this.collectionName }],
+        where: {
+          fieldFilter: {
+            field: { fieldPath: "documentSha256" },
+            op: "EQUAL",
+            value: { stringValue: normalized }
+          }
+        }
+      }
+    });
+
+    const res = await fetch(url, { method: "POST", headers, body });
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`Failed to query winning results for ${normalized}: HTTP ${res.status} - ${err}`);
+    }
+
+    const data = (await res.json()) as Array<{ document?: { fields: Record<string, any> } }>;
+    const results: WinningResult[] = [];
+    for (const item of data) {
+      if (item.document?.fields) {
+        results.push(this.fromFirestoreFields(item.document.fields));
+      }
+    }
+    return results;
+  }
+
+  async getByPrizeTierId(prizeTierId: string): Promise<WinningResult[]> {
+    const url = `${this.baseUrl}:runQuery`;
+    const headers = await this.getHeaders();
+    const body = JSON.stringify({
+      structuredQuery: {
+        from: [{ collectionId: this.collectionName }],
+        where: {
+          fieldFilter: {
+            field: { fieldPath: "prizeTierId" },
+            op: "EQUAL",
+            value: { stringValue: prizeTierId }
+          }
+        }
+      }
+    });
+
+    const res = await fetch(url, { method: "POST", headers, body });
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`Failed to query winning results for tier ${prizeTierId}: HTTP ${res.status} - ${err}`);
+    }
+
+    const data = (await res.json()) as Array<{ document?: { fields: Record<string, any> } }>;
+    const results: WinningResult[] = [];
+    for (const item of data) {
+      if (item.document?.fields) {
+        results.push(this.fromFirestoreFields(item.document.fields));
+      }
+    }
+    return results;
+  }
+
+  async save(result: WinningResult): Promise<void> {
+    validateWinningResult(result);
+    const url = `${this.baseUrl}/${this.collectionName}/${encodeURIComponent(result.id)}`;
+    const headers = await this.getHeaders();
+    const body = JSON.stringify({ fields: this.toFirestoreFields(result) });
+
+    const res = await fetch(url, {
+      method: "PATCH",
+      headers,
+      body
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Firestore REST PATCH failed (${res.status}): ${errText}`);
+    }
+  }
+
+  async saveBatch(results: WinningResult[]): Promise<void> {
+    for (const r of results) {
+      await this.save(r);
+    }
+  }
+
+  private toFirestoreFields(result: WinningResult): Record<string, any> {
+    const fields: Record<string, any> = {
+      id: { stringValue: result.id },
+      documentSha256: { stringValue: result.documentSha256 },
+      pageId: { stringValue: result.pageId },
+      pageNumber: { integerValue: result.pageNumber.toString() },
+      sourceTextBlockOrders: {
+        arrayValue: {
+          values: result.sourceTextBlockOrders.map((o) => ({ integerValue: o.toString() }))
+        }
+      },
+      rawSourceText: { stringValue: result.rawSourceText },
+      boundingBox: {
+        mapValue: {
+          fields: {
+            x: { doubleValue: result.boundingBox.x },
+            y: { doubleValue: result.boundingBox.y },
+            width: { doubleValue: result.boundingBox.width },
+            height: { doubleValue: result.boundingBox.height },
+            top: { doubleValue: result.boundingBox.top ?? 0 },
+            unit: { stringValue: result.boundingBox.unit }
+          }
+        }
+      },
+      parserRule: { stringValue: result.parserRule },
+      parserVersion: { stringValue: result.parserVersion },
+      prizeTierId: { stringValue: result.prizeTierId },
+      prizeTierName: { stringValue: result.prizeTierName },
+      rank: { integerValue: result.rank.toString() },
+      canonicalNumber: { stringValue: result.canonicalNumber },
+      numberLength: { integerValue: result.numberLength.toString() },
+      isSuffix: { booleanValue: result.isSuffix },
+      confidence: { doubleValue: result.confidence },
+      validationStatus: { stringValue: result.validationStatus },
+      createdAt: { stringValue: result.createdAt }
+    };
+    if (result.drawId) fields.drawId = { stringValue: result.drawId };
+    if (result.amount !== undefined) fields.amount = { integerValue: result.amount.toString() };
+    if (result.series) fields.series = { stringValue: result.series };
+    if (result.location) fields.location = { stringValue: result.location };
+    return fields;
+  }
+
+  private fromFirestoreFields(fields: Record<string, any>): WinningResult {
+    const bbf = fields.boundingBox?.mapValue?.fields || {};
+    const orders: number[] = [];
+    if (fields.sourceTextBlockOrders?.arrayValue?.values) {
+      for (const v of fields.sourceTextBlockOrders.arrayValue.values) {
+        orders.push(parseInt(v.integerValue || "0", 10));
+      }
+    }
+
+    return {
+      id: fields.id?.stringValue || "",
+      documentSha256: fields.documentSha256?.stringValue || "",
+      pageId: fields.pageId?.stringValue || "",
+      pageNumber: parseInt(fields.pageNumber?.integerValue || "1", 10),
+      sourceTextBlockOrders: orders,
+      rawSourceText: fields.rawSourceText?.stringValue || "",
+      boundingBox: {
+        x: parseFloat(bbf.x?.doubleValue || bbf.x?.integerValue || "0"),
+        y: parseFloat(bbf.y?.doubleValue || bbf.y?.integerValue || "0"),
+        width: parseFloat(bbf.width?.doubleValue || bbf.width?.integerValue || "0"),
+        height: parseFloat(bbf.height?.doubleValue || bbf.height?.integerValue || "0"),
+        top: bbf.top ? parseFloat(bbf.top.doubleValue || bbf.top.integerValue || "0") : undefined,
+        unit: "pt"
+      },
+      parserRule: fields.parserRule?.stringValue || "",
+      parserVersion: fields.parserVersion?.stringValue || "",
+      drawId: fields.drawId?.stringValue,
+      prizeTierId: fields.prizeTierId?.stringValue || "",
+      prizeTierName: fields.prizeTierName?.stringValue || "",
+      rank: parseInt(fields.rank?.integerValue || "0", 10),
+      amount: fields.amount?.integerValue ? parseInt(fields.amount.integerValue, 10) : undefined,
+      series: fields.series?.stringValue,
+      canonicalNumber: fields.canonicalNumber?.stringValue || "",
+      numberLength: parseInt(fields.numberLength?.integerValue || "4", 10),
+      isSuffix: fields.isSuffix?.booleanValue ?? false,
+      location: fields.location?.stringValue,
+      confidence: parseFloat(fields.confidence?.doubleValue || fields.confidence?.integerValue || "1.0"),
+      validationStatus: (fields.validationStatus?.stringValue || "VALID") as any,
+      createdAt: fields.createdAt?.stringValue || ""
+    };
+  }
+}
+
 

@@ -289,6 +289,117 @@ export interface DocumentSemanticSegmentation {
 export const DEFAULT_SEMANTIC_VERSION = "v1.0.0-semantic-regions";
 
 // ============================================================================
+// Milestone 3E: Validated Lottery Entities & Provenance Contracts
+// ============================================================================
+
+export type PrizeTierType = "RANKED" | "CONSOLATION" | "SPECIAL";
+
+/**
+ * Validated prize tier entity extracted from explicit PRIZE_STRUCTURE observations.
+ */
+export interface PrizeTier {
+  id: string; // Deterministic: `${documentSha256}_tier_${tierCode}`
+  documentSha256: string;
+  pageId: string;
+  pageNumber: number;
+  sourceTextBlockOrders: number[];
+  rawSourceText: string;
+  boundingBox: RegionBoundingBox;
+  parserRule: string;
+  parserVersion: string;
+  name: string; // e.g. "1st Prize", "Cons Prize", "2nd Prize", "4th Prize"
+  rank: number; // 1 for 1st, 2 for 2nd, 0 for Consolation
+  tierType: PrizeTierType;
+  amount?: number; // Numeric prize amount in INR, e.g. 10000000, 5000
+  currency?: "INR";
+  isSuffix: boolean; // True for suffix tiers ("FOR THE TICKETS ENDING...")
+  expectedLength: number; // 6 for full ticket, 4 for suffix
+  confidence: number;
+  createdAt: string; // ISO 8601
+}
+
+/**
+ * Validated lottery series/prefix entity extracted from full ticket prize tiers.
+ */
+export interface Series {
+  id: string; // Deterministic: `${documentSha256}_series_${code}_${pageNumber}_${order}`
+  documentSha256: string;
+  pageId: string;
+  pageNumber: number;
+  sourceTextBlockOrders: number[];
+  rawSourceText: string;
+  boundingBox: RegionBoundingBox;
+  parserRule: string;
+  parserVersion: string;
+  code: string; // 2-letter uppercase alphabetic code e.g. "DW", "DO", "DN", "DB"
+  confidence: number;
+  createdAt: string; // ISO 8601
+}
+
+/**
+ * Validated individual prize payout result entity linking tier, number, series, and provenance.
+ */
+export interface WinningResult {
+  id: string; // Deterministic: `${prizeTierId}_result_${canonicalNumber}${series ? '_' + series : ''}`
+  documentSha256: string;
+  pageId: string;
+  pageNumber: number;
+  sourceTextBlockOrders: number[];
+  rawSourceText: string;
+  boundingBox: RegionBoundingBox;
+  parserRule: string;
+  parserVersion: string;
+  drawId?: string;
+  prizeTierId: string;
+  prizeTierName: string;
+  rank: number;
+  amount?: number;
+  series?: string;
+  canonicalNumber: string; // Exact digits preserved as string, e.g. "0259", "809210"
+  numberLength: number;
+  isSuffix: boolean;
+  location?: string; // Agency / location if present, e.g. "ERNAKULAM", "PALAKKAD"
+  confidence: number;
+  validationStatus: "VALID" | "FLAGGED" | "PENDING_REVIEW";
+  createdAt: string; // ISO 8601
+}
+
+export type CandidateRejectionReason =
+  | "OUTSIDE_PRIZE_STRUCTURE"
+  | "UNASSOCIATED_TIER"
+  | "INVALID_LENGTH"
+  | "NON_NUMERIC"
+  | "AMBIGUOUS"
+  | "MALFORMED_SERIES";
+
+export interface RejectedCandidate {
+  reason: CandidateRejectionReason;
+  rawText: string;
+  pageNumber: number;
+  textBlockOrder: number;
+  boundingBox: RegionBoundingBox;
+  ruleId: string;
+  detail?: string;
+}
+
+export interface LotteryEntityExtractionResult {
+  documentSha256: string;
+  drawId: string;
+  drawMetadata?: DrawMetadata;
+  prizeTiers: PrizeTier[];
+  series: Series[];
+  winningResults: WinningResult[];
+  winningNumbers: WinningNumber[];
+  rejectedCandidates: RejectedCandidate[];
+  parserVersion: string;
+  extractionVersion: string;
+  semanticVersion: string;
+  createdAt: string;
+}
+
+export const DEFAULT_ENTITY_PARSER_VERSION = "v1.0.0-validated-entities";
+
+// ============================================================================
 // Kerala Lottery Core Data Model
 // ============================================================================
 
@@ -348,20 +459,33 @@ export interface PrizeResult {
  */
 export interface WinningNumber {
   id: string;
-  drawId: string;
-  prizeResultId: string;
+  documentSha256: string;
+  pageId: string;
+  pageNumber: number;
+  sourceTextBlockOrders: number[];
+  rawSourceText: string;
+  boundingBox: RegionBoundingBox;
+  parserRule: string;
+  parserVersion: string;
+  drawId?: string;
+  prizeResultId?: string;
+  prizeTierId?: string;
+  prizeTierName?: string;
+  rank?: number;
+  amount?: number;
   series?: string; // e.g. "DB", "WA", or undefined for suffix draws
   canonicalNumber: string; // String with exact digits preserved e.g. "0276", "293215"
   numberLength: number; // e.g. 4 for 4-digit suffix, 6 for full ticket number
   isSuffix: boolean;
   suffixLength?: number;
   resultType: PrizeResultType;
-  sourceDocumentId: string;
-  sourcePage: number;
-  sourceText: string;
+  sourceDocumentId?: string; // Backward compatibility alias
+  sourcePage?: number; // Backward compatibility alias
+  sourceText?: string; // Backward compatibility alias
   confidence: number;
   validationStatus: "VALID" | "FLAGGED" | "PENDING_REVIEW";
   derivedNumericValue?: number; // Optional derived value ONLY, canonicalNumber always rules
+  createdAt?: string;
 }
 
 // ============================================================================
