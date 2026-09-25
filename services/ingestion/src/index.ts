@@ -28,6 +28,7 @@ import {
 export * from "./errors";
 export * from "./acquisition";
 export * from "./discovery";
+export * from "./page-extraction";
 
 export interface IngestDocumentInput {
   fileBuffer: Uint8Array;

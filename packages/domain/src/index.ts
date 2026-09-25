@@ -116,6 +116,86 @@ export interface SourceEvidence {
 }
 
 // ============================================================================
+// Milestone 3C: PDF Page Observation & Text Layout Contracts
+// ============================================================================
+
+export type PageExtractionStatus =
+  | "TEXT_LAYER"
+  | "IMAGE_ONLY"
+  | "MIXED"
+  | "FAILED";
+
+/**
+ * Text block representing a physical, structural text segment on a PDF page.
+ *
+ * Coordinate Convention:
+ * - Unit: PostScript points (pt), where 1 pt = 1/72 inch.
+ * - Primary Origin: BOTTOM_LEFT of page (standard PDF user space coordinate system).
+ *   - x: horizontal offset from left edge of page to left edge of text box (x-axis increases right).
+ *   - y: vertical offset from bottom edge of page to bottom edge of text box (y-axis increases upwards).
+ *   - width: width of bounding box in points.
+ *   - height: height of bounding box in points.
+ * - Derived Top-Down Coordinate (for Web/CSS overlays):
+ *   - top: vertical offset from top edge of page (pageHeight - (y + height)).
+ */
+export interface TextBlock {
+  id?: string;
+  order: number; // 0-based extraction/reading order index
+  text: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  top?: number;
+  fontName?: string;
+  fontSize?: number;
+  fontWeight?: string;
+  rotation?: number;
+}
+
+export interface PageGeometry {
+  width: number;
+  height: number;
+  unit: "pt";
+  rotation: number;
+  coordinateSystem: {
+    origin: "BOTTOM_LEFT";
+    xAxis: "RIGHT";
+    yAxis: "UP";
+    unit: "pt";
+  };
+}
+
+/**
+ * Physical observation layer representing an individual page of a source PDF.
+ *
+ * Invariants:
+ * - documentSha256 + pageNumber = unique deterministic page identity.
+ * - ID format: `${documentSha256}_${pageNumber}`
+ * - Page numbering is 1-based (1 <= pageNumber <= pageCount).
+ * - Pure observation of physical layout and text without semantic interpretation.
+ */
+export interface DocumentPage {
+  id: string; // Deterministic: `${documentSha256}_${pageNumber}`
+  documentSha256: string; // 64-character lowercase SHA-256 of source document
+  pageNumber: number; // 1-based page number (1, 2, ... pageCount)
+  pageCount: number; // Total number of pages in the source PDF
+  extractionMethod: string; // e.g. "PDFJS_TEXT_LAYOUT"
+  extractionVersion: string; // e.g. "v1.0.0-text-layout"
+  extractionStatus: PageExtractionStatus;
+  text: string; // Concatenated text content of the page
+  textBlocks: TextBlock[]; // Structural text blocks with coordinates and typography
+  pageWidth: number; // Width in points (pt)
+  pageHeight: number; // Height in points (pt)
+  unit: "pt"; // Measurement unit for coordinates and dimensions
+  hasImages: boolean; // True if raster or vector image objects are present on the page
+  createdAt: string; // ISO 8601
+  updatedAt: string; // ISO 8601
+  errorMessage?: string; // Descriptive error message if extractionStatus === "FAILED"
+}
+
+
+// ============================================================================
 // Kerala Lottery Core Data Model
 // ============================================================================
 

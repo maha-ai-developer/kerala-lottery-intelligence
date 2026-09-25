@@ -1,10 +1,15 @@
 import { createHash } from "node:crypto";
+import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 import type {
   DocumentType,
   SourceDocument,
   OfficialSource,
   DocumentProvenance,
-  HttpProvenanceMetadata
+  HttpProvenanceMetadata,
+  DocumentPage,
+  TextBlock,
+  PageExtractionStatus,
+  PageGeometry
 } from "@kerala-lottery/domain";
 
 export type {
@@ -12,7 +17,11 @@ export type {
   DocumentType,
   OfficialSource,
   DocumentProvenance,
-  HttpProvenanceMetadata
+  HttpProvenanceMetadata,
+  DocumentPage,
+  TextBlock,
+  PageExtractionStatus,
+  PageGeometry
 };
 
 /**
@@ -401,3 +410,451 @@ export function classifyDocumentText(extractedText: string): DocumentClassificat
     confidence: 0.5
   };
 }
+
+// ============================================================================
+// Milestone 3C: PDF Layout Extraction, Text Segmentation & Page Observation
+// ============================================================================
+
+export const DEFAULT_EXTRACTION_VERSION = "v1.0.0-text-layout";
+export const DEFAULT_EXTRACTION_METHOD = "PDFJS_TEXT_LAYOUT";
+
+/**
+ * Deterministic multi-page synthetic PDF fixture for Milestone 3C layout tests.
+ * Contains 3 pages:
+ * - Page 1: 2 structured text blocks with known coordinates and typography
+ * - Page 2: 1 structured text block
+ * - Page 3: 0 text blocks (scanned / image-only test page)
+ * Page dimensions: 612 x 792 pt (US Letter).
+ * Free from misleading lottery numbers.
+ */
+export const DEV_SYNTHETIC_LAYOUT_FIXTURE_BYTES: Uint8Array = new Uint8Array(
+  Buffer.from(
+    "%PDF-1.4\n" +
+    "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n" +
+    "2 0 obj\n<< /Type /Pages /Kids [3 0 R 4 0 R 5 0 R] /Count 3 >>\nendobj\n" +
+    "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 7 0 R /Resources << /Font << /F1 6 0 R >> >> >>\nendobj\n" +
+    "4 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 8 0 R /Resources << /Font << /F1 6 0 R >> >> >>\nendobj\n" +
+    "5 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 9 0 R >>\nendobj\n" +
+    "6 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n" +
+    "7 0 obj\n<< /Length 99 >>\nstream\nBT\n/F1 14 Tf\n100 700 Td\n(KERALA STATE LOTTERIES) Tj\n0 -50 Td\n(Milestone 3C Layout Extraction) Tj\nET\nendstream\nendobj\n" +
+    "8 0 obj\n<< /Length 58 >>\nstream\nBT\n/F1 12 Tf\n120 720 Td\n(Physical Observation Layer) Tj\nET\nendstream\nendobj\n" +
+    "9 0 obj\n<< /Length 0 >>\nstream\n\nendstream\nendobj\n" +
+    "xref\n0 10\n0000000000 65535 f \n" +
+    "0000000009 00000 n \n" +
+    "0000000058 00000 n \n" +
+    "0000000127 00000 n \n" +
+    "0000000253 00000 n \n" +
+    "0000000379 00000 n \n" +
+    "0000000466 00000 n \n" +
+    "0000000536 00000 n \n" +
+    "0000000685 00000 n \n" +
+    "0000000793 00000 n \n" +
+    "trailer\n<< /Size 10 /Root 1 0 R >>\nstartxref\n842\n%%EOF",
+    "utf8"
+  )
+);
+
+export const DEV_SYNTHETIC_LAYOUT_FIXTURE_SHA256 =
+  "dc0f9293b5cb75220e1bea359fe13c734b0e2b09d61534a0fae06601d24f2856";
+
+/**
+ * Returns deterministic Firestore document ID for a page: `${documentSha256}_${pageNumber}`.
+ */
+export function getDocumentPageId(documentSha256: string, pageNumber: number): string {
+  if (!documentSha256 || typeof documentSha256 !== "string") {
+    throw new DocumentValidationError("documentSha256 must be a non-empty string", "INVALID_SHA256");
+  }
+  const normalizedSha = documentSha256.trim().toLowerCase();
+  if (!/^[a-f0-9]{64}$/.test(normalizedSha)) {
+    throw new DocumentValidationError(
+      `Invalid documentSha256 '${documentSha256}'. Expected 64 lowercase hexadecimal characters.`,
+      "INVALID_SHA256"
+    );
+  }
+  if (!Number.isInteger(pageNumber) || pageNumber < 1) {
+    throw new DocumentValidationError(
+      `pageNumber must be a positive 1-based integer, received ${pageNumber}`,
+      "INVALID_PAGE_NUMBER"
+    );
+  }
+  return `${normalizedSha}_${pageNumber}`;
+}
+
+/**
+ * Validates a TextBlock structural invariant.
+ */
+export function validateTextBlock(block: TextBlock): void {
+  if (!block || typeof block !== "object") {
+    throw new DocumentValidationError("TextBlock must be a valid object", "INVALID_TEXT_BLOCK");
+  }
+  if (typeof block.order !== "number" || block.order < 0 || !Number.isInteger(block.order)) {
+    throw new DocumentValidationError(
+      `TextBlock order must be a non-negative integer, received ${block.order}`,
+      "INVALID_BLOCK_ORDER"
+    );
+  }
+  if (typeof block.text !== "string") {
+    throw new DocumentValidationError("TextBlock text must be a string", "INVALID_BLOCK_TEXT");
+  }
+  if (typeof block.x !== "number" || isNaN(block.x)) {
+    throw new DocumentValidationError(`TextBlock x coordinate must be a valid number, received ${block.x}`, "INVALID_COORDINATE");
+  }
+  if (typeof block.y !== "number" || isNaN(block.y)) {
+    throw new DocumentValidationError(`TextBlock y coordinate must be a valid number, received ${block.y}`, "INVALID_COORDINATE");
+  }
+  if (typeof block.width !== "number" || block.width < 0 || isNaN(block.width)) {
+    throw new DocumentValidationError(`TextBlock width must be a non-negative number, received ${block.width}`, "INVALID_DIMENSION");
+  }
+  if (typeof block.height !== "number" || block.height < 0 || isNaN(block.height)) {
+    throw new DocumentValidationError(`TextBlock height must be a non-negative number, received ${block.height}`, "INVALID_DIMENSION");
+  }
+}
+
+/**
+ * Validates a DocumentPage entity ensuring deterministic identity, provenance, and geometry invariants.
+ */
+export function validateDocumentPage(page: DocumentPage): void {
+  if (!page || typeof page !== "object") {
+    throw new DocumentValidationError("DocumentPage must be a valid object", "INVALID_PAGE");
+  }
+  if (!page.documentSha256 || !/^[a-f0-9]{64}$/.test(page.documentSha256)) {
+    throw new DocumentValidationError(
+      `DocumentPage documentSha256 must be a 64-character lowercase hex string, received '${page.documentSha256}'`,
+      "INVALID_SHA256"
+    );
+  }
+  if (!Number.isInteger(page.pageNumber) || page.pageNumber < 1) {
+    throw new DocumentValidationError(
+      `DocumentPage pageNumber must be a positive integer (1-based), received ${page.pageNumber}`,
+      "INVALID_PAGE_NUMBER"
+    );
+  }
+  if (!Number.isInteger(page.pageCount) || page.pageCount < 1) {
+    throw new DocumentValidationError(
+      `DocumentPage pageCount must be a positive integer, received ${page.pageCount}`,
+      "INVALID_PAGE_COUNT"
+    );
+  }
+  if (page.pageNumber > page.pageCount) {
+    throw new DocumentValidationError(
+      `DocumentPage pageNumber (${page.pageNumber}) exceeds pageCount (${page.pageCount})`,
+      "PAGE_NUMBER_OUT_OF_BOUNDS"
+    );
+  }
+  const expectedId = getDocumentPageId(page.documentSha256, page.pageNumber);
+  if (page.id !== expectedId) {
+    throw new DocumentValidationError(
+      `DocumentPage id ('${page.id}') must match deterministic page ID ('${expectedId}')`,
+      "PAGE_ID_MISMATCH"
+    );
+  }
+  if (!page.extractionMethod || typeof page.extractionMethod !== "string") {
+    throw new DocumentValidationError("DocumentPage extractionMethod must be a non-empty string", "INVALID_EXTRACTION_METHOD");
+  }
+  if (!page.extractionVersion || typeof page.extractionVersion !== "string") {
+    throw new DocumentValidationError("DocumentPage extractionVersion must be a non-empty string", "INVALID_EXTRACTION_VERSION");
+  }
+  const validStatuses: PageExtractionStatus[] = ["TEXT_LAYER", "IMAGE_ONLY", "MIXED", "FAILED"];
+  if (!validStatuses.includes(page.extractionStatus)) {
+    throw new DocumentValidationError(
+      `DocumentPage extractionStatus must be one of [${validStatuses.join(", ")}], received '${page.extractionStatus}'`,
+      "INVALID_EXTRACTION_STATUS"
+    );
+  }
+  if (typeof page.text !== "string") {
+    throw new DocumentValidationError("DocumentPage text must be a string", "INVALID_PAGE_TEXT");
+  }
+  if (!Array.isArray(page.textBlocks)) {
+    throw new DocumentValidationError("DocumentPage textBlocks must be an array", "INVALID_TEXT_BLOCKS");
+  }
+  for (const block of page.textBlocks) {
+    validateTextBlock(block);
+  }
+  if (typeof page.pageWidth !== "number" || page.pageWidth <= 0) {
+    throw new DocumentValidationError(`DocumentPage pageWidth must be a positive number, received ${page.pageWidth}`, "INVALID_DIMENSION");
+  }
+  if (typeof page.pageHeight !== "number" || page.pageHeight <= 0) {
+    throw new DocumentValidationError(`DocumentPage pageHeight must be a positive number, received ${page.pageHeight}`, "INVALID_DIMENSION");
+  }
+  if (page.unit !== "pt") {
+    throw new DocumentValidationError(`DocumentPage unit must be 'pt', received '${page.unit}'`, "INVALID_UNIT");
+  }
+  if (typeof page.hasImages !== "boolean") {
+    throw new DocumentValidationError("DocumentPage hasImages must be a boolean", "INVALID_HAS_IMAGES");
+  }
+  if (!page.createdAt || isNaN(Date.parse(page.createdAt))) {
+    throw new DocumentValidationError(`DocumentPage createdAt must be a valid ISO 8601 string, received '${page.createdAt}'`, "INVALID_CREATED_AT");
+  }
+}
+
+export interface PageExtractionOptions {
+  extractionVersion?: string;
+  extractionMethod?: string;
+}
+
+export interface ExtractionResult {
+  documentSha256: string;
+  pageCount: number;
+  pages: DocumentPage[];
+  extractionVersion: string;
+  extractionMethod: string;
+}
+
+/**
+ * Server-side PDF extraction engine built on pdfjs-dist.
+ *
+ * Observes page structure, dimensions, layout text blocks, and coordinates
+ * without any semantic lottery interpretation.
+ */
+export class PdfPageExtractorService {
+  constructor(
+    public readonly defaultVersion: string = DEFAULT_EXTRACTION_VERSION,
+    public readonly defaultMethod: string = DEFAULT_EXTRACTION_METHOD
+  ) {}
+
+  async extractPages(
+    pdfBuffer: Uint8Array,
+    documentSha256: string,
+    options?: PageExtractionOptions
+  ): Promise<ExtractionResult> {
+    validatePdfBuffer(pdfBuffer);
+
+    if (!documentSha256 || typeof documentSha256 !== "string") {
+      throw new DocumentValidationError("documentSha256 must be a non-empty string", "INVALID_SHA256");
+    }
+    const normalizedSha = documentSha256.trim().toLowerCase();
+    if (!/^[a-f0-9]{64}$/.test(normalizedSha)) {
+      throw new DocumentValidationError(
+        `Invalid documentSha256 '${documentSha256}'. Expected 64 lowercase hexadecimal characters.`,
+        "INVALID_SHA256"
+      );
+    }
+
+    const extractionVersion = options?.extractionVersion || this.defaultVersion;
+    const extractionMethod = options?.extractionMethod || this.defaultMethod;
+    const now = new Date().toISOString();
+
+    let doc: any;
+    try {
+      const loadingTask = pdfjsLib.getDocument({
+        data: new Uint8Array(pdfBuffer),
+        useSystemFonts: true,
+        disableFontFace: true,
+        isEvalSupported: false
+      });
+      doc = await loadingTask.promise;
+    } catch (err: any) {
+      throw new DocumentValidationError(
+        `Failed to parse PDF document structure: ${err?.message || String(err)}`,
+        "PDF_PARSE_FAILED"
+      );
+    }
+
+    const pageCount = doc.numPages;
+    if (typeof pageCount !== "number" || pageCount < 1) {
+      throw new DocumentValidationError(
+        `Extracted page count is invalid: ${pageCount}`,
+        "INVALID_PAGE_COUNT"
+      );
+    }
+
+    const pages: DocumentPage[] = [];
+
+    for (let pageNumber = 1; pageNumber <= pageCount; pageNumber++) {
+      try {
+        const page = await doc.getPage(pageNumber);
+        const vp = page.getViewport({ scale: 1.0 });
+        const pageWidth = Number(vp.width.toFixed(2));
+        const pageHeight = Number(vp.height.toFixed(2));
+
+        // Detect raster and vector image operators
+        const ops = await page.getOperatorList();
+        const OPS = pdfjsLib.OPS;
+        const hasImages = ops.fnArray.some(
+          (fn: number) =>
+            fn === OPS.paintImageXObject ||
+            fn === OPS.paintInlineImageXObject ||
+            fn === OPS.paintImageMaskXObject
+        );
+
+        const textContent = await page.getTextContent();
+        const rawItems: Array<{
+          str: string;
+          x: number;
+          y: number;
+          width: number;
+          height: number;
+          fontName?: string;
+          fontSize?: number;
+        }> = [];
+
+        for (const item of textContent.items) {
+          if (!("str" in item) || typeof item.str !== "string" || !item.str.trim()) {
+            continue;
+          }
+          const tx = item.transform[4];
+          const ty = item.transform[5];
+          const fontSize = Math.abs(item.transform[3]) || item.height || 10;
+          const height = fontSize;
+          const width = item.width;
+          const fontName = item.fontName
+            ? item.fontName.replace(/^g_d\d+_/, "")
+            : undefined;
+
+          rawItems.push({
+            str: item.str,
+            x: tx,
+            y: ty,
+            width,
+            height,
+            fontName,
+            fontSize
+          });
+        }
+
+        // Sort items in natural reading order: top-to-bottom (y descending in PDF coords), left-to-right (x ascending)
+        const sorted = [...rawItems].sort((a, b) => {
+          if (Math.abs(a.y - b.y) > 3) {
+            return b.y - a.y; // Higher y is visually higher on the page in standard PDF
+          }
+          return a.x - b.x;
+        });
+
+        // Group horizontally adjacent text items into coherent line text blocks
+        const textBlocks: TextBlock[] = [];
+        let currentLine: {
+          str: string;
+          x: number;
+          y: number;
+          width: number;
+          height: number;
+          fontName?: string;
+          fontSize?: number;
+        } | null = null;
+
+        for (const it of sorted) {
+          if (!currentLine) {
+            currentLine = { ...it };
+          } else if (Math.abs(currentLine.y - it.y) <= 3) {
+            // Same horizontal line: merge bounding boxes and concatenate string
+            currentLine.str += (currentLine.str.endsWith(" ") ? "" : " ") + it.str;
+            const minX = Math.min(currentLine.x, it.x);
+            const maxX = Math.max(currentLine.x + currentLine.width, it.x + it.width);
+            const minY = Math.min(currentLine.y, it.y);
+            const maxY = Math.max(currentLine.y + currentLine.height, it.y + it.height);
+            currentLine.x = minX;
+            currentLine.y = minY;
+            currentLine.width = maxX - minX;
+            currentLine.height = maxY - minY;
+          } else {
+            // New line encountered: commit previous line block
+            const blockTop = Number((pageHeight - (currentLine.y + currentLine.height)).toFixed(2));
+            textBlocks.push({
+              order: textBlocks.length,
+              text: currentLine.str,
+              x: Number(currentLine.x.toFixed(2)),
+              y: Number(currentLine.y.toFixed(2)),
+              width: Number(currentLine.width.toFixed(2)),
+              height: Number(currentLine.height.toFixed(2)),
+              top: blockTop,
+              fontName: currentLine.fontName,
+              fontSize: currentLine.fontSize ? Number(currentLine.fontSize.toFixed(2)) : undefined
+            });
+            currentLine = { ...it };
+          }
+        }
+        if (currentLine) {
+          const blockTop = Number((pageHeight - (currentLine.y + currentLine.height)).toFixed(2));
+          textBlocks.push({
+            order: textBlocks.length,
+            text: currentLine.str,
+            x: Number(currentLine.x.toFixed(2)),
+            y: Number(currentLine.y.toFixed(2)),
+            width: Number(currentLine.width.toFixed(2)),
+            height: Number(currentLine.height.toFixed(2)),
+            top: blockTop,
+            fontName: currentLine.fontName,
+            fontSize: currentLine.fontSize ? Number(currentLine.fontSize.toFixed(2)) : undefined
+          });
+        }
+
+        const pageText = textBlocks.map((b) => b.text).join("\n");
+
+        let extractionStatus: PageExtractionStatus;
+        if (textBlocks.length > 0 && !hasImages) {
+          extractionStatus = "TEXT_LAYER";
+        } else if (textBlocks.length > 0 && hasImages) {
+          extractionStatus = "MIXED";
+        } else {
+          extractionStatus = "IMAGE_ONLY";
+        }
+
+        const pageDoc: DocumentPage = {
+          id: getDocumentPageId(normalizedSha, pageNumber),
+          documentSha256: normalizedSha,
+          pageNumber,
+          pageCount,
+          extractionMethod,
+          extractionVersion,
+          extractionStatus,
+          text: pageText,
+          textBlocks,
+          pageWidth,
+          pageHeight,
+          unit: "pt",
+          hasImages,
+          createdAt: now,
+          updatedAt: now
+        };
+
+        validateDocumentPage(pageDoc);
+        pages.push(pageDoc);
+      } catch (pageErr: any) {
+        // Build a failed page record rather than silently omitting or losing metadata
+        const failedDoc: DocumentPage = {
+          id: getDocumentPageId(normalizedSha, pageNumber),
+          documentSha256: normalizedSha,
+          pageNumber,
+          pageCount,
+          extractionMethod,
+          extractionVersion,
+          extractionStatus: "FAILED",
+          text: "",
+          textBlocks: [],
+          pageWidth: 595.28,
+          pageHeight: 841.89,
+          unit: "pt",
+          hasImages: false,
+          createdAt: now,
+          updatedAt: now,
+          errorMessage: pageErr?.message || String(pageErr)
+        };
+        pages.push(failedDoc);
+      }
+    }
+
+    return {
+      documentSha256: normalizedSha,
+      pageCount,
+      pages,
+      extractionVersion,
+      extractionMethod
+    };
+  }
+}
+
+/**
+ * Convenience function to extract pages from raw PDF bytes.
+ */
+export async function extractPdfPages(
+  pdfBuffer: Uint8Array,
+  documentSha256: string,
+  options?: PageExtractionOptions
+): Promise<ExtractionResult> {
+  const extractor = new PdfPageExtractorService(
+    options?.extractionVersion,
+    options?.extractionMethod
+  );
+  return extractor.extractPages(pdfBuffer, documentSha256, options);
+}
+

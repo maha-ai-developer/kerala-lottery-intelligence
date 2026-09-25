@@ -11,8 +11,14 @@ import type {
   AuditLog,
   UserProfile,
   DocumentProvenance,
-  HttpProvenanceMetadata
+  HttpProvenanceMetadata,
+  DocumentPage,
+  TextBlock,
+  PageExtractionStatus
 } from "@kerala-lottery/domain";
+import { getDocumentPageId, validateDocumentPage } from "@kerala-lottery/documents";
+
+export type { DocumentPage, TextBlock, PageExtractionStatus };
 
 export interface DrawRepository {
   findById(id: string): Promise<Draw | null>;
@@ -27,7 +33,17 @@ export interface WinningNumberRepository {
   saveMany(numbers: WinningNumber[]): Promise<void>;
 }
 
-import { doc, getDoc, runTransaction, type Firestore } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  setDoc,
+  collection,
+  query,
+  where,
+  getDocs,
+  runTransaction,
+  type Firestore
+} from "firebase/firestore";
 
 export interface DocumentRepository {
   getBySha256(sha256: string): Promise<SourceDocument | null>;
@@ -35,6 +51,15 @@ export interface DocumentRepository {
   findById?(id: string): Promise<SourceDocument | null>;
   findBySha256?(sha256: string): Promise<SourceDocument | null>;
   save?(doc: SourceDocument): Promise<void>;
+}
+
+export interface DocumentPageRepository {
+  getById(id: string): Promise<DocumentPage | null>;
+  getByDocumentAndPage(documentSha256: string, pageNumber: number): Promise<DocumentPage | null>;
+  getByDocumentSha256(documentSha256: string): Promise<DocumentPage[]>;
+  create(page: DocumentPage): Promise<void>;
+  createBatch(pages: DocumentPage[]): Promise<void>;
+  save(page: DocumentPage): Promise<void>;
 }
 
 export interface StorageMetadata {
@@ -61,6 +86,7 @@ export interface StorageService {
     data: Uint8Array,
     metadata: StorageMetadata
   ): Promise<StorageObject>;
+  getObject?(path: string): Promise<Uint8Array | null>;
 }
 
 // ============================================================================
@@ -71,6 +97,13 @@ export class DocumentAlreadyExistsError extends Error {
   constructor(message: string, public readonly documentId?: string) {
     super(message);
     this.name = "DocumentAlreadyExistsError";
+  }
+}
+
+export class PageAlreadyExistsError extends Error {
+  constructor(message: string, public readonly pageId?: string) {
+    super(message);
+    this.name = "PageAlreadyExistsError";
   }
 }
 
@@ -131,6 +164,61 @@ export class InMemoryDocumentRepository implements DocumentRepository {
   }
 }
 
+export class InMemoryDocumentPageRepository implements DocumentPageRepository {
+  private readonly pages = new Map<string, DocumentPage>();
+
+  async getById(id: string): Promise<DocumentPage | null> {
+    const page = this.pages.get(id);
+    return page ? JSON.parse(JSON.stringify(page)) : null;
+  }
+
+  async getByDocumentAndPage(documentSha256: string, pageNumber: number): Promise<DocumentPage | null> {
+    const pageId = getDocumentPageId(documentSha256, pageNumber);
+    return this.getById(pageId);
+  }
+
+  async getByDocumentSha256(documentSha256: string): Promise<DocumentPage[]> {
+    const normalized = documentSha256.trim().toLowerCase();
+    const matches: DocumentPage[] = [];
+    for (const page of this.pages.values()) {
+      if (page.documentSha256 === normalized) {
+        matches.push(JSON.parse(JSON.stringify(page)));
+      }
+    }
+    return matches.sort((a, b) => a.pageNumber - b.pageNumber);
+  }
+
+  async create(page: DocumentPage): Promise<void> {
+    validateDocumentPage(page);
+    if (this.pages.has(page.id)) {
+      throw new PageAlreadyExistsError(
+        `DocumentPage with ID '${page.id}' already exists in repository`,
+        page.id
+      );
+    }
+    this.pages.set(page.id, JSON.parse(JSON.stringify(page)));
+  }
+
+  async createBatch(pages: DocumentPage[]): Promise<void> {
+    for (const page of pages) {
+      await this.create(page);
+    }
+  }
+
+  async save(page: DocumentPage): Promise<void> {
+    validateDocumentPage(page);
+    this.pages.set(page.id, JSON.parse(JSON.stringify(page)));
+  }
+
+  getAll(): DocumentPage[] {
+    return Array.from(this.pages.values()).map((p) => JSON.parse(JSON.stringify(p)));
+  }
+
+  clear(): void {
+    this.pages.clear();
+  }
+}
+
 export class InMemoryStorageService implements StorageService {
   private readonly objects = new Map<
     string,
@@ -171,6 +259,12 @@ export class InMemoryStorageService implements StorageService {
       contentType: metadata.contentType || "application/pdf",
       created
     };
+  }
+
+  async getObject(path: string): Promise<Uint8Array | null> {
+    const normalizedPath = path.replace(/^\/+/, "");
+    const obj = this.objects.get(normalizedPath);
+    return obj ? new Uint8Array(obj.data) : null;
   }
 
   has(path: string): boolean {
@@ -229,6 +323,64 @@ export class FirestoreDocumentRepository implements DocumentRepository {
 
   async save(doc: SourceDocument): Promise<void> {
     return this.create(doc);
+  }
+}
+
+export class FirestoreDocumentPageRepository implements DocumentPageRepository {
+  constructor(
+    private readonly db: Firestore,
+    private readonly collectionName = "document_pages"
+  ) {}
+
+  async getById(id: string): Promise<DocumentPage | null> {
+    const docRef = doc(this.db, this.collectionName, id);
+    const snap = await getDoc(docRef);
+    if (!snap.exists()) {
+      return null;
+    }
+    return snap.data() as DocumentPage;
+  }
+
+  async getByDocumentAndPage(documentSha256: string, pageNumber: number): Promise<DocumentPage | null> {
+    const pageId = getDocumentPageId(documentSha256, pageNumber);
+    return this.getById(pageId);
+  }
+
+  async getByDocumentSha256(documentSha256: string): Promise<DocumentPage[]> {
+    const normalized = documentSha256.trim().toLowerCase();
+    const colRef = collection(this.db, this.collectionName);
+    const q = query(colRef, where("documentSha256", "==", normalized));
+    const snap = await getDocs(q);
+    const pages: DocumentPage[] = [];
+    snap.forEach((d) => pages.push(d.data() as DocumentPage));
+    return pages.sort((a, b) => a.pageNumber - b.pageNumber);
+  }
+
+  async create(page: DocumentPage): Promise<void> {
+    validateDocumentPage(page);
+    const docRef = doc(this.db, this.collectionName, page.id);
+    await runTransaction(this.db, async (tx) => {
+      const snap = await tx.get(docRef);
+      if (snap.exists()) {
+        throw new PageAlreadyExistsError(
+          `DocumentPage with ID '${page.id}' already exists in Firestore collection '${this.collectionName}'`,
+          page.id
+        );
+      }
+      tx.set(docRef, page);
+    });
+  }
+
+  async createBatch(pages: DocumentPage[]): Promise<void> {
+    for (const page of pages) {
+      await this.create(page);
+    }
+  }
+
+  async save(page: DocumentPage): Promise<void> {
+    validateDocumentPage(page);
+    const docRef = doc(this.db, this.collectionName, page.id);
+    await setDoc(docRef, page, { merge: true });
   }
 }
 
@@ -337,6 +489,33 @@ export class FirebaseStorageService implements StorageService {
       etag: result.etag,
       generation: result.generation
     };
+  }
+
+  async getObject(path: string): Promise<Uint8Array | null> {
+    const cleanPath = path.replace(/^\/+/, "");
+    const token = this.getAccessToken
+      ? await this.getAccessToken()
+      : undefined;
+
+    const url = `https://storage.googleapis.com/storage/v1/b/${this.bucket}/o/${encodeURIComponent(cleanPath)}?alt=media`;
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(url, { headers });
+    if (response.status === 404) {
+      return null;
+    }
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new StorageError(
+        `Failed to get storage object from '${cleanPath}' (HTTP ${response.status}): ${errText}`
+      );
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    return new Uint8Array(arrayBuffer);
   }
 }
 
@@ -527,6 +706,239 @@ export class FirestoreRestDocumentRepository implements DocumentRepository {
       status: (fields.status?.stringValue || "UPLOADED") as any,
       createdAt: fields.createdAt?.stringValue || "",
       provenance
+    };
+  }
+}
+
+export class FirestoreRestDocumentPageRepository implements DocumentPageRepository {
+  private readonly projectId: string;
+  private readonly databaseId: string;
+  private readonly getAccessToken?: () => Promise<string> | string;
+  private readonly collectionName: string;
+
+  constructor(config: FirestoreRestConfig, collectionName = "document_pages") {
+    this.projectId = config.projectId;
+    this.databaseId = config.databaseId || "(default)";
+    this.getAccessToken = config.getAccessToken;
+    this.collectionName = collectionName;
+  }
+
+  private baseUrl(): string {
+    return `https://firestore.googleapis.com/v1/projects/${this.projectId}/databases/${this.databaseId}/documents`;
+  }
+
+  async getById(id: string): Promise<DocumentPage | null> {
+    const url = `${this.baseUrl()}/${this.collectionName}/${id}`;
+    const token = this.getAccessToken ? await this.getAccessToken() : undefined;
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    const res = await fetch(url, { headers });
+    if (res.status === 404) {
+      return null;
+    }
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`Failed to get document page ${id}: HTTP ${res.status} - ${err}`);
+    }
+
+    const data = (await res.json()) as { fields: Record<string, any> };
+    return this.fromFirestoreFields(data.fields);
+  }
+
+  async getByDocumentAndPage(documentSha256: string, pageNumber: number): Promise<DocumentPage | null> {
+    const pageId = getDocumentPageId(documentSha256, pageNumber);
+    return this.getById(pageId);
+  }
+
+  async getByDocumentSha256(documentSha256: string): Promise<DocumentPage[]> {
+    const normalized = documentSha256.trim().toLowerCase();
+    const url = `${this.baseUrl()}:runQuery`;
+    const token = this.getAccessToken ? await this.getAccessToken() : undefined;
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    const body = JSON.stringify({
+      structuredQuery: {
+        from: [{ collectionId: this.collectionName }],
+        where: {
+          fieldFilter: {
+            field: { fieldPath: "documentSha256" },
+            op: "EQUAL",
+            value: { stringValue: normalized }
+          }
+        }
+      }
+    });
+
+    const res = await fetch(url, { method: "POST", headers, body });
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`Failed to query document pages for ${normalized}: HTTP ${res.status} - ${err}`);
+    }
+
+    const data = (await res.json()) as Array<{ document?: { fields: Record<string, any> } }>;
+    const pages: DocumentPage[] = [];
+    for (const item of data) {
+      if (item.document?.fields) {
+        pages.push(this.fromFirestoreFields(item.document.fields));
+      }
+    }
+    return pages.sort((a, b) => a.pageNumber - b.pageNumber);
+  }
+
+  async create(page: DocumentPage): Promise<void> {
+    validateDocumentPage(page);
+    const existing = await this.getById(page.id);
+    if (existing) {
+      throw new PageAlreadyExistsError(
+        `DocumentPage with ID '${page.id}' already exists in Firestore collection '${this.collectionName}'`,
+        page.id
+      );
+    }
+
+    const url = `${this.baseUrl()}/${this.collectionName}?documentId=${page.id}`;
+    const token = this.getAccessToken ? await this.getAccessToken() : undefined;
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    const body = JSON.stringify({
+      fields: this.toFirestoreFields(page)
+    });
+
+    const res = await fetch(url, { method: "POST", headers, body });
+    if (res.status === 409) {
+      throw new PageAlreadyExistsError(
+        `DocumentPage with ID '${page.id}' already exists in Firestore collection '${this.collectionName}'`,
+        page.id
+      );
+    }
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`Failed to create page ${page.id}: HTTP ${res.status} - ${err}`);
+    }
+  }
+
+  async createBatch(pages: DocumentPage[]): Promise<void> {
+    for (const page of pages) {
+      await this.create(page);
+    }
+  }
+
+  async save(page: DocumentPage): Promise<void> {
+    validateDocumentPage(page);
+    const existing = await this.getById(page.id);
+    const token = this.getAccessToken ? await this.getAccessToken() : undefined;
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    if (existing) {
+      const url = `${this.baseUrl()}/${this.collectionName}/${page.id}`;
+      const body = JSON.stringify({
+        fields: this.toFirestoreFields(page)
+      });
+      const res = await fetch(url, { method: "PATCH", headers, body });
+      if (!res.ok) {
+        const err = await res.text();
+        throw new Error(`Failed to update page ${page.id}: HTTP ${res.status} - ${err}`);
+      }
+    } else {
+      await this.create(page);
+    }
+  }
+
+  private toFirestoreFields(page: DocumentPage): Record<string, any> {
+    const fields: Record<string, any> = {
+      id: { stringValue: page.id },
+      documentSha256: { stringValue: page.documentSha256 },
+      pageNumber: { integerValue: page.pageNumber.toString() },
+      pageCount: { integerValue: page.pageCount.toString() },
+      extractionMethod: { stringValue: page.extractionMethod },
+      extractionVersion: { stringValue: page.extractionVersion },
+      extractionStatus: { stringValue: page.extractionStatus },
+      text: { stringValue: page.text },
+      pageWidth: { doubleValue: page.pageWidth },
+      pageHeight: { doubleValue: page.pageHeight },
+      unit: { stringValue: page.unit },
+      hasImages: { booleanValue: page.hasImages },
+      createdAt: { stringValue: page.createdAt },
+      updatedAt: { stringValue: page.updatedAt }
+    };
+    if (page.errorMessage) {
+      fields.errorMessage = { stringValue: page.errorMessage };
+    }
+    if (Array.isArray(page.textBlocks)) {
+      const values = page.textBlocks.map((b) => {
+        const bf: Record<string, any> = {
+          order: { integerValue: b.order.toString() },
+          text: { stringValue: b.text },
+          x: { doubleValue: b.x },
+          y: { doubleValue: b.y },
+          width: { doubleValue: b.width },
+          height: { doubleValue: b.height }
+        };
+        if (b.id) bf.id = { stringValue: b.id };
+        if (b.top !== undefined) bf.top = { doubleValue: b.top };
+        if (b.fontName) bf.fontName = { stringValue: b.fontName };
+        if (b.fontSize !== undefined) bf.fontSize = { doubleValue: b.fontSize };
+        if (b.fontWeight) bf.fontWeight = { stringValue: b.fontWeight };
+        if (b.rotation !== undefined) bf.rotation = { integerValue: b.rotation.toString() };
+        return { mapValue: { fields: bf } };
+      });
+      fields.textBlocks = { arrayValue: { values } };
+    }
+    return fields;
+  }
+
+  private fromFirestoreFields(fields: Record<string, any>): DocumentPage {
+    const textBlocks: TextBlock[] = [];
+    if (fields.textBlocks?.arrayValue?.values) {
+      for (const val of fields.textBlocks.arrayValue.values) {
+        if (val.mapValue?.fields) {
+          const bf = val.mapValue.fields;
+          textBlocks.push({
+            id: bf.id?.stringValue,
+            order: parseInt(bf.order?.integerValue || "0", 10),
+            text: bf.text?.stringValue || "",
+            x: parseFloat(bf.x?.doubleValue || bf.x?.integerValue || "0"),
+            y: parseFloat(bf.y?.doubleValue || bf.y?.integerValue || "0"),
+            width: parseFloat(bf.width?.doubleValue || bf.width?.integerValue || "0"),
+            height: parseFloat(bf.height?.doubleValue || bf.height?.integerValue || "0"),
+            top: bf.top ? parseFloat(bf.top.doubleValue || bf.top.integerValue || "0") : undefined,
+            fontName: bf.fontName?.stringValue,
+            fontSize: bf.fontSize ? parseFloat(bf.fontSize.doubleValue || bf.fontSize.integerValue || "0") : undefined,
+            fontWeight: bf.fontWeight?.stringValue,
+            rotation: bf.rotation ? parseInt(bf.rotation.integerValue || "0", 10) : undefined
+          });
+        }
+      }
+    }
+
+    return {
+      id: fields.id?.stringValue || "",
+      documentSha256: fields.documentSha256?.stringValue || "",
+      pageNumber: parseInt(fields.pageNumber?.integerValue || "1", 10),
+      pageCount: parseInt(fields.pageCount?.integerValue || "1", 10),
+      extractionMethod: fields.extractionMethod?.stringValue || "PDFJS_TEXT_LAYOUT",
+      extractionVersion: fields.extractionVersion?.stringValue || "v1.0.0-text-layout",
+      extractionStatus: (fields.extractionStatus?.stringValue || "TEXT_LAYER") as any,
+      text: fields.text?.stringValue || "",
+      textBlocks,
+      pageWidth: parseFloat(fields.pageWidth?.doubleValue || fields.pageWidth?.integerValue || "595.28"),
+      pageHeight: parseFloat(fields.pageHeight?.doubleValue || fields.pageHeight?.integerValue || "841.89"),
+      unit: "pt",
+      hasImages: fields.hasImages?.booleanValue || false,
+      createdAt: fields.createdAt?.stringValue || "",
+      updatedAt: fields.updatedAt?.stringValue || "",
+      errorMessage: fields.errorMessage?.stringValue
     };
   }
 }
