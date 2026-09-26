@@ -2066,7 +2066,31 @@ export {
   type ResultFeatureVector,
   type FeatureMatrix,
   type FeatureMatrixRow,
-  type FeatureRepository
+  type FeatureRepository,
+  DEFAULT_FEATURE_EVALUATION_VERSION,
+  HISTORICAL_FEATURE_EVALUATION_DISCLAIMER,
+  computePopulationScopeHash,
+  computeFeatureEvaluationHash,
+  calculateFeatureCoverage,
+  calculateFeatureCardinality,
+  calculateFeatureDistribution,
+  calculateFeatureStability,
+  calculateFeatureRedundancy,
+  validateFeatureMatrixIntegrity,
+  evaluateFeatureMatrix,
+  InMemoryFeatureEvaluationRepository,
+  type FeatureEvaluationReport,
+  type FeatureEvaluationMetric,
+  type FeatureCoverageSummary,
+  type FeatureCardinalitySummary,
+  type FeatureDistributionSummary,
+  type FeatureStabilitySummary,
+  type FeatureRedundancySummary,
+  type FeatureIntegrityReport,
+  type FeatureValidationIssue,
+  type FeatureEvaluationRepository,
+  type FeatureEvaluationPopulationScope,
+  type FeatureStabilityClassification
 } from "@kerala-lottery/statistics";
 
 

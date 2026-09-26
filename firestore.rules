@@ -189,6 +189,12 @@ service cloud.firestore {
       allow write: if isResearcher();
     }
 
+    // Historical Feature Evaluation Reports (Milestone 6B)
+    match /historical_feature_evaluations/{evaluationId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+
     // Dataset Versions & Experiments
     match /datasetVersions/{versionId} {
       allow read: if isAuthenticated();
