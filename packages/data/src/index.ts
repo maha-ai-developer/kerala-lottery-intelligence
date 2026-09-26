@@ -1882,3 +1882,50 @@ export {
   InMemoryKnowledgeGraphRepository,
   FirestoreRestKnowledgeGraphRepository
 } from "@kerala-lottery/knowledge";
+
+// ============================================================================
+// Milestone 5A: Historical Statistics Re-exports
+// ============================================================================
+export type {
+  ResultTypeFilter,
+  StatisticalFilterCriteria,
+  StatisticalPopulationScope,
+  NumberFrequencyItem,
+  NumberFrequencyReport,
+  SeriesFrequencyItem,
+  SeriesFrequencyReport,
+  DigitDistributionItem,
+  LastDigitFrequencyReport,
+  DigitPositionDistribution,
+  DigitPositionFrequencyReport,
+  SuffixFrequencyItem,
+  SuffixFrequencyReport,
+  PrizeTierStatisticsItem,
+  PrizeTierStatisticsReport,
+  DrawSummaryStatistics,
+  HistoricalLotteryStatisticsAggregate,
+  HistoricalStatisticsRepository,
+  FirestoreRestHistoricalStatisticsRepositoryOptions,
+  StatisticalEngineInput,
+  StatisticalEngineOptions,
+  ValidatedStatisticalEntities
+} from "@kerala-lottery/statistics";
+
+export {
+  DEFAULT_STATISTICAL_VERSION,
+  StatisticalValidationError,
+  calculateHistoricalStatistics,
+  computeDrawSummaryStatistics,
+  computePrizeTierStatistics,
+  computeNumberFrequency,
+  computeSeriesFrequency,
+  computeLastDigitFrequency,
+  computeDigitPositionFrequency,
+  computeSuffixFrequency,
+  computeScopeHash,
+  extractEntitiesFromKnowledgeGraph,
+  normalizeStatisticalInput,
+  InMemoryHistoricalStatisticsRepository,
+  FirestoreRestHistoricalStatisticsRepository
+} from "@kerala-lottery/statistics";
+

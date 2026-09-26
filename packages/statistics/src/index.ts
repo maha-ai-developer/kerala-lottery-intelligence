@@ -1,7 +1,18 @@
 /**
  * Kerala State Lottery Intelligence & Experiment Platform
- * Deterministic Statistical Engine
+ * Milestone 5A: Historical Statistical Foundation
+ *
+ * Deterministic statistical aggregation engine, contracts, and repositories
+ * for historical lottery observations.
  */
+
+export * from "./statistical-types";
+export * from "./statistical-engine";
+export * from "./repository";
+
+// ============================================================================
+// Core Statistical Math Utilities (Legacy & Mathematical Primitives)
+// ============================================================================
 
 export interface DistributionResult {
   counts: Record<string, number>;

@@ -8,6 +8,7 @@
     "@kerala-lottery/domain": "*",
     "@kerala-lottery/documents": "*",
     "@kerala-lottery/knowledge": "*",
+    "@kerala-lottery/statistics": "*",
     "firebase": "^11.3.1"
   },
   "scripts": {

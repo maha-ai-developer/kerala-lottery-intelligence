@@ -182,11 +182,13 @@ describe.skipIf(!isEmulatorActive)("Firestore Security Rules Authorization Verif
       await assertFails(setDoc(doc(viewerDb, "knowledge_nodes", "node-01"), { label: "Illegal Node" }));
       await assertFails(setDoc(doc(viewerDb, "knowledge_edges", "edge-01"), { relation: "HAS_DRAW" }));
       await assertFails(setDoc(doc(viewerDb, "lottery_knowledge_graphs", "graph-01"), { documentSha256: "abc" }));
+      await assertFails(setDoc(doc(viewerDb, "statistical_reports", "stat-01"), { totalObservedResults: 10 }));
 
       // Authenticated read is allowed
       await assertSucceeds(getDoc(doc(viewerDb, "knowledge_nodes", "node-01")));
       await assertSucceeds(getDoc(doc(viewerDb, "knowledge_edges", "edge-01")));
       await assertSucceeds(getDoc(doc(viewerDb, "lottery_knowledge_graphs", "graph-01")));
+      await assertSucceeds(getDoc(doc(viewerDb, "statistical_reports", "stat-01")));
     });
   });
 
@@ -241,6 +243,12 @@ describe.skipIf(!isEmulatorActive)("Firestore Security Rules Authorization Verif
         setDoc(doc(researcherDb, "lottery_knowledge_graphs", "graph-doc-01"), {
           documentSha256: "abcdef123456",
           nodes: []
+        })
+      );
+      await assertSucceeds(
+        setDoc(doc(researcherDb, "statistical_reports", "stat-doc-01"), {
+          id: "stat-doc-01",
+          totalObservedResults: 50
         })
       );
     });

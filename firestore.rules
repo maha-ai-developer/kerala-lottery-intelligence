@@ -159,6 +159,12 @@ service cloud.firestore {
       allow write: if isResearcher();
     }
 
+    // Historical Statistical Observations (Milestone 5A)
+    match /statistical_reports/{reportId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+
     // Dataset Versions & Experiments
     match /datasetVersions/{versionId} {
       allow read: if isAuthenticated();
