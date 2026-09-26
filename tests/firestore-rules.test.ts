@@ -185,6 +185,7 @@ describe.skipIf(!isEmulatorActive)("Firestore Security Rules Authorization Verif
       await assertFails(setDoc(doc(viewerDb, "statistical_reports", "stat-01"), { totalObservedResults: 10 }));
       await assertFails(setDoc(doc(viewerDb, "lottery_corpora", "corp-01"), { totalDraws: 5 }));
       await assertFails(setDoc(doc(viewerDb, "historical_analyses", "analysis-01"), { analysisVersion: "v1" }));
+      await assertFails(setDoc(doc(viewerDb, "historical_experiments", "exp-01"), { experimentId: "exp-01" }));
 
       // Authenticated read is allowed
       await assertSucceeds(getDoc(doc(viewerDb, "knowledge_nodes", "node-01")));
@@ -193,6 +194,7 @@ describe.skipIf(!isEmulatorActive)("Firestore Security Rules Authorization Verif
       await assertSucceeds(getDoc(doc(viewerDb, "statistical_reports", "stat-01")));
       await assertSucceeds(getDoc(doc(viewerDb, "lottery_corpora", "corp-01")));
       await assertSucceeds(getDoc(doc(viewerDb, "historical_analyses", "analysis-01")));
+      await assertSucceeds(getDoc(doc(viewerDb, "historical_experiments", "exp-01")));
     });
   });
 
@@ -265,6 +267,13 @@ describe.skipIf(!isEmulatorActive)("Firestore Security Rules Authorization Verif
         setDoc(doc(researcherDb, "historical_analyses", "analysis-doc-01"), {
           id: "analysis-doc-01",
           analysisVersion: "v1"
+        })
+      );
+      await assertSucceeds(
+        setDoc(doc(researcherDb, "historical_experiments", "exp-doc-01"), {
+          id: "exp-doc-01",
+          experimentId: "exp-doc-01",
+          executionVersion: "v1"
         })
       );
     });

@@ -1945,14 +1945,29 @@ export type {
   PopulationLevelComparisonReport,
   HistoricalAnalysisSuite,
   AnalysisOptions,
-  HistoricalAnalysisRepository
+  HistoricalAnalysisRepository,
+  StatisticalTestType,
+  ExperimentBaselineType,
+  ExperimentTargetMetric,
+  ExperimentPopulationCriteria,
+  ResolvedExperimentPopulation,
+  ExperimentBaselineDefinition,
+  ExperimentTestConfiguration,
+  ExperimentDefinition,
+  CategoryTestDetail,
+  ExperimentStatisticalTestResult,
+  ExperimentResult,
+  HistoricalExperimentRecord,
+  HistoricalExperimentRepository
 } from "@kerala-lottery/statistics";
 
 export {
   DEFAULT_STATISTICAL_VERSION,
   DEFAULT_CORPUS_VERSION,
   DEFAULT_ANALYSIS_VERSION,
+  DEFAULT_EXPERIMENT_VERSION,
   HISTORICAL_ANALYSIS_DISCLAIMER,
+  HISTORICAL_EXPERIMENT_DISCLAIMER,
   StatisticalValidationError,
   calculateHistoricalStatistics,
   computeDrawSummaryStatistics,
@@ -1997,6 +2012,18 @@ export {
   comparePopulationLevels,
   runComprehensiveHistoricalAnalysis,
   InMemoryHistoricalAnalysisRepository,
-  FirestoreRestHistoricalAnalysisRepository
+  FirestoreRestHistoricalAnalysisRepository,
+  computeExperimentDefinitionHash,
+  computeExperimentResultHash,
+  createLastDigitUniformityExperiment,
+  createDigitPositionUniformityExperiment,
+  resolveExperimentPopulation,
+  resolveBaselineExpectedCounts,
+  calculateChiSquareTest,
+  executeStatisticalExperiment,
+  createHistoricalExperimentRecord,
+  InMemoryHistoricalExperimentRepository,
+  FirestoreRestHistoricalExperimentRepository
 } from "@kerala-lottery/statistics";
+
 

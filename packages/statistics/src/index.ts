@@ -12,6 +12,8 @@ export * from "./repository";
 export * from "./multi-draw-corpus";
 export * from "./historical-analysis-types";
 export * from "./historical-analysis-engine";
+export * from "./experiment-types";
+export * from "./experiment-engine";
 
 // ============================================================================
 // Core Statistical Math Utilities (Legacy & Mathematical Primitives)

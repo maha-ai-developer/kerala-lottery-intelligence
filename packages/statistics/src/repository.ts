@@ -15,6 +15,11 @@
 import type { HistoricalLotteryStatisticsAggregate } from "./statistical-types";
 import type { MultiDrawLotteryCorpus } from "./multi-draw-corpus";
 import type { HistoricalAnalysisSuite } from "./historical-analysis-types";
+import type {
+  HistoricalExperimentRecord,
+  ExperimentResult,
+  ExperimentDefinition
+} from "./experiment-types";
 
 // ============================================================================
 // Repository Interfaces
@@ -30,6 +35,12 @@ export interface HistoricalAnalysisRepository {
   saveAnalysis(analysis: HistoricalAnalysisSuite): Promise<void>;
   getAnalysisById(id: string): Promise<HistoricalAnalysisSuite | null>;
   listAnalyses(limit?: number): Promise<HistoricalAnalysisSuite[]>;
+}
+
+export interface HistoricalExperimentRepository {
+  saveExperiment(experiment: HistoricalExperimentRecord): Promise<void>;
+  getExperimentById(experimentId: string): Promise<HistoricalExperimentRecord | null>;
+  listExperiments(limit?: number): Promise<HistoricalExperimentRecord[]>;
 }
 
 export interface HistoricalStatisticsRepository {
@@ -533,3 +544,117 @@ export class FirestoreRestHistoricalAnalysisRepository implements HistoricalAnal
     return results;
   }
 }
+
+// ============================================================================
+// Historical Experiment In-Memory & Firestore Implementations (Milestone 5D)
+// ============================================================================
+
+export function createHistoricalExperimentRecord(
+  definition: ExperimentDefinition,
+  result: ExperimentResult
+): HistoricalExperimentRecord {
+  return {
+    id: definition.id,
+    experimentId: definition.id,
+    definition,
+    result,
+    createdAt: result.executedAt || new Date().toISOString()
+  };
+}
+
+export class InMemoryHistoricalExperimentRepository implements HistoricalExperimentRepository {
+  private readonly experimentsById = new Map<string, HistoricalExperimentRecord>();
+
+  async saveExperiment(experiment: HistoricalExperimentRecord): Promise<void> {
+    this.experimentsById.set(experiment.id, JSON.parse(JSON.stringify(experiment)));
+  }
+
+  async getExperimentById(experimentId: string): Promise<HistoricalExperimentRecord | null> {
+    const item = this.experimentsById.get(experimentId);
+    return item ? JSON.parse(JSON.stringify(item)) : null;
+  }
+
+  async listExperiments(limit = 10): Promise<HistoricalExperimentRecord[]> {
+    return Array.from(this.experimentsById.values())
+      .slice(0, limit)
+      .map((item) => JSON.parse(JSON.stringify(item)));
+  }
+}
+
+export class FirestoreRestHistoricalExperimentRepository implements HistoricalExperimentRepository {
+  private readonly baseUrl: string;
+  private readonly collectionName = "historical_experiments";
+  private readonly getAccessToken: () => Promise<string> | string;
+
+  constructor(options: FirestoreRestHistoricalStatisticsRepositoryOptions) {
+    const projectId = options.projectId || "kerala-lottery-intel-dev";
+    const databaseId = options.databaseId || "(default)";
+    this.baseUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/${databaseId}/documents`;
+    this.getAccessToken = options.getAccessToken;
+  }
+
+  private async getHeaders(): Promise<HeadersInit> {
+    const token = await this.getAccessToken();
+    return {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json"
+    };
+  }
+
+  async saveExperiment(experiment: HistoricalExperimentRecord): Promise<void> {
+    const url = `${this.baseUrl}/${this.collectionName}/${encodeURIComponent(experiment.id)}`;
+    const headers = await this.getHeaders();
+    const body = JSON.stringify({
+      fields: encodeFirestoreValue(experiment).mapValue.fields
+    });
+
+    const res = await fetch(url, { method: "PATCH", headers, body });
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Failed to save historical experiment ${experiment.id}: HTTP ${res.status} - ${errText}`);
+    }
+  }
+
+  async getExperimentById(experimentId: string): Promise<HistoricalExperimentRecord | null> {
+    const url = `${this.baseUrl}/${this.collectionName}/${encodeURIComponent(experimentId)}`;
+    const headers = await this.getHeaders();
+
+    const res = await fetch(url, { method: "GET", headers });
+    if (res.status === 404) return null;
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Failed to get historical experiment ${experimentId}: HTTP ${res.status} - ${errText}`);
+    }
+
+    const data = (await res.json()) as { fields: Record<string, any> };
+    return decodeFirestoreValue({ mapValue: { fields: data.fields } });
+  }
+
+  async listExperiments(limit = 10): Promise<HistoricalExperimentRecord[]> {
+    const url = `${this.baseUrl}:runQuery`;
+    const headers = await this.getHeaders();
+
+    const body = JSON.stringify({
+      structuredQuery: {
+        from: [{ collectionId: this.collectionName }],
+        limit
+      }
+    });
+
+    const res = await fetch(url, { method: "POST", headers, body });
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Failed to list historical experiments: HTTP ${res.status} - ${errText}`);
+    }
+
+    const data = (await res.json()) as Array<{ document?: { fields: Record<string, any> } }>;
+    const results: HistoricalExperimentRecord[] = [];
+    for (const item of data) {
+      if (item.document?.fields) {
+        results.push(decodeFirestoreValue({ mapValue: { fields: item.document.fields } }));
+      }
+    }
+    return results;
+  }
+}
+
