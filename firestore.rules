@@ -201,6 +201,18 @@ service cloud.firestore {
       allow write: if isResearcher();
     }
 
+    // Historical Modeling Datasets (Milestone 7A)
+    match /historical_modeling_datasets/{datasetId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+
+    // Historical Model Runs (Milestone 7A)
+    match /historical_model_runs/{runId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+
     // Dataset Versions & Experiments
     match /datasetVersions/{versionId} {
       allow read: if isAuthenticated();

@@ -22,6 +22,8 @@ export * from "./feature-evaluation-types";
 export * from "./feature-evaluation-engine";
 export * from "./feature-selection-types";
 export * from "./feature-selection-engine";
+export * from "./modeling-types";
+export * from "./modeling-engine";
 
 // ============================================================================
 // Core Statistical Math Utilities (Legacy & Mathematical Primitives)

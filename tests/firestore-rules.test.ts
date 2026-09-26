@@ -201,6 +201,8 @@ describe.skipIf(!isEmulatorActive)("Firestore Security Rules Authorization Verif
       await assertSucceeds(getDoc(doc(viewerDb, "historical_robustness_reports", "rob-01")));
       await assertSucceeds(getDoc(doc(viewerDb, "historical_feature_evaluations", "feval-01")));
       await assertSucceeds(getDoc(doc(viewerDb, "historical_model_feature_matrices", "mfmat-01")));
+      await assertSucceeds(getDoc(doc(viewerDb, "historical_modeling_datasets", "mdset-01")));
+      await assertSucceeds(getDoc(doc(viewerDb, "historical_model_runs", "mrun-01")));
     });
   });
 
@@ -299,6 +301,18 @@ describe.skipIf(!isEmulatorActive)("Firestore Security Rules Authorization Verif
         setDoc(doc(researcherDb, "historical_model_feature_matrices", "mfmat-doc-01"), {
           id: "mfmat-doc-01",
           featureSelectionVersion: "v1"
+        })
+      );
+      await assertSucceeds(
+        setDoc(doc(researcherDb, "historical_modeling_datasets", "mdset-doc-01"), {
+          id: "mdset-doc-01",
+          modelingVersion: "v1"
+        })
+      );
+      await assertSucceeds(
+        setDoc(doc(researcherDb, "historical_model_runs", "mrun-doc-01"), {
+          runId: "mrun-doc-01",
+          executionVersion: "v1"
         })
       );
     });
