@@ -165,6 +165,12 @@ service cloud.firestore {
       allow write: if isResearcher();
     }
 
+    // Multi-Draw Dataset Corpora (Milestone 5B)
+    match /lottery_corpora/{corpusId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+
     // Dataset Versions & Experiments
     match /datasetVersions/{versionId} {
       allow read: if isAuthenticated();

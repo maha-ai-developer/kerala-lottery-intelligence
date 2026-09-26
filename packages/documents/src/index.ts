@@ -36,11 +36,13 @@ export const KERALA_STATE_LOTTERY_PORTAL: OfficialSource = {
   discoveryUrl: "https://statelottery.kerala.gov.in/English/index.php/lottery-result-view",
   allowedDomains: [
     "statelottery.kerala.gov.in",
-    "www.statelottery.kerala.gov.in"
+    "www.statelottery.kerala.gov.in",
+    "result.keralalotteries.com"
   ],
   authorityEvidence: [
     "Domain registered under apex Government of Kerala namespace (.kerala.gov.in) managed by National Informatics Centre (NIC) and Government of India",
     "Official administrative body: Directorate of Kerala State Lotteries, Vikas Bhavan, Thiruvananthapuram, Kerala 695033",
+    "Official result viewing domain: result.keralalotteries.com, officially framed and linked on statelottery.kerala.gov.in for live Gazette draw publications",
     "Developed and maintained by KELTRON (Kerala State Electronics Development Corporation Limited, a Government of Kerala undertaking) Software Group",
     "Referenced by apex Kerala Government portal (https://kerala.gov.in) as the official Directorate portal",
     "Official contact and notification endpoint: cru.dir.lotteries@kerala.gov.in, Ph: 0471-2305193"

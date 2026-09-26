@@ -174,6 +174,44 @@ export class OfficialSourceDiscoveryService {
       }
     }
 
+    // Strategy 3: Match table rows from official results view table:
+    // <tr><td class='text-left'>KARUNYA PLUS(KN-641)</td><td >17/09/2026</td><td ><a href='http://result.keralalotteries.com/viewlotisresult.php?drawserial=75382'...
+    const tableRowRegex =
+      /<tr[^>]*>\s*<td[^>]*class=['"][^'"]*text-left[^'"]*['"][^>]*>([^<]+)<\/td>\s*<td[^>]*>([^<]+)<\/td>\s*<td[^>]*><a\s+[^>]*href=['"]([^'"]+)['"][^>]*>([^<]*)<\/a>/gi;
+    while ((match = tableRowRegex.exec(html)) !== null) {
+      const rawTitle = (match[1] ?? "").trim();
+      const rawDate = (match[2] ?? "").trim();
+      const rawHref = (match[3] ?? "").trim();
+      const rawLinkText = (match[4] ?? "").trim();
+
+      const documentUrl = this.resolveAndValidateUrl(rawHref, officialSource);
+      if (!documentUrl || seenUrls.has(documentUrl)) {
+        continue;
+      }
+      seenUrls.add(documentUrl);
+
+      const parsedMeta = this.parseTitleMetadata(rawTitle);
+      let canonicalDate = parsedMeta.drawDate;
+      if (!canonicalDate && rawDate) {
+        const parts = rawDate.split(/[-/]/);
+        if (parts.length === 3 && parts[0] && parts[1] && parts[2]) {
+          canonicalDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+        }
+      }
+
+      results.push({
+        sourceId: officialSource.sourceId,
+        sourceOrganization: officialSource.organization,
+        discoveryUrl: officialSource.discoveryUrl,
+        documentUrl,
+        title: rawTitle ? `Result - ${rawTitle}` : `Kerala State Lottery Result ${parsedMeta.drawNumber || ""}`.trim(),
+        drawDate: canonicalDate,
+        drawNumber: parsedMeta.drawNumber,
+        lotteryCode: parsedMeta.lotteryCode,
+        rawLinkText: rawLinkText || undefined
+      });
+    }
+
     return results;
   }
 

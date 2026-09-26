@@ -1908,11 +1908,17 @@ export type {
   FirestoreRestHistoricalStatisticsRepositoryOptions,
   StatisticalEngineInput,
   StatisticalEngineOptions,
-  ValidatedStatisticalEntities
+  ValidatedStatisticalEntities,
+  MultiDrawCorpusDrawProfile,
+  MultiDrawCorpusValidationReport,
+  MultiDrawLotteryCorpus,
+  MultiDrawCorpusOptions,
+  MultiDrawCorpusRepository
 } from "@kerala-lottery/statistics";
 
 export {
   DEFAULT_STATISTICAL_VERSION,
+  DEFAULT_CORPUS_VERSION,
   StatisticalValidationError,
   calculateHistoricalStatistics,
   computeDrawSummaryStatistics,
@@ -1926,6 +1932,20 @@ export {
   extractEntitiesFromKnowledgeGraph,
   normalizeStatisticalInput,
   InMemoryHistoricalStatisticsRepository,
-  FirestoreRestHistoricalStatisticsRepository
+  FirestoreRestHistoricalStatisticsRepository,
+  buildMultiDrawCorpus,
+  getCorpusDrawCount,
+  getCorpusLotteries,
+  getDrawsByLottery,
+  getDrawByDate,
+  getSourceDocumentForDraw,
+  getResultsPerDraw,
+  getResultTypesPerDraw,
+  getSeriesPerDraw,
+  getConflictingOrDuplicateResults,
+  getMissingOrMalformedRecords,
+  calculateCorpusHistoricalStatistics,
+  InMemoryMultiDrawCorpusRepository,
+  FirestoreRestMultiDrawCorpusRepository
 } from "@kerala-lottery/statistics";
 

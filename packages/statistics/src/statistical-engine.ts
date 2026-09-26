@@ -92,11 +92,15 @@ export function extractEntitiesFromKnowledgeGraph(
   const draws: Draw[] = [];
   const lotteries: Lottery[] = [];
 
+  const defaultDrawNode = graph.nodes.find((n) => n.type === "Draw");
+  const defaultDrawId = defaultDrawNode?.id;
+
   for (const node of graph.nodes) {
     if (node.type === "WinningResult") {
       const p = node.properties;
       winningResults.push({
         id: node.id,
+        drawId: (p.drawId as string) || defaultDrawId,
         documentSha256: (p.documentSha256 as string) || graph.documentSha256,
         pageId: (p.pageId as string) || `${graph.documentSha256}_${p.pageNumber || 1}`,
         pageNumber: (p.pageNumber as number) || 1,
@@ -362,8 +366,13 @@ export function calculateHistoricalStatistics(
     .filter(Boolean)
     .sort();
 
+  const resultDrawIds = filteredResults
+    .map((r) => r.drawId)
+    .filter((d): d is string => Boolean(d));
+  const fallbackDrawIds =
+    rawEntities.draws?.map((d) => d.id).filter((d): d is string => Boolean(d)) || [];
   const drawIds = Array.from(
-    new Set(filteredResults.map((r) => r.drawId).filter((d): d is string => Boolean(d)))
+    new Set(resultDrawIds.length > 0 ? resultDrawIds : fallbackDrawIds)
   ).sort();
 
   const drawCount = drawIds.length > 0 ? drawIds.length : (rawEntities.draws?.length || 1);

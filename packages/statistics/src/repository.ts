@@ -13,10 +13,17 @@
  */
 
 import type { HistoricalLotteryStatisticsAggregate } from "./statistical-types";
+import type { MultiDrawLotteryCorpus } from "./multi-draw-corpus";
 
 // ============================================================================
-// Repository Interface
+// Repository Interfaces
 // ============================================================================
+
+export interface MultiDrawCorpusRepository {
+  saveCorpus(corpus: MultiDrawLotteryCorpus): Promise<void>;
+  getCorpusById(id: string): Promise<MultiDrawLotteryCorpus | null>;
+  listCorpora(limit?: number): Promise<MultiDrawLotteryCorpus[]>;
+}
 
 export interface HistoricalStatisticsRepository {
   saveAggregate(aggregate: HistoricalLotteryStatisticsAggregate): Promise<void>;
@@ -300,6 +307,117 @@ export class FirestoreRestHistoricalStatisticsRepository
 
     const data = (await res.json()) as Array<{ document?: { fields: Record<string, any> } }>;
     const results: HistoricalLotteryStatisticsAggregate[] = [];
+    for (const item of data) {
+      if (item.document?.fields) {
+        results.push(decodeFirestoreValue({ mapValue: { fields: item.document.fields } }));
+      }
+    }
+    return results;
+  }
+}
+
+// ============================================================================
+// Multi-Draw Corpus Repository Implementations
+// ============================================================================
+
+export class InMemoryMultiDrawCorpusRepository implements MultiDrawCorpusRepository {
+  private readonly corporaById = new Map<string, MultiDrawLotteryCorpus>();
+
+  async saveCorpus(corpus: MultiDrawLotteryCorpus): Promise<void> {
+    this.corporaById.set(corpus.id, JSON.parse(JSON.stringify(corpus)));
+  }
+
+  async getCorpusById(id: string): Promise<MultiDrawLotteryCorpus | null> {
+    const item = this.corporaById.get(id);
+    return item ? JSON.parse(JSON.stringify(item)) : null;
+  }
+
+  async listCorpora(limit = 10): Promise<MultiDrawLotteryCorpus[]> {
+    const all = Array.from(this.corporaById.values()).map((c) => JSON.parse(JSON.stringify(c)));
+    return all.slice(0, limit);
+  }
+}
+
+export class FirestoreRestMultiDrawCorpusRepository implements MultiDrawCorpusRepository {
+  private readonly baseUrl: string;
+  private readonly collectionName: string;
+  private readonly getAccessToken: () => Promise<string> | string;
+
+  constructor(options: FirestoreRestHistoricalStatisticsRepositoryOptions) {
+    const databaseId = options.databaseId || "(default)";
+    this.baseUrl = `https://firestore.googleapis.com/v1/projects/${options.projectId}/databases/${databaseId}/documents`;
+    this.collectionName = "lottery_corpora";
+    this.getAccessToken = options.getAccessToken;
+  }
+
+  private async getHeaders(): Promise<HeadersInit> {
+    const token = await this.getAccessToken();
+    return {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json"
+    };
+  }
+
+  async saveCorpus(corpus: MultiDrawLotteryCorpus): Promise<void> {
+    const url = `${this.baseUrl}/${this.collectionName}/${encodeURIComponent(corpus.id)}`;
+    const headers = await this.getHeaders();
+    // Do not encode full knowledgeGraphs directly to avoid Firestore 1MB document limit; store draw profiles and summaries
+    const persistable = {
+      id: corpus.id,
+      corpusHash: corpus.corpusHash,
+      version: corpus.version,
+      computedAt: corpus.computedAt,
+      draws: corpus.draws,
+      documentSha256s: corpus.documentSha256s,
+      validationReport: corpus.validationReport,
+      totalDraws: corpus.draws.length,
+      totalWinningResults: corpus.validationReport.totalWinningResults
+    };
+    const body = JSON.stringify({
+      fields: encodeFirestoreValue(persistable).mapValue.fields
+    });
+
+    const res = await fetch(url, { method: "PATCH", headers, body });
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Failed to save corpus ${corpus.id}: HTTP ${res.status} - ${errText}`);
+    }
+  }
+
+  async getCorpusById(id: string): Promise<MultiDrawLotteryCorpus | null> {
+    const url = `${this.baseUrl}/${this.collectionName}/${encodeURIComponent(id)}`;
+    const headers = await this.getHeaders();
+
+    const res = await fetch(url, { method: "GET", headers });
+    if (res.status === 404) return null;
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Failed to get corpus ${id}: HTTP ${res.status} - ${errText}`);
+    }
+
+    const data = (await res.json()) as { fields: Record<string, any> };
+    return decodeFirestoreValue({ mapValue: { fields: data.fields } });
+  }
+
+  async listCorpora(limit = 10): Promise<MultiDrawLotteryCorpus[]> {
+    const url = `${this.baseUrl}:runQuery`;
+    const headers = await this.getHeaders();
+
+    const body = JSON.stringify({
+      structuredQuery: {
+        from: [{ collectionId: this.collectionName }],
+        limit
+      }
+    });
+
+    const res = await fetch(url, { method: "POST", headers, body });
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Failed to list corpora: HTTP ${res.status} - ${errText}`);
+    }
+
+    const data = (await res.json()) as Array<{ document?: { fields: Record<string, any> } }>;
+    const results: MultiDrawLotteryCorpus[] = [];
     for (const item of data) {
       if (item.document?.fields) {
         results.push(decodeFirestoreValue({ mapValue: { fields: item.document.fields } }));
