@@ -16,6 +16,8 @@ export * from "./experiment-types";
 export * from "./experiment-engine";
 export * from "./robustness-types";
 export * from "./robustness-engine";
+export * from "./feature-types";
+export * from "./feature-engine";
 
 // ============================================================================
 // Core Statistical Math Utilities (Legacy & Mathematical Primitives)

@@ -2048,7 +2048,25 @@ export {
   executeRobustnessEvaluation,
   createHistoricalRobustnessRecord,
   InMemoryHistoricalRobustnessRepository,
-  FirestoreRestHistoricalRobustnessRepository
+  FirestoreRestHistoricalRobustnessRepository,
+  DEFAULT_FEATURE_VERSION,
+  HISTORICAL_FEATURE_DISCLAIMER,
+  FeatureValidationError,
+  computeFeatureRecordHash,
+  computeFeatureMatrixHash,
+  validateResultForFeatureExtraction,
+  extractResultFeatures,
+  transformToFeatureMatrix,
+  extractCorpusFeatures,
+  InMemoryFeatureRepository,
+  type FeatureRecord,
+  type FeatureFamily,
+  type FeatureValueType,
+  type DrawFeatureContext,
+  type ResultFeatureVector,
+  type FeatureMatrix,
+  type FeatureMatrixRow,
+  type FeatureRepository
 } from "@kerala-lottery/statistics";
 
 
