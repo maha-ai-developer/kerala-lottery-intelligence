@@ -20,6 +20,11 @@ import type {
   ExperimentResult,
   ExperimentDefinition
 } from "./experiment-types";
+import type {
+  HistoricalRobustnessRecord,
+  RobustnessReport,
+  RobustnessDefinition
+} from "./robustness-types";
 
 // ============================================================================
 // Repository Interfaces
@@ -42,6 +47,13 @@ export interface HistoricalExperimentRepository {
   getExperimentById(experimentId: string): Promise<HistoricalExperimentRecord | null>;
   listExperiments(limit?: number): Promise<HistoricalExperimentRecord[]>;
 }
+
+export interface HistoricalRobustnessRepository {
+  saveReport(report: HistoricalRobustnessRecord): Promise<void>;
+  getReportById(robustnessId: string): Promise<HistoricalRobustnessRecord | null>;
+  listReports(limit?: number): Promise<HistoricalRobustnessRecord[]>;
+}
+
 
 export interface HistoricalStatisticsRepository {
   saveAggregate(aggregate: HistoricalLotteryStatisticsAggregate): Promise<void>;
@@ -657,4 +669,118 @@ export class FirestoreRestHistoricalExperimentRepository implements HistoricalEx
     return results;
   }
 }
+
+// ============================================================================
+// Historical Robustness In-Memory & Firestore Implementations (Milestone 5E)
+// ============================================================================
+
+export function createHistoricalRobustnessRecord(
+  definition: RobustnessDefinition,
+  report: RobustnessReport
+): HistoricalRobustnessRecord {
+  return {
+    id: definition.id,
+    robustnessId: definition.id,
+    definition,
+    report,
+    createdAt: report.evaluatedAt || new Date().toISOString()
+  };
+}
+
+export class InMemoryHistoricalRobustnessRepository implements HistoricalRobustnessRepository {
+  private readonly reportsById = new Map<string, HistoricalRobustnessRecord>();
+
+  async saveReport(report: HistoricalRobustnessRecord): Promise<void> {
+    this.reportsById.set(report.id, JSON.parse(JSON.stringify(report)));
+  }
+
+  async getReportById(robustnessId: string): Promise<HistoricalRobustnessRecord | null> {
+    const item = this.reportsById.get(robustnessId);
+    return item ? JSON.parse(JSON.stringify(item)) : null;
+  }
+
+  async listReports(limit = 10): Promise<HistoricalRobustnessRecord[]> {
+    return Array.from(this.reportsById.values())
+      .slice(0, limit)
+      .map((item) => JSON.parse(JSON.stringify(item)));
+  }
+}
+
+export class FirestoreRestHistoricalRobustnessRepository implements HistoricalRobustnessRepository {
+  private readonly baseUrl: string;
+  private readonly collectionName = "historical_robustness_reports";
+  private readonly getAccessToken: () => Promise<string> | string;
+
+  constructor(options: FirestoreRestHistoricalStatisticsRepositoryOptions) {
+    const projectId = options.projectId || "kerala-lottery-intel-dev";
+    const databaseId = options.databaseId || "(default)";
+    this.baseUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/${databaseId}/documents`;
+    this.getAccessToken = options.getAccessToken;
+  }
+
+  private async getHeaders(): Promise<HeadersInit> {
+    const token = await this.getAccessToken();
+    return {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json"
+    };
+  }
+
+  async saveReport(report: HistoricalRobustnessRecord): Promise<void> {
+    const url = `${this.baseUrl}/${this.collectionName}/${encodeURIComponent(report.id)}`;
+    const headers = await this.getHeaders();
+    const body = JSON.stringify({
+      fields: encodeFirestoreValue(report).mapValue.fields
+    });
+
+    const res = await fetch(url, { method: "PATCH", headers, body });
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Failed to save historical robustness report ${report.id}: HTTP ${res.status} - ${errText}`);
+    }
+  }
+
+  async getReportById(robustnessId: string): Promise<HistoricalRobustnessRecord | null> {
+    const url = `${this.baseUrl}/${this.collectionName}/${encodeURIComponent(robustnessId)}`;
+    const headers = await this.getHeaders();
+
+    const res = await fetch(url, { method: "GET", headers });
+    if (res.status === 404) return null;
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Failed to get historical robustness report ${robustnessId}: HTTP ${res.status} - ${errText}`);
+    }
+
+    const data = (await res.json()) as { fields: Record<string, any> };
+    return decodeFirestoreValue({ mapValue: { fields: data.fields } });
+  }
+
+  async listReports(limit = 10): Promise<HistoricalRobustnessRecord[]> {
+    const url = `${this.baseUrl}:runQuery`;
+    const headers = await this.getHeaders();
+
+    const body = JSON.stringify({
+      structuredQuery: {
+        from: [{ collectionId: this.collectionName }],
+        limit
+      }
+    });
+
+    const res = await fetch(url, { method: "POST", headers, body });
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Failed to list historical robustness reports: HTTP ${res.status} - ${errText}`);
+    }
+
+    const data = (await res.json()) as Array<{ document?: { fields: Record<string, any> } }>;
+    const results: HistoricalRobustnessRecord[] = [];
+    for (const item of data) {
+      if (item.document?.fields) {
+        results.push(decodeFirestoreValue({ mapValue: { fields: item.document.fields } }));
+      }
+    }
+    return results;
+  }
+}
+
 

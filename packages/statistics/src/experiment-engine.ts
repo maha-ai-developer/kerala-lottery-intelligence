@@ -449,20 +449,47 @@ export function resolveBaselineExpectedCounts(
 // 3. Statistic Calculator (Pearson's Chi-Square Goodness-of-Fit)
 // ============================================================================
 
+/**
+ * Computes standard normal quantile z for upper-tail probability alpha in (0, 0.5]
+ * using Abramowitz & Stegun rational approximation 26.2.23.
+ */
+function normalUpperQuantile(alpha: number): number {
+  if (alpha >= 0.5) return 0;
+  if (alpha <= 1e-12) return 8.0;
+  const t = Math.sqrt(-2 * Math.log(alpha));
+  const c0 = 2.515517;
+  const c1 = 0.802853;
+  const c2 = 0.010328;
+  const d1 = 1.432788;
+  const d2 = 0.189269;
+  const d3 = 0.001308;
+  const num = c0 + c1 * t + c2 * t * t;
+  const den = 1 + d1 * t + d2 * t * t + d3 * t * t * t;
+  return t - num / den;
+}
+
 export function calculateChiSquareCriticalValue(df: number, alpha: number): number {
-  // Wilson-Hilferty transformation approximation for Chi-Square critical value
-  let z = 1.64485; // alpha = 0.05
-  if (alpha <= 0.001) {
-    z = 3.09023;
-  } else if (alpha <= 0.01) {
-    z = 2.32635;
+  // Standard exact values for canonical significance levels
+  if (Math.abs(alpha - 0.05) < 1e-5) {
+    if (df === 1) return 3.841;
+    if (df === 9) return 16.919;
+    if (df === 11) return 19.675;
+  }
+  if (Math.abs(alpha - 0.01) < 1e-5) {
+    if (df === 1) return 6.635;
+    if (df === 9) return 21.666;
+    if (df === 11) return 24.725;
+  }
+  if (Math.abs(alpha - 0.001) < 1e-5) {
+    if (df === 1) return 10.828;
+    if (df === 9) return 27.877;
+    if (df === 11) return 31.264;
   }
 
-  if (df === 1) return alpha === 0.01 ? 6.635 : alpha === 0.001 ? 10.828 : 3.841;
-  if (df === 9) return alpha === 0.01 ? 21.666 : alpha === 0.001 ? 27.877 : 16.919;
-  if (df === 11) return alpha === 0.01 ? 24.725 : alpha === 0.001 ? 31.264 : 19.675;
-
-  const term = 1 - 2 / (9 * df) + z * Math.sqrt(2 / (9 * df));
+  // Wilson-Hilferty transformation approximation for Chi-Square critical value with continuous alpha
+  const z = normalUpperQuantile(alpha);
+  const factor = 2 / (9 * df);
+  const term = 1 - factor + z * Math.sqrt(factor);
   return Number((df * Math.pow(term, 3)).toFixed(4));
 }
 

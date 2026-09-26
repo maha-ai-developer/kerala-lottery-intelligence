@@ -183,6 +183,12 @@ service cloud.firestore {
       allow write: if isResearcher();
     }
 
+    // Historical Statistical Robustness Reports (Milestone 5E)
+    match /historical_robustness_reports/{robustnessId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+
     // Dataset Versions & Experiments
     match /datasetVersions/{versionId} {
       allow read: if isAuthenticated();

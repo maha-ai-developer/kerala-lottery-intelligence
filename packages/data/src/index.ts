@@ -1958,7 +1958,20 @@ export type {
   ExperimentStatisticalTestResult,
   ExperimentResult,
   HistoricalExperimentRecord,
-  HistoricalExperimentRepository
+  HistoricalExperimentRepository,
+  RobustnessVariantDimension,
+  RobustnessVariantDefinition,
+  EffectSizeMagnitude,
+  EffectSizeMetrics,
+  RobustnessSensitivityMetric,
+  RobustnessClassification,
+  RobustnessEvaluationSummary,
+  MultipleComparisonCorrectionMethod,
+  RobustnessConfiguration,
+  RobustnessDefinition,
+  RobustnessReport,
+  HistoricalRobustnessRecord,
+  HistoricalRobustnessRepository
 } from "@kerala-lottery/statistics";
 
 export {
@@ -1966,8 +1979,10 @@ export {
   DEFAULT_CORPUS_VERSION,
   DEFAULT_ANALYSIS_VERSION,
   DEFAULT_EXPERIMENT_VERSION,
+  DEFAULT_ROBUSTNESS_VERSION,
   HISTORICAL_ANALYSIS_DISCLAIMER,
   HISTORICAL_EXPERIMENT_DISCLAIMER,
+  HISTORICAL_ROBUSTNESS_DISCLAIMER,
   StatisticalValidationError,
   calculateHistoricalStatistics,
   computeDrawSummaryStatistics,
@@ -2023,7 +2038,18 @@ export {
   executeStatisticalExperiment,
   createHistoricalExperimentRecord,
   InMemoryHistoricalExperimentRepository,
-  FirestoreRestHistoricalExperimentRepository
+  FirestoreRestHistoricalExperimentRepository,
+  calculateCramersV,
+  calculateChiSquareCriticalValue,
+  computeRobustnessDefinitionHash,
+  computeRobustnessReportHash,
+  createStandardPopulationRobustnessVariants,
+  createPopulationRobustnessDefinition,
+  executeRobustnessEvaluation,
+  createHistoricalRobustnessRecord,
+  InMemoryHistoricalRobustnessRepository,
+  FirestoreRestHistoricalRobustnessRepository
 } from "@kerala-lottery/statistics";
+
 
 
