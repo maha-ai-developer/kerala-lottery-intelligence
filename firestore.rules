@@ -171,6 +171,12 @@ service cloud.firestore {
       allow write: if isResearcher();
     }
 
+    // Historical Statistical Analysis Suites (Milestone 5C)
+    match /historical_analyses/{analysisId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+
     // Dataset Versions & Experiments
     match /datasetVersions/{versionId} {
       allow read: if isAuthenticated();

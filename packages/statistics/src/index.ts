@@ -10,6 +10,8 @@ export * from "./statistical-types";
 export * from "./statistical-engine";
 export * from "./repository";
 export * from "./multi-draw-corpus";
+export * from "./historical-analysis-types";
+export * from "./historical-analysis-engine";
 
 // ============================================================================
 // Core Statistical Math Utilities (Legacy & Mathematical Primitives)
