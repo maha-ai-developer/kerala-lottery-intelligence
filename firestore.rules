@@ -195,6 +195,12 @@ service cloud.firestore {
       allow write: if isResearcher();
     }
 
+    // Historical Model Feature Matrices & Selections (Milestone 6C)
+    match /historical_model_feature_matrices/{matrixId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+
     // Dataset Versions & Experiments
     match /datasetVersions/{versionId} {
       allow read: if isAuthenticated();
