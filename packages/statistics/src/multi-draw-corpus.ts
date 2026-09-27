@@ -49,6 +49,46 @@ export const CANONICAL_6_BASELINE_FILES = [
   "277-2340-13-09-2026.pdf"
 ] as const;
 
+/**
+ * Converts a date string (DD/MM/YYYY, DD-MM-YYYY, or YYYY-MM-DD) to a comparable ISO YYYY-MM-DD string.
+ */
+export function parseDrawDateToIso(dateStr: string): string {
+  if (!dateStr) return "";
+  const trimmed = dateStr.trim();
+  if (trimmed.includes("/")) {
+    const parts = trimmed.split("/");
+    if (parts.length === 3) {
+      const day = parts[0]!.padStart(2, "0");
+      const month = parts[1]!.padStart(2, "0");
+      const year = parts[2]!;
+      return `${year}-${month}-${day}`;
+    }
+  } else if (trimmed.includes("-")) {
+    const parts = trimmed.split("-");
+    if (parts.length === 3) {
+      if (parts[0]!.length === 4) {
+        return trimmed;
+      }
+      const day = parts[0]!.padStart(2, "0");
+      const month = parts[1]!.padStart(2, "0");
+      const year = parts[2]!;
+      return `${year}-${month}-${day}`;
+    }
+  }
+  return trimmed;
+}
+
+/**
+ * Sorts date strings chronologically rather than alphabetically.
+ */
+export function sortDatesChronologically(dates: string[]): string[] {
+  return dates.slice().sort((a, b) => {
+    const isoA = parseDrawDateToIso(a);
+    const isoB = parseDrawDateToIso(b);
+    return isoA.localeCompare(isoB);
+  });
+}
+
 // ============================================================================
 // Multi-Draw Corpus Contracts
 // ============================================================================
@@ -279,8 +319,8 @@ export function buildMultiDrawCorpus(
     }
   }
 
-  // Determine date range
-  const dates = drawProfiles.map((d) => d.drawDate).filter(Boolean).sort();
+  // Determine date range chronologically
+  const dates = sortDatesChronologically(drawProfiles.map((d) => d.drawDate).filter(Boolean));
   const dateRange = {
     earliest: dates[0],
     latest: dates[dates.length - 1]

@@ -21,7 +21,7 @@
  */
 
 import type { LotteryKnowledgeGraph } from "@kerala-lottery/knowledge";
-import { extractEntitiesFromKnowledgeGraph } from "@kerala-lottery/statistics";
+import { extractEntitiesFromKnowledgeGraph, sortDatesChronologically } from "@kerala-lottery/statistics";
 
 export interface BatchValidationIssue {
   type:
@@ -295,10 +295,10 @@ export class CrossDocumentValidator {
       }
     }
 
-    dates.sort();
+    const sortedDates = sortDatesChronologically(dates);
     const dateRange = {
-      earliest: dates[0],
-      latest: dates[dates.length - 1]
+      earliest: sortedDates[0],
+      latest: sortedDates[sortedDates.length - 1]
     };
 
     return {

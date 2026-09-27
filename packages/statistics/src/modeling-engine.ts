@@ -60,29 +60,11 @@ export class ModelingValidationError extends Error {
   }
 }
 
+import { parseDrawDateToIso } from "./multi-draw-corpus";
+
 // ============================================================================
 // Date Parsing & Normalization
 // ============================================================================
-
-export function parseDrawDateToIso(dateStr: string): string {
-  if (!dateStr) return "";
-  const trimmed = dateStr.trim();
-  if (trimmed.includes("/")) {
-    const parts = trimmed.split("/");
-    if (parts.length === 3) {
-      const day = parts[0]!.padStart(2, "0");
-      const month = parts[1]!.padStart(2, "0");
-      const year = parts[2]!;
-      return `${year}-${month}-${day}`;
-    }
-  } else if (trimmed.includes("-")) {
-    const parts = trimmed.split("-");
-    if (parts.length === 3 && parts[0]!.length === 4) {
-      return trimmed;
-    }
-  }
-  return trimmed;
-}
 
 export function parseDrawDateToTimestamp(dateStr: string): number {
   const iso = parseDrawDateToIso(dateStr);

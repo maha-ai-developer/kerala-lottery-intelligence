@@ -128,6 +128,22 @@ async function verifyExpansionMilestone7A5() {
   if (corpus.validationReport.totalSuffixResults !== 36222) {
     throw new Error(`Expected 36,222 SUFFIX results, found ${corpus.validationReport.totalSuffixResults}`);
   }
+  if (corpus.validationReport.dateRange.earliest !== "19/06/2026") {
+    throw new Error(`Expected earliest draw date 19/06/2026, found ${corpus.validationReport.dateRange.earliest}`);
+  }
+  if (corpus.validationReport.dateRange.latest !== "26/09/2026") {
+    throw new Error(`Expected latest draw date 26/09/2026, found ${corpus.validationReport.dateRange.latest}`);
+  }
+
+  // Verify all 6 September canonical baseline draws are present
+  const septBaselines = ["12/09/2026", "13/09/2026", "14/09/2026", "15/09/2026", "16/09/2026", "17/09/2026"];
+  const corpusDrawDates = new Set(corpus.draws.map(d => d.drawDate));
+  for (const bDate of septBaselines) {
+    if (!corpusDrawDates.has(bDate)) {
+      throw new Error(`Missing September baseline draw date: ${bDate}`);
+    }
+  }
+  console.log(`   ✓ All 6 September canonical baseline draws verified present in corpus.`);
 
   // 4. Verify Downstream Layers (5A through 7A)
   console.log("\n4. Verifying Downstream Derived Layer Refreshes...");

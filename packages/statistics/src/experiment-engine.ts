@@ -27,7 +27,7 @@
  */
 
 import { createHash } from "node:crypto";
-import type { MultiDrawLotteryCorpus } from "./multi-draw-corpus";
+import { type MultiDrawLotteryCorpus, sortDatesChronologically } from "./multi-draw-corpus";
 import { StatisticalValidationError } from "./statistical-engine";
 import { extractAnalysisProvenanceRecords } from "./historical-analysis-engine";
 import {
@@ -365,10 +365,11 @@ export function resolveExperimentPopulation(
   const drawIds = Array.from(new Set(matchingItems.map((item) => item.drawId))).sort();
   const documentSha256s = Array.from(new Set(matchingItems.map((item) => item.documentSha256))).sort();
 
-  const drawDates = targetDraws
-    .map((d) => d.drawDate)
-    .filter(Boolean)
-    .sort();
+  const drawDates = sortDatesChronologically(
+    targetDraws
+      .map((d) => d.drawDate)
+      .filter(Boolean)
+  );
 
   const populationHash = createHash("sha256")
     .update(

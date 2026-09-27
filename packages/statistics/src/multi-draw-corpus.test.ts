@@ -28,7 +28,9 @@ import {
   InMemoryMultiDrawCorpusRepository,
   DEFAULT_CORPUS_VERSION,
   DEFAULT_STATISTICAL_VERSION,
-  StatisticalValidationError
+  StatisticalValidationError,
+  parseDrawDateToIso,
+  sortDatesChronologically
 } from "./index";
 
 describe("Milestone 5B — Multi-Draw Dataset Expansion & Corpus Foundation", () => {
@@ -298,5 +300,20 @@ describe("Milestone 5B — Multi-Draw Dataset Expansion & Corpus Foundation", ()
     const list = await repo.listCorpora();
     expect(list.length).toBe(1);
     expect(list[0]?.id).toBe(corpus.id);
+  });
+
+  // 12. Chronological date range computation
+  it("12. Invariant: Computes chronological dateRange without alphabetical bias", () => {
+    const dates = ["14/09/2026", "01/07/2026", "19/06/2026", "26/09/2026", "31/08/2026"];
+    const sorted = sortDatesChronologically(dates);
+    expect(sorted[0]).toBe("19/06/2026");
+    expect(sorted[sorted.length - 1]).toBe("26/09/2026");
+
+    const corpus = buildMultiDrawCorpus(graphs);
+    expect(corpus.validationReport.dateRange.earliest).toBeDefined();
+    expect(corpus.validationReport.dateRange.latest).toBeDefined();
+    const isoEarliest = parseDrawDateToIso(corpus.validationReport.dateRange.earliest!);
+    const isoLatest = parseDrawDateToIso(corpus.validationReport.dateRange.latest!);
+    expect(isoEarliest <= isoLatest).toBe(true);
   });
 });

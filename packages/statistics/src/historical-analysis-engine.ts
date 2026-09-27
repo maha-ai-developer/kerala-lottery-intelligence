@@ -10,7 +10,7 @@
 
 import { createHash } from "node:crypto";
 import type { RegionBoundingBox, WinningResult, PrizeTier } from "@kerala-lottery/domain";
-import type { MultiDrawLotteryCorpus } from "./multi-draw-corpus";
+import { type MultiDrawLotteryCorpus, sortDatesChronologically } from "./multi-draw-corpus";
 import { StatisticalValidationError } from "./statistical-engine";
 import { calculateChiSquareUniform } from "./index";
 
@@ -130,10 +130,11 @@ export function buildAnalysisPopulationScope(
     new Set(filteredDraws.map((d) => d.sourceDocumentSha256))
   ).sort();
 
-  const dates = filteredDraws
-    .map((d) => d.drawDate)
-    .filter(Boolean)
-    .sort();
+  const dates = sortDatesChronologically(
+    filteredDraws
+      .map((d) => d.drawDate)
+      .filter(Boolean)
+  );
 
   const earliestDate = dates[0];
   const latestDate = dates[dates.length - 1];

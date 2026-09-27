@@ -11,6 +11,7 @@ import {
   LotteryEntityExtractorService,
   computeSha256
 } from "@kerala-lottery/documents";
+import { sortDatesChronologically } from "@kerala-lottery/statistics";
 
 async function inspectAllPdfs() {
   const dir = join(process.cwd(), "data/source-documents/lottery-results");
@@ -117,7 +118,7 @@ async function inspectAllPdfs() {
   console.log(`Total WinningResults:       ${totalResults} (FULL_TICKET: ${totalFull}, SUFFIX: ${totalSuffix})`);
 
   // Date range
-  const dates = validRows.map((r) => r.drawDate).filter(Boolean).sort();
+  const dates = sortDatesChronologically(validRows.map((r) => r.drawDate).filter(Boolean));
   console.log(`Date range:                 ${dates[0]} to ${dates[dates.length - 1]}`);
   console.log(`Sample draws:`);
   validRows.slice(0, 5).forEach((r) => {
