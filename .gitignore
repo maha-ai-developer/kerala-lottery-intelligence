@@ -55,3 +55,4 @@ ui-debug.log*
 scratch/
 tmp/
 *.tmp
+data/processed-cache/

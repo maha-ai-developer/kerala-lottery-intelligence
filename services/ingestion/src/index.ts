@@ -29,6 +29,9 @@ export * from "./errors";
 export * from "./acquisition";
 export * from "./discovery";
 export * from "./page-extraction";
+export * from "./cross-document-validator";
+export * from "./document-cache";
+export * from "./daily-ingestion-engine";
 
 export interface IngestDocumentInput {
   fileBuffer: Uint8Array;

@@ -15,7 +15,8 @@
     "test:rules": "npx -y firebase-tools emulators:exec --only firestore \"vitest run tests/firestore-rules.test.ts\"",
     "test:watch": "vitest",
     "lint": "eslint . --ext .ts,.tsx,.js",
-    "typecheck": "tsc --noEmit --project tsconfig.base.json"
+    "typecheck": "tsc --noEmit --project tsconfig.base.json",
+    "ingest:daily": "npx tsx services/ingestion/scripts/daily-ingestion.ts"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.2",

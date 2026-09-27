@@ -44,6 +44,7 @@ import {
 } from "@kerala-lottery/knowledge";
 import {
   buildMultiDrawCorpus,
+  CANONICAL_6_BASELINE_FILES,
   extractCorpusFeatures,
   evaluateFeatureMatrix,
   buildModelFeatureMatrix,
@@ -85,8 +86,9 @@ describe("Milestone 7A: Modeling Foundation", () => {
   beforeAll(async () => {
     if (!existsSync(LOTTERY_RESULTS_DIR)) return;
 
+    const canonicalSet = new Set<string>(CANONICAL_6_BASELINE_FILES);
     const files = readdirSync(LOTTERY_RESULTS_DIR)
-      .filter((f) => f.endsWith(".pdf") && f !== "dhanalekshmi-dl-40.pdf")
+      .filter((f) => canonicalSet.has(f))
       .sort();
 
     const extractor = new PdfPageExtractorService();

@@ -8,7 +8,9 @@
     "@kerala-lottery/domain": "*",
     "@kerala-lottery/documents": "*",
     "@kerala-lottery/validation": "*",
-    "@kerala-lottery/data": "*"
+    "@kerala-lottery/data": "*",
+    "@kerala-lottery/knowledge": "*",
+    "@kerala-lottery/statistics": "*"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

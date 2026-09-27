@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -36,7 +36,7 @@ describe("Milestone 5B — Multi-Draw Dataset Expansion & Corpus Foundation", ()
 
   let graphs: LotteryKnowledgeGraph[] = [];
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     // Build real knowledge graphs from the real official Kerala State Lottery PDFs in the repository
     const pdfFiles = [
       "271-2344-14-09-2026.pdf", // BHAGYATHARA (BT-71)
