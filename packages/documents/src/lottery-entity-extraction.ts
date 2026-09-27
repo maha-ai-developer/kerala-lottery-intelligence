@@ -354,8 +354,8 @@ export function extractLotteryEntitiesFromDocument(
       // 2. Check for Prize Tier declaration
       const tierInfo = parsePrizeTierDeclaration(text);
       if (tierInfo) {
-        // Tiers 4th and above in Kerala lotteries are suffix tiers, or if we passed suffix announcement
-        const isSuffix = isSuffixSection || tierInfo.rank >= 4;
+        // Tiers in Kerala lotteries are suffix tiers once the suffix announcement section is reached
+        const isSuffix = isSuffixSection;
         const tierId = `${documentSha256}_tier_${tierInfo.tierType === "CONSOLATION" ? "cons" : tierInfo.rank}`;
 
         currentTier = {

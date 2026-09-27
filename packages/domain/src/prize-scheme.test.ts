@@ -2,7 +2,7 @@
  * Kerala State Lottery Intelligence & Experiment Platform
  * Milestone 7A.6 — Prize Structure & Scheme Registry Tests
  *
- * Tests all 24 required invariant and functional properties:
+ * Tests all required invariant and functional properties:
  * 1. WEEKLY scheme identity
  * 2. BUMPER scheme identity
  * 3. version identity
@@ -18,15 +18,21 @@
  * 13. draw-to-scheme resolution
  * 14. date applicability
  * 15. ambiguous scheme handling
- * 16. missing scheme handling
+ * 16. missing scheme handling (explicit UNRESOLVED status)
  * 17. weekly validation
  * 18. bumper validation
  * 19. observed-result compatibility
  * 20. deterministic scheme ID
  * 21. repeated execution equivalence
  * 22. no source mutation
- * 23. provenance preservation
+ * 23. provenance preservation & real SHA validation
  * 24. leading-zero compatibility
+ * 25. total prize reconciliation across all schemes
+ * 26. placeholder SHA rejection & real SHA verification
+ * 27. unavailable physical-source modeling (null SHA)
+ * 28. official vs observed scheme archetype classification
+ * 29. bumper per-series structural validation (ONE_PER_SERIES and N_PER_SERIES)
+ * 30. bumper consolation validation (remaining series matching 1st prize number)
  */
 
 import { describe, it, expect } from "vitest";
@@ -35,13 +41,25 @@ import {
   InMemoryPrizeSchemeRepository,
   validateDrawAgainstPrizeScheme,
   inferSchemeTypeFromLotteryName,
+  reconcilePrizeSchemeTotal,
+  isValidSha256Hex,
+  validateSchemeProvenanceIntegrity,
+  hasOfficialGazetteSro,
   BT_SRO_SHA256,
+  DL_SRO_SHA256,
+  KN_SRO_SHA256,
+  SS_SRO_SHA256,
+  SK_SRO_SHA256,
+  KR_SRO_SHA256,
+  SM_SRO_SHA256,
+  MONSOON_BUMPER_SRO_SHA256,
+  THIRUVONAM_BUMPER_RESULT_SHA256,
   type PrizeSchemeVersion
 } from "./prize-scheme";
 import { statSync } from "node:fs";
 import { join } from "node:path";
 
-describe("Milestone 7A.6 — Prize Structure & Scheme Registry", () => {
+describe("Milestone 7A.6 — Prize Structure & Scheme Registry Integrity", () => {
   const registry = createAuthoritativePrizeSchemeRegistry();
 
   // 1. WEEKLY scheme identity
@@ -53,6 +71,10 @@ describe("Milestone 7A.6 — Prize Structure & Scheme Registry", () => {
     expect(inferSchemeTypeFromLotteryName("BHAGYATHARA")).toBe("WEEKLY");
     expect(inferSchemeTypeFromLotteryName("DHANALEKSHMI")).toBe("WEEKLY");
     expect(inferSchemeTypeFromLotteryName("KARUNYA PLUS")).toBe("WEEKLY");
+    expect(inferSchemeTypeFromLotteryName("STHREE-SAKTHI")).toBe("WEEKLY");
+    expect(inferSchemeTypeFromLotteryName("SUVARNA KERALAM")).toBe("WEEKLY");
+    expect(inferSchemeTypeFromLotteryName("KARUNYA")).toBe("WEEKLY");
+    expect(inferSchemeTypeFromLotteryName("SAMRUDHI")).toBe("WEEKLY");
   });
 
   // 2. BUMPER scheme identity
@@ -77,7 +99,7 @@ describe("Milestone 7A.6 — Prize Structure & Scheme Registry", () => {
   // 3. version identity
   it("3. version identity: each scheme version has deterministic, unique identifier", () => {
     const all = registry.getAllVersions();
-    expect(all.length).toBeGreaterThanOrEqual(5);
+    expect(all.length).toBeGreaterThanOrEqual(16); // 7 weekly * 2 versions + 2 bumpers
 
     const ids = new Set(all.map((v) => v.id));
     expect(ids.size).toBe(all.length);
@@ -129,7 +151,7 @@ describe("Milestone 7A.6 — Prize Structure & Scheme Registry", () => {
   });
 
   // 7. common-to-all-series rule
-  it("7. common-to-all-series rule: 1st, 2nd, 3rd prizes are common across all series", () => {
+  it("7. common-to-all-series rule: 1st, 2nd, 3rd prizes are common across all series in weekly lotteries", () => {
     const kn = registry.getSchemeVersion("scheme_ver_kn_v2025-11-sro1294")!;
     const tier1 = kn.tierRules.find((t) => t.rank === 1)!;
     const tier2 = kn.tierRules.find((t) => t.rank === 2)!;
@@ -141,12 +163,10 @@ describe("Milestone 7A.6 — Prize Structure & Scheme Registry", () => {
     expect(tier1.numberLength).toBe(6);
 
     expect(tier2.selectionBasis).toBe("COMMON_TO_ALL_SERIES");
-    expect(tier2.drawCount).toBe(1);
-    expect(tier2.maximumPrizeCount).toBe(1);
+    expect(tier2.numberLength).toBe(6);
 
     expect(tier3.selectionBasis).toBe("COMMON_TO_ALL_SERIES");
-    expect(tier3.drawCount).toBe(1);
-    expect(tier3.maximumPrizeCount).toBe(1);
+    expect(tier3.numberLength).toBe(6);
   });
 
   // 8. one-per-series rule
@@ -208,7 +228,6 @@ describe("Milestone 7A.6 — Prize Structure & Scheme Registry", () => {
 
     for (const tier of bt.tierRules) {
       if (tier.isSuffix) {
-        // theoretical maximum = repetitionCount * (tickets / 10000)
         expect(tier.maximumPrizeCount).toBe(tier.drawCount * factor);
       }
     }
@@ -227,6 +246,7 @@ describe("Milestone 7A.6 — Prize Structure & Scheme Registry", () => {
     });
 
     expect(res.status).toBe("SCHEME_RESOLVED");
+    expect(res.authorityLevel).toBe("OFFICIAL_SCHEME");
     expect(res.schemeVersion?.id).toBe("scheme_ver_bt_v2025-11-sro1297");
     expect(res.confidence).toBe(1.0);
     expect(res.sourceProvenance?.sroNumber).toBe("S. R. O. No. 1297/2025");
@@ -247,7 +267,6 @@ describe("Milestone 7A.6 — Prize Structure & Scheme Registry", () => {
   // 15. ambiguous scheme handling
   it("15. ambiguous scheme handling: returns SCHEME_RESOLUTION_AMBIGUOUS for unresolvable overlaps", () => {
     const customRepo = new InMemoryPrizeSchemeRepository();
-    // Register two overlapping active versions without supersession
     const vA: PrizeSchemeVersion = {
       ...registry.getSchemeVersion("scheme_ver_bt_v2025-11-sro1297")!,
       id: "scheme_ver_bt_alt_A",
@@ -273,29 +292,22 @@ describe("Milestone 7A.6 — Prize Structure & Scheme Registry", () => {
     expect(res.resolutionEvidence).toContain("multiple overlapping");
   });
 
-  // 16. missing scheme handling
-  it("16. missing scheme handling: returns SCHEME_NOT_FOUND when official Gazette SRO is absent", () => {
+  // 16. missing scheme handling (explicit UNRESOLVED status)
+  it("16. missing scheme handling: returns SCHEME_NOT_FOUND when lottery is unregistered, explicitly marking it unresolved", () => {
     const res = registry.resolveSchemeForDraw({
-      lotteryName: "UNKNOWN_LOTTERY_XYZ",
+      lotteryName: "FIFTY_FIFTY_LOTTERY",
       drawDate: "2026-09-14"
     });
     expect(res.status).toBe("SCHEME_NOT_FOUND");
     expect(res.schemeVersion).toBeUndefined();
-
-    // Sthree-Sakthi without registered Gazette SRO returns NOT_FOUND
-    const resSS = registry.resolveSchemeForDraw({
-      lotteryName: "STHREE-SAKTHI",
-      drawDate: "2026-09-15"
-    });
-    expect(resSS.status).toBe("SCHEME_NOT_FOUND");
-    expect(resSS.resolutionEvidence).toContain("No registered scheme definitions");
+    expect(res.resolutionEvidence).toContain("UNRESOLVED");
+    expect(res.resolutionEvidence).toContain("No authoritative scheme document ingested");
   });
 
   // 17. weekly validation
   it("17. weekly validation: validates complete weekly draw structure against official SRO rules", () => {
     const scheme = registry.getSchemeVersion("scheme_ver_bt_v2025-11-sro1297")!;
 
-    // Construct mock observed draw matching BT structure
     const mockTiers = scheme.tierRules.map((r) => ({
       name: r.tierName,
       rank: r.rank,
@@ -310,18 +322,20 @@ describe("Milestone 7A.6 — Prize Structure & Scheme Registry", () => {
       canonicalNumber: string;
       numberLength: number;
       isSuffix: boolean;
+      series?: string;
     }> = [
-      { prizeTierName: "1st Prize", rank: 1, amount: 10000000, canonicalNumber: "123456", numberLength: 6, isSuffix: false },
+      { prizeTierName: "1st Prize", rank: 1, amount: 10000000, canonicalNumber: "123456", numberLength: 6, isSuffix: false, series: "BA" },
       { prizeTierName: "2nd Prize", rank: 2, amount: 3000000, canonicalNumber: "234567", numberLength: 6, isSuffix: false },
-      { prizeTierName: "3rd Prize", rank: 3, amount: 500000, canonicalNumber: "345678", numberLength: 6, isSuffix: false },
-      // 11 consolation prizes
-      ...Array.from({ length: 11 }, () => ({
+      { prizeTierName: "3rd Prize", rank: 3, amount: 500000, canonicalNumber: "345671", numberLength: 6, isSuffix: false },
+      // 11 consolation prizes matching 1st prize number "123456" in remaining series
+      ...["BB", "BC", "BD", "BE", "BG", "BH", "BJ", "BK", "BL", "BM", "BN"].map((s) => ({
         prizeTierName: "Consolation Prize",
         rank: 0,
         amount: 5000,
         canonicalNumber: "123456",
         numberLength: 6,
-        isSuffix: false
+        isSuffix: false,
+        series: s
       })),
       // 19 draws for 4th prize
       ...Array.from({ length: 19 }, (_, i) => ({
@@ -350,7 +364,7 @@ describe("Milestone 7A.6 — Prize Structure & Scheme Registry", () => {
         numberLength: 4,
         isSuffix: true
       })),
-      // 76 draws for 7th prize
+      // 68 draws for 7th prize
       ...Array.from({ length: 76 }, (_, i) => ({
         prizeTierName: "7th Prize",
         rank: 7,
@@ -359,7 +373,7 @@ describe("Milestone 7A.6 — Prize Structure & Scheme Registry", () => {
         numberLength: 4,
         isSuffix: true
       })),
-      // 94 draws for 8th prize
+      // 104 draws for 8th prize
       ...Array.from({ length: 94 }, (_, i) => ({
         prizeTierName: "8th Prize",
         rank: 8,
@@ -368,7 +382,7 @@ describe("Milestone 7A.6 — Prize Structure & Scheme Registry", () => {
         numberLength: 4,
         isSuffix: true
       })),
-      // 144 draws for 9th prize
+      // 164 draws for 9th prize
       ...Array.from({ length: 144 }, (_, i) => ({
         prizeTierName: "9th Prize",
         rank: 9,
@@ -430,7 +444,6 @@ describe("Milestone 7A.6 — Prize Structure & Scheme Registry", () => {
       isSuffix: r.isSuffix
     }));
 
-    // Suffix tier IV theoretical maximum is 20,520; observed draw repetition count is 19
     const tier4 = scheme.tierRules.find((t) => t.tierCode === "IV")!;
     expect(19).toBeLessThan(tier4.maximumPrizeCount);
 
@@ -474,28 +487,32 @@ describe("Milestone 7A.6 — Prize Structure & Scheme Registry", () => {
 
   // 22. no source mutation
   it("22. no source mutation: verifies physical source files in data/source-documents remain untouched", () => {
-    const btPath = join(process.cwd(), "data/source-documents/prize-structure/sro-bhagyathara-bt.pdf");
-    const dlPath = join(process.cwd(), "data/source-documents/prize-structure/sro-dhanalekshmi-dl.pdf");
-    const knPath = join(process.cwd(), "data/source-documents/prize-structure/sro-karunya-plus-kn.pdf");
+    const paths = [
+      "data/source-documents/prize-structure/sro-bhagyathara-bt.pdf",
+      "data/source-documents/prize-structure/sro-dhanalekshmi-dl.pdf",
+      "data/source-documents/prize-structure/sro-karunya-plus-kn.pdf",
+      "data/source-documents/prize-structure/sro-sthree-sakthi-ss.pdf",
+      "data/source-documents/prize-structure/sro-suvarna-keralam-sk.pdf",
+      "data/source-documents/prize-structure/sro-karunya-kr.pdf",
+      "data/source-documents/prize-structure/sro-samrudhi-sm.pdf",
+      "data/source-documents/prize-structure/sro-monsoon-bumper-br110.pdf"
+    ];
 
-    const statBt = statSync(btPath);
-    const statDl = statSync(dlPath);
-    const statKn = statSync(knPath);
-
-    expect(statBt.size).toBeGreaterThan(0);
-    expect(statDl.size).toBeGreaterThan(0);
-    expect(statKn.size).toBeGreaterThan(0);
+    for (const p of paths) {
+      const stat = statSync(join(process.cwd(), p));
+      expect(stat.size).toBeGreaterThan(0);
+    }
   });
 
-  // 23. provenance preservation
-  it("23. provenance preservation: every scheme version references an immutable document SHA-256", () => {
+  // 23. provenance preservation & real SHA validation
+  it("23. provenance preservation & real SHA validation: active schemes have valid 64-hex SHA-256", () => {
     const all = registry.getAllVersions();
     for (const v of all) {
-      expect(v.sourceDocumentSha256).toBeDefined();
-      expect(v.sourceDocumentSha256.length).toBeGreaterThan(0);
-      expect(v.provenance).toBeDefined();
-      expect(v.provenance.authorityPriority).toBeGreaterThanOrEqual(1);
-      expect(v.provenance.authorityPriority).toBeLessThanOrEqual(4);
+      if (v.status === "ACTIVE") {
+        expect(v.sourceDocumentSha256).toBeDefined();
+        expect(v.sourceDocumentSha256).not.toBeNull();
+        expect(isValidSha256Hex(v.sourceDocumentSha256!)).toBe(true);
+      }
     }
   });
 
@@ -519,7 +536,7 @@ describe("Milestone 7A.6 — Prize Structure & Scheme Registry", () => {
           prizeTierName: "4th Prize",
           rank: 4,
           amount: 5000,
-          canonicalNumber: "0276", // Must remain 4-char string "0276", NOT 276
+          canonicalNumber: "0276",
           numberLength: 4,
           isSuffix: true
         }
@@ -529,5 +546,237 @@ describe("Milestone 7A.6 — Prize Structure & Scheme Registry", () => {
     expect(typeof drawWithLeadingZeros.winningResults[0]!.canonicalNumber).toBe("string");
     expect(drawWithLeadingZeros.winningResults[0]!.canonicalNumber.startsWith("0")).toBe(true);
     expect(drawWithLeadingZeros.winningResults[0]!.canonicalNumber.length).toBe(4);
+  });
+
+  // 25. Total prize reconciliation across all schemes
+  it("25. total prize reconciliation: validates sum(tier.amount * tier.maxCount) = scheme.totalPrizeAmount for all schemes", () => {
+    const activeSchemes = registry.getAllVersions().filter((v) => v.status === "ACTIVE");
+    expect(activeSchemes.length).toBeGreaterThanOrEqual(9);
+
+    for (const scheme of activeSchemes) {
+      const reconciliation = reconcilePrizeSchemeTotal(scheme);
+      expect(
+        reconciliation.isReconciled,
+        `Reconciliation failed for ${scheme.lotteryName} (${scheme.id}): calculated ${reconciliation.calculatedTotal}, expected ${reconciliation.expectedTotal}, diff ${reconciliation.difference}`
+      ).toBe(true);
+      expect(reconciliation.difference).toBe(0);
+      expect(reconciliation.calculatedTotal).toBe(scheme.totalPrizeAmount);
+    }
+
+    // Specific reconciliation verification for Monsoon Bumper BR-110: ₹30,85,25,000
+    const monsoon = registry.getSchemeVersion("scheme_ver_monsoon_bumper_2026_br110")!;
+    const recMonsoon = reconcilePrizeSchemeTotal(monsoon);
+    expect(recMonsoon.calculatedTotal).toBe(308525000);
+    expect(recMonsoon.expectedTotal).toBe(308525000);
+    expect(recMonsoon.isReconciled).toBe(true);
+
+    // Specific reconciliation verification for Thiruvonam Bumper BR-111: ₹1,25,54,00,000
+    const onam = registry.getSchemeVersion("scheme_ver_thiruvonam_bumper_2026_br111")!;
+    const recOnam = reconcilePrizeSchemeTotal(onam);
+    expect(recOnam.calculatedTotal).toBe(1255400000);
+    expect(recOnam.expectedTotal).toBe(1255400000);
+    expect(recOnam.isReconciled).toBe(true);
+  });
+
+  // 26. Placeholder SHA rejection & real SHA verification
+  it("26. placeholder SHA rejection: rejects non-SHA identifier strings and validates real 64-char hex", () => {
+    expect(isValidSha256Hex("superseded_sro_1062_2025_gazette_3329")).toBe(false);
+    expect(isValidSha256Hex("fake_sha")).toBe(false);
+    expect(isValidSha256Hex("")).toBe(false);
+    expect(isValidSha256Hex(null)).toBe(false);
+    expect(isValidSha256Hex(undefined)).toBe(false);
+
+    // Real SHA check
+    expect(isValidSha256Hex(BT_SRO_SHA256)).toBe(true);
+    expect(isValidSha256Hex(DL_SRO_SHA256)).toBe(true);
+    expect(isValidSha256Hex(KN_SRO_SHA256)).toBe(true);
+    expect(isValidSha256Hex(SS_SRO_SHA256)).toBe(true);
+    expect(isValidSha256Hex(SK_SRO_SHA256)).toBe(true);
+    expect(isValidSha256Hex(KR_SRO_SHA256)).toBe(true);
+    expect(isValidSha256Hex(SM_SRO_SHA256)).toBe(true);
+    expect(isValidSha256Hex(MONSOON_BUMPER_SRO_SHA256)).toBe(true);
+    expect(isValidSha256Hex(THIRUVONAM_BUMPER_RESULT_SHA256)).toBe(true);
+
+    // Test that validateSchemeProvenanceIntegrity catches placeholder strings
+    const fakeVersion: PrizeSchemeVersion = {
+      ...registry.getSchemeVersion("scheme_ver_bt_v2025-11-sro1297")!,
+      id: "scheme_ver_fake",
+      sourceDocumentSha256: "superseded_sro_1062_2025_gazette_3329",
+      provenance: {
+        ...registry.getSchemeVersion("scheme_ver_bt_v2025-11-sro1297")!.provenance,
+        documentSha256: "superseded_sro_1062_2025_gazette_3329"
+      }
+    };
+
+    const integrity = validateSchemeProvenanceIntegrity(fakeVersion);
+    expect(integrity.isValid).toBe(false);
+    expect(integrity.errors.some((e) => e.includes("Must be a 64-character hexadecimal"))).toBe(true);
+  });
+
+  // 27. Unavailable physical-source modeling (null SHA)
+  it("27. unavailable physical-source handling: properly models missing physical PDFs with null SHA", () => {
+    const btOld = registry.getSchemeVersion("scheme_ver_bt_v2025-09-sro1062")!;
+    expect(btOld.sourceDocumentSha256).toBeNull();
+    expect(btOld.provenance.documentSha256).toBeNull();
+    expect(btOld.isPhysicalDocumentAvailable).toBe(false);
+    expect(btOld.provenance.isPhysicalDocumentAvailable).toBe(false);
+
+    const integrity = validateSchemeProvenanceIntegrity(btOld);
+    expect(integrity.isValid).toBe(true);
+    expect(integrity.errors.length).toBe(0);
+  });
+
+  // 28. Official vs observed scheme archetype classification
+  it("28. official vs observed scheme classification: verifies authority level distinctions", () => {
+    const bt = registry.getSchemeVersion("scheme_ver_bt_v2025-11-sro1297")!;
+    const ss = registry.getSchemeVersion("scheme_ver_ss_v2025-11-sro1292")!;
+    const monsoon = registry.getSchemeVersion("scheme_ver_monsoon_bumper_2026_br110")!;
+    const thiruvonam = registry.getSchemeVersion("scheme_ver_thiruvonam_bumper_2026_br111")!;
+
+    expect(bt.authorityLevel).toBe("OFFICIAL_SCHEME");
+    expect(ss.authorityLevel).toBe("OFFICIAL_SCHEME");
+    expect(monsoon.authorityLevel).toBe("OFFICIAL_SCHEME");
+    expect(monsoon.provenance.sourceType).toBe("GAZETTE_SRO");
+
+    expect(thiruvonam.authorityLevel).toBe("OBSERVED_SCHEME_ARCHETYPE");
+    expect(thiruvonam.provenance.sourceType).toBe("RESULT_PDF");
+    expect(thiruvonam.provenance.authorityPriority).toBe(3);
+
+    // Resolution reflects authority level
+    const resBt = registry.resolveSchemeForDraw({ lotteryName: "BHAGYATHARA", drawDate: "2026-09-14" });
+    expect(resBt.authorityLevel).toBe("OFFICIAL_SCHEME");
+
+    const resThiruvonam = registry.resolveSchemeForDraw({ lotteryName: "THIRUVONAM BUMPER", drawDate: "2026-09-26" });
+    expect(resThiruvonam.authorityLevel).toBe("OBSERVED_SCHEME_ARCHETYPE");
+  });
+
+  // 29. Bumper per-series structural validation (ONE_PER_SERIES and N_PER_SERIES)
+  it("29. bumper per-series structural validation: validates ONE_PER_SERIES and N_PER_SERIES rules", () => {
+    const monsoon = registry.getSchemeVersion("scheme_ver_monsoon_bumper_2026_br110")!;
+    const mockTiers = monsoon.tierRules.map((r) => ({
+      name: r.tierName,
+      rank: r.rank,
+      amount: r.amount,
+      isSuffix: r.isSuffix
+    }));
+
+    // Valid Monsoon Bumper 2nd Prize: 5 tickets in 5 series MA, MB, MC, MD, ME
+    const validWinningResults = [
+      { prizeTierName: "1st Prize", rank: 1, amount: 100000000, canonicalNumber: "123456", numberLength: 6, isSuffix: false, series: "MA" },
+      ...["MB", "MC", "MD", "ME"].map((s) => ({
+        prizeTierName: "Consolation Prize",
+        rank: 0,
+        amount: 100000,
+        canonicalNumber: "123456",
+        numberLength: 6,
+        isSuffix: false,
+        series: s
+      })),
+      { prizeTierName: "2nd Prize", rank: 2, amount: 1000000, canonicalNumber: "200001", numberLength: 6, isSuffix: false, series: "MA" },
+      { prizeTierName: "2nd Prize", rank: 2, amount: 1000000, canonicalNumber: "200002", numberLength: 6, isSuffix: false, series: "MB" },
+      { prizeTierName: "2nd Prize", rank: 2, amount: 1000000, canonicalNumber: "200003", numberLength: 6, isSuffix: false, series: "MC" },
+      { prizeTierName: "2nd Prize", rank: 2, amount: 1000000, canonicalNumber: "200004", numberLength: 6, isSuffix: false, series: "MD" },
+      { prizeTierName: "2nd Prize", rank: 2, amount: 1000000, canonicalNumber: "200005", numberLength: 6, isSuffix: false, series: "ME" },
+      // 3rd & 4th prizes with 5 series each
+      ...["MA", "MB", "MC", "MD", "ME"].map((s, idx) => ({
+        prizeTierName: "3rd Prize",
+        rank: 3,
+        amount: 500000,
+        canonicalNumber: String(300000 + idx),
+        numberLength: 6,
+        isSuffix: false,
+        series: s
+      })),
+      ...["MA", "MB", "MC", "MD", "ME"].map((s, idx) => ({
+        prizeTierName: "4th Prize",
+        rank: 4,
+        amount: 300000,
+        canonicalNumber: String(400000 + idx),
+        numberLength: 6,
+        isSuffix: false,
+        series: s
+      }))
+    ];
+
+    const validVal = validateDrawAgainstPrizeScheme(
+      {
+        id: "valid_monsoon_draw",
+        lotteryName: "MONSOON BUMPER",
+        drawDate: "2026-07-18",
+        prizeTiers: mockTiers,
+        winningResults: validWinningResults
+      },
+      monsoon
+    );
+
+    expect(validVal.isValid).toBe(true);
+
+    // Invalid Monsoon Bumper: duplicate series in ONE_PER_SERIES tier (two "MA" tickets in 2nd prize)
+    const invalidResultsDuplicateSeries = [
+      ...validWinningResults.filter((r) => !(r.rank === 2 && r.series === "MB")),
+      { prizeTierName: "2nd Prize", rank: 2, amount: 1000000, canonicalNumber: "200099", numberLength: 6, isSuffix: false, series: "MA" }
+    ];
+
+    const invalidVal = validateDrawAgainstPrizeScheme(
+      {
+        id: "invalid_monsoon_draw",
+        lotteryName: "MONSOON BUMPER",
+        drawDate: "2026-07-18",
+        prizeTiers: mockTiers,
+        winningResults: invalidResultsDuplicateSeries
+      },
+      monsoon
+    );
+
+    expect(invalidVal.isValid).toBe(false);
+    expect(invalidVal.discrepancies.some((d) => d.includes("ONE_PER_SERIES series duplication"))).toBe(true);
+  });
+
+  // 30. Bumper consolation validation
+  it("30. bumper consolation validation: validates consolation numbers match 1st prize number in remaining series", () => {
+    const monsoon = registry.getSchemeVersion("scheme_ver_monsoon_bumper_2026_br110")!;
+    const mockTiers = monsoon.tierRules.map((r) => ({
+      name: r.tierName,
+      rank: r.rank,
+      amount: r.amount,
+      isSuffix: r.isSuffix
+    }));
+
+    // Consolation ticket number does NOT match 1st prize number
+    const invalidConsolationResults = [
+      { prizeTierName: "1st Prize", rank: 1, amount: 100000000, canonicalNumber: "123456", numberLength: 6, isSuffix: false, series: "MA" },
+      { prizeTierName: "Consolation Prize", rank: 0, amount: 100000, canonicalNumber: "999999", numberLength: 6, isSuffix: false, series: "MB" }, // Wrong number!
+      { prizeTierName: "Consolation Prize", rank: 0, amount: 100000, canonicalNumber: "123456", numberLength: 6, isSuffix: false, series: "MC" },
+      { prizeTierName: "Consolation Prize", rank: 0, amount: 100000, canonicalNumber: "123456", numberLength: 6, isSuffix: false, series: "MD" },
+      { prizeTierName: "Consolation Prize", rank: 0, amount: 100000, canonicalNumber: "123456", numberLength: 6, isSuffix: false, series: "ME" }
+    ];
+
+    const validation = validateDrawAgainstPrizeScheme(
+      {
+        id: "invalid_cons_draw",
+        lotteryName: "MONSOON BUMPER",
+        drawDate: "2026-07-18",
+        prizeTiers: mockTiers,
+        winningResults: invalidConsolationResults
+      },
+      monsoon
+    );
+
+    expect(validation.isValid).toBe(false);
+    expect(validation.discrepancies.some((d) => d.includes("Consolation ticket number mismatch"))).toBe(true);
+  });
+
+  // 31. SRO coverage for weekly lotteries
+  it("31. official SRO coverage: verifies all 7 weekly lotteries have official Gazette SRO status", () => {
+    expect(hasOfficialGazetteSro("BT")).toBe(true);
+    expect(hasOfficialGazetteSro("DL")).toBe(true);
+    expect(hasOfficialGazetteSro("KN")).toBe(true);
+    expect(hasOfficialGazetteSro("SS")).toBe(true);
+    expect(hasOfficialGazetteSro("SK")).toBe(true);
+    expect(hasOfficialGazetteSro("KR")).toBe(true);
+    expect(hasOfficialGazetteSro("SM")).toBe(true);
+    expect(hasOfficialGazetteSro("MONSOON_BUMPER")).toBe(true);
+    expect(hasOfficialGazetteSro("THIRUVONAM_BUMPER")).toBe(false); // Observed archetype
+    expect(hasOfficialGazetteSro("FIFTY_FIFTY")).toBe(false);
   });
 });

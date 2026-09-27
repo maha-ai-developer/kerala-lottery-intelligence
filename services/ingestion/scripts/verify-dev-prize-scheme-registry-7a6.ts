@@ -1,18 +1,21 @@
 /**
  * Kerala State Lottery Intelligence & Experiment Platform
- * Milestone 7A.6 — Canonical Dev Verifier: Prize Structure & Scheme Registry
+ * Milestone 7A.6 — Canonical Dev Verifier: Prize Structure & Scheme Registry Integrity
  *
  * Verifies:
- * 1. Authoritative scheme sources loaded with strict provenance
- * 2. WEEKLY vs BUMPER explicit distinction
- * 3. Historical draw resolution across the 98-draw corpus
- * 4. No ambiguous forced assignments (clean SCHEME_NOT_FOUND for missing SROs)
- * 5. Result/scheme validation with theoretical vs observed counts
- * 6. Six canonical baseline draws resolution behavior
- * 7. Bumper draw resolution and validation
- * 8. Deterministic scheme IDs and repeated execution equivalence
- * 9. Source PDF immutability
- * 10. Descriptive-only invariant
+ * 1. Authoritative scheme sources loaded with strict provenance & no fake SHAs
+ * 2. Official vs Observed Scheme Archetype distinction
+ * 3. Total Prize Reconciliation across all schemes:
+ *    sum(tier amount * maxCount) + consolation = totalPrizeAmount
+ * 4. Bumper structural validation:
+ *    COMMON_TO_ALL_SERIES, ONE_PER_SERIES, N_PER_SERIES, consolation matching
+ * 5. Full 98-draw historical corpus resolution and validation:
+ *    97 Official Schemes + 1 Observed Archetype = 98 Resolved, 0 Unresolved, 98 Validated
+ * 6. Explicit UNRESOLVED handling for missing/unregistered lottery schemes
+ * 7. Six canonical September baseline draws resolution behavior
+ * 8. Physical source SRO PDF immutability & SHA-256 verification
+ * 9. Deterministic IDs and repeated execution equivalence
+ * 10. Descriptive historical research invariant
  */
 
 import { readdirSync, readFileSync } from "node:fs";
@@ -20,9 +23,19 @@ import { join } from "node:path";
 import {
   createAuthoritativePrizeSchemeRegistry,
   validateDrawAgainstPrizeScheme,
+  reconcilePrizeSchemeTotal,
+  isValidSha256Hex,
+  validateSchemeProvenanceIntegrity,
+  hasOfficialGazetteSro,
   BT_SRO_SHA256,
   DL_SRO_SHA256,
-  KN_SRO_SHA256
+  KN_SRO_SHA256,
+  SS_SRO_SHA256,
+  SK_SRO_SHA256,
+  KR_SRO_SHA256,
+  SM_SRO_SHA256,
+  MONSOON_BUMPER_SRO_SHA256,
+  THIRUVONAM_BUMPER_RESULT_SHA256
 } from "@kerala-lottery/domain";
 import {
   PdfPageExtractorService,
@@ -31,18 +44,18 @@ import {
   computeSha256
 } from "@kerala-lottery/documents";
 
-async function verifyMilestone7A6() {
+async function verifyMilestone7A6Correction() {
   console.log("============================================================");
   console.log("KERALA STATE LOTTERY INTELLIGENCE PLATFORM");
-  console.log("MILESTONE 7A.6: PRIZE STRUCTURE & SCHEME REGISTRY VERIFIER");
+  console.log("MILESTONE 7A.6-CORRECTION: PRIZE SCHEME REGISTRY INTEGRITY");
   console.log("Branch: develop ONLY");
   console.log("Scientific Boundary: DESCRIPTIVE HISTORICAL RESEARCH ONLY");
   console.log("============================================================\n");
 
   const registry = createAuthoritativePrizeSchemeRegistry();
 
-  // 1. Authoritative Scheme Sources Loaded
-  console.log("1. Verifying Authoritative Scheme Sources & Provenance...");
+  // 1. Authoritative Scheme Sources & Provenance Integrity
+  console.log("1. Verifying Authoritative Scheme Sources & Provenance Integrity...");
   const versions = registry.getAllVersions();
   console.log(`   ✓ Loaded ${versions.length} scheme versions into authoritative registry.`);
 
@@ -50,67 +63,121 @@ async function verifyMilestone7A6() {
     if (!v.id || !v.schemeId || !v.lotteryCode || !v.version) {
       throw new Error(`Scheme version missing mandatory identifiers: ${JSON.stringify(v.id)}`);
     }
-    if (!v.provenance || !v.provenance.documentSha256) {
-      throw new Error(`Scheme version ${v.id} missing provenance or documentSha256`);
-    }
     if (v.descriptiveOnly !== true) {
       throw new Error(`Scheme version ${v.id} violates descriptive-only invariant`);
     }
+
+    // Provenance integrity validator: checks no fake SHA strings, correct types
+    const integrity = validateSchemeProvenanceIntegrity(v);
+    if (!integrity.isValid) {
+      throw new Error(`Provenance integrity failure for ${v.id}: ${integrity.errors.join("; ")}`);
+    }
+
+    if (v.sourceDocumentSha256 !== null && !isValidSha256Hex(v.sourceDocumentSha256)) {
+      throw new Error(`Invalid sourceDocumentSha256 '${v.sourceDocumentSha256}' in ${v.id}. Must be 64-char hex or null.`);
+    }
+
     console.log(
-      `   - [${v.schemeType}] ${v.lotteryName} (${v.version}) -> Priority ${v.provenance.authorityPriority} (${v.provenance.sourceType}), SRO: ${v.provenance.sroNumber || v.provenance.notificationNumber}`
+      `   - [${v.authorityLevel.padEnd(25)}] [${v.schemeType.padEnd(6)}] ${v.lotteryName} (${v.version}) -> Priority ${v.provenance.authorityPriority}, SHA: ${v.sourceDocumentSha256 ? v.sourceDocumentSha256.substring(0, 12) + "..." : "NULL (UNAVAILABLE)"}`
     );
   }
+  console.log("   ✓ All scheme versions pass strict provenance integrity (0 placeholder SHAs).");
 
-  // Verify SHA-256 for the 3 official Government Gazette SROs
+  // 2. Physical SRO Source File Verification (All 8 Ingested Gazette SROs)
+  console.log("\n2. Verifying Physical Source Gazette S.R.O. Documents & SHAs...");
+  const sroFiles = [
+    { name: "Bhagyathara (BT)", path: "data/source-documents/prize-structure/sro-bhagyathara-bt.pdf", expectedSha: BT_SRO_SHA256, sro: "S.R.O. 1297/2025" },
+    { name: "Dhanalekshmi (DL)", path: "data/source-documents/prize-structure/sro-dhanalekshmi-dl.pdf", expectedSha: DL_SRO_SHA256, sro: "S.R.O. 1296/2025" },
+    { name: "Karunya Plus (KN)", path: "data/source-documents/prize-structure/sro-karunya-plus-kn.pdf", expectedSha: KN_SRO_SHA256, sro: "S.R.O. 1294/2025" },
+    { name: "Sthree-Sakthi (SS)", path: "data/source-documents/prize-structure/sro-sthree-sakthi-ss.pdf", expectedSha: SS_SRO_SHA256, sro: "S.R.O. 1292/2025" },
+    { name: "Suvarna Keralam (SK)", path: "data/source-documents/prize-structure/sro-suvarna-keralam-sk.pdf", expectedSha: SK_SRO_SHA256, sro: "S.R.O. 1291/2025" },
+    { name: "Karunya (KR)", path: "data/source-documents/prize-structure/sro-karunya-kr.pdf", expectedSha: KR_SRO_SHA256, sro: "S.R.O. 1295/2025" },
+    { name: "Samrudhi (SM)", path: "data/source-documents/prize-structure/sro-samrudhi-sm.pdf", expectedSha: SM_SRO_SHA256, sro: "S.R.O. 1293/2025" },
+    { name: "Monsoon Bumper (BR-110)", path: "data/source-documents/prize-structure/sro-monsoon-bumper-br110.pdf", expectedSha: MONSOON_BUMPER_SRO_SHA256, sro: "S.R.O. 526/2026" }
+  ];
+
+  for (const item of sroFiles) {
+    const bytes = readFileSync(join(process.cwd(), item.path));
+    const computedSha = computeSha256(new Uint8Array(bytes));
+    if (computedSha !== item.expectedSha) {
+      throw new Error(`SHA mismatch for ${item.name} (${item.path}): expected ${item.expectedSha}, got ${computedSha}`);
+    }
+    console.log(`   ✓ [${item.sro}] ${item.name.padEnd(24)} -> SHA: ${computedSha.substring(0, 16)}... (VERIFIED)`);
+  }
+
+  // 3. Official vs Observed Scheme Classification
+  console.log("\n3. Verifying Official vs Observed Scheme Classification...");
   const bt = registry.getSchemeVersion("scheme_ver_bt_v2025-11-sro1297")!;
-  const dl = registry.getSchemeVersion("scheme_ver_dl_v2025-11-sro1296")!;
-  const kn = registry.getSchemeVersion("scheme_ver_kn_v2025-11-sro1294")!;
-
-  if (bt.provenance.documentSha256 !== BT_SRO_SHA256) {
-    throw new Error(`BT SRO SHA mismatch. Expected ${BT_SRO_SHA256}, got ${bt.provenance.documentSha256}`);
-  }
-  if (dl.provenance.documentSha256 !== DL_SRO_SHA256) {
-    throw new Error(`DL SRO SHA mismatch. Expected ${DL_SRO_SHA256}, got ${dl.provenance.documentSha256}`);
-  }
-  if (kn.provenance.documentSha256 !== KN_SRO_SHA256) {
-    throw new Error(`KN SRO SHA mismatch. Expected ${KN_SRO_SHA256}, got ${kn.provenance.documentSha256}`);
-  }
-  console.log(`   ✓ All 3 official Gazette S.R.O. files match verified SHA-256 digests.`);
-
-  // 2. Weekly vs Bumper Scheme Identity
-  console.log("\n2. Verifying WEEKLY vs BUMPER Scheme Classification...");
+  const ss = registry.getSchemeVersion("scheme_ver_ss_v2025-11-sro1292")!;
   const monsoon = registry.getSchemeVersion("scheme_ver_monsoon_bumper_2026_br110")!;
   const onam = registry.getSchemeVersion("scheme_ver_thiruvonam_bumper_2026_br111")!;
 
-  if (bt.schemeType !== "WEEKLY" || dl.schemeType !== "WEEKLY" || kn.schemeType !== "WEEKLY") {
-    throw new Error("Weekly lotteries must have schemeType = 'WEEKLY'");
+  if (bt.authorityLevel !== "OFFICIAL_SCHEME" || ss.authorityLevel !== "OFFICIAL_SCHEME") {
+    throw new Error("Weekly lotteries with Gazette SROs must have authorityLevel = 'OFFICIAL_SCHEME'");
   }
-  if (monsoon.schemeType !== "BUMPER" || onam.schemeType !== "BUMPER") {
-    throw new Error("Bumper lotteries must have schemeType = 'BUMPER'");
+  if (!hasOfficialGazetteSro(bt.lotteryCode) || !hasOfficialGazetteSro(monsoon.lotteryCode)) {
+    throw new Error("BT and Monsoon Bumper must be identified as having official Gazette SRO");
   }
-  console.log(`   ✓ Weekly schemes correctly have schemeType = 'WEEKLY' (12 series, common 1-3 tiers).`);
-  console.log(`   ✓ Monsoon Bumper has schemeType = 'BUMPER' (5 series: ${monsoon.seriesCodes.join(", ")}, 1-per-series tiers).`);
-  console.log(`   ✓ Thiruvonam Bumper has schemeType = 'BUMPER' (10 series: ${onam.seriesCodes.join(", ")}, 2-per-series tiers).`);
+  if (hasOfficialGazetteSro(onam.lotteryCode)) {
+    throw new Error("Thiruvonam Bumper archetype must not be identified as having official Gazette SRO");
+  }
+  if (monsoon.authorityLevel !== "OFFICIAL_SCHEME") {
+    throw new Error("Monsoon Bumper BR-110 with S.R.O. 526/2026 must have authorityLevel = 'OFFICIAL_SCHEME'");
+  }
+  if (onam.authorityLevel !== "OBSERVED_SCHEME_ARCHETYPE") {
+    throw new Error("Thiruvonam Bumper BR-111 derived from result PDF must have authorityLevel = 'OBSERVED_SCHEME_ARCHETYPE'");
+  }
+  if (onam.provenance.sourceType !== "RESULT_PDF" || onam.provenance.authorityPriority !== 3) {
+    throw new Error("Thiruvonam Bumper archetype must not claim Gazette provenance");
+  }
+  if (onam.provenance.documentSha256 !== THIRUVONAM_BUMPER_RESULT_SHA256) {
+    throw new Error("Thiruvonam Bumper SHA does not match expected result PDF SHA");
+  }
+  console.log(`   ✓ Monsoon Bumper (BR-110) correctly classified as OFFICIAL_SCHEME (S.R.O. 526/2026).`);
+  console.log(`   ✓ Thiruvonam Bumper (BR-111) correctly classified as OBSERVED_SCHEME_ARCHETYPE (RESULT_PDF).`);
 
-  // 3. Theoretical vs Observed Capacity Calculations
-  console.log("\n3. Verifying Theoretical Capacity & Mathematical Formulae...");
-  for (const v of [bt, dl, kn]) {
-    const factor = v.ticketsPrinted / 10000; // 1080
-    for (const tier of v.tierRules) {
-      if (tier.isSuffix) {
-        const expectedMax = tier.drawCount * factor;
-        if (tier.maximumPrizeCount !== expectedMax) {
-          throw new Error(
-            `Mathematical inconsistency in ${v.lotteryCode} ${tier.tierName}: expected max ${expectedMax}, found ${tier.maximumPrizeCount}`
-          );
-        }
-      }
+  // 4. Total Prize Reconciliation Across All Registered Schemes
+  console.log("\n4. Verifying Total Prize Reconciliation Across All Schemes...");
+  const activeSchemes = versions.filter((v) => v.status === "ACTIVE");
+
+  for (const s of activeSchemes) {
+    const rec = reconcilePrizeSchemeTotal(s);
+    if (!rec.isReconciled) {
+      throw new Error(
+        `Total prize reconciliation failed for ${s.lotteryName} (${s.id}): calculated ${rec.calculatedTotal}, expected ${rec.expectedTotal}, diff ${rec.difference}`
+      );
     }
+    console.log(
+      `   ✓ ${s.lotteryName.padEnd(32)}: sum(tier*count) = ₹${rec.calculatedTotal.toLocaleString("en-IN")} === scheme.totalPrizeAmount (Diff: 0)`
+    );
   }
-  console.log(`   ✓ Suffix theoretical capacity verified: drawRepetitions * (ticketsPrinted / 10,000) = maximumPrizeCount`);
 
-  // 4. Historical Corpus Validation (98 Draws)
-  console.log("\n4. Running 98-Draw Historical Corpus Against Prize Scheme Registry...");
+  // Explicit check on the corrected bumper values
+  if (monsoon.totalPrizeAmount !== 308525000) {
+    throw new Error(`Monsoon Bumper totalPrizeAmount must be ₹30,85,25,000, got ${monsoon.totalPrizeAmount}`);
+  }
+  if (onam.totalPrizeAmount !== 1255400000) {
+    throw new Error(`Thiruvonam Bumper totalPrizeAmount must be ₹1,25,54,00,000, got ${onam.totalPrizeAmount}`);
+  }
+  console.log("   ✓ Monsoon Bumper reconciled: ₹30,85,25,000 (G.O.(P) No. 58/2026/TAXES, S.R.O. 526/2026).");
+  console.log("   ✓ Thiruvonam Bumper reconciled: ₹1,25,54,00,000 (all 9 tiers + consolation).");
+
+  // 5. Unresolved Scheme Handling (Explicit UNRESOLVED marking)
+  console.log("\n5. Verifying Unresolved Scheme Handling...");
+  const unresolvedRes = registry.resolveSchemeForDraw({
+    lotteryName: "NON_EXISTENT_LOTTERY",
+    drawDate: "2026-09-14"
+  });
+  if (unresolvedRes.status !== "SCHEME_NOT_FOUND") {
+    throw new Error(`Expected SCHEME_NOT_FOUND for unregistered lottery, got ${unresolvedRes.status}`);
+  }
+  if (!unresolvedRes.resolutionEvidence.includes("UNRESOLVED")) {
+    throw new Error(`Resolution evidence must explicitly indicate UNRESOLVED: '${unresolvedRes.resolutionEvidence}'`);
+  }
+  console.log(`   ✓ Unregistered lotteries cleanly return SCHEME_NOT_FOUND with explicit UNRESOLVED evidence.`);
+
+  // 6. Historical Corpus Validation (98 Draws)
+  console.log("\n6. Running 98-Draw Historical Corpus Against Prize Scheme Registry...");
   const dir = join(process.cwd(), "data/source-documents/lottery-results");
   const files = readdirSync(dir).filter((f) => f.endsWith(".pdf")).sort();
 
@@ -128,8 +195,10 @@ async function verifyMilestone7A6() {
   let schemeAmbiguousCount = 0;
   let schemeValidatedCount = 0;
   let schemeMismatchCount = 0;
+  let officialSchemeCount = 0;
+  let observedArchetypeCount = 0;
 
-  const resolutionBreakdown = new Map<string, { resolved: number; notFound: number }>();
+  const resolutionBreakdown = new Map<string, { resolved: number; notFound: number; authority: string }>();
 
   for (let i = 0; i < files.length; i++) {
     const filename = files[i]!;
@@ -145,7 +214,7 @@ async function verifyMilestone7A6() {
     const drawNumber = extraction.drawMetadata?.drawNumber?.value || "UNKNOWN";
 
     if (!resolutionBreakdown.has(lotteryName)) {
-      resolutionBreakdown.set(lotteryName, { resolved: 0, notFound: 0 });
+      resolutionBreakdown.set(lotteryName, { resolved: 0, notFound: 0, authority: "UNKNOWN" });
     }
 
     const resolution = registry.resolveSchemeForDraw({
@@ -156,6 +225,13 @@ async function verifyMilestone7A6() {
     if (resolution.status === "SCHEME_RESOLVED") {
       schemeResolvedCount++;
       resolutionBreakdown.get(lotteryName)!.resolved++;
+      resolutionBreakdown.get(lotteryName)!.authority = resolution.authorityLevel || "UNKNOWN";
+
+      if (resolution.authorityLevel === "OFFICIAL_SCHEME") {
+        officialSchemeCount++;
+      } else if (resolution.authorityLevel === "OBSERVED_SCHEME_ARCHETYPE") {
+        observedArchetypeCount++;
+      }
 
       const validation = validateDrawAgainstPrizeScheme(
         {
@@ -189,48 +265,56 @@ async function verifyMilestone7A6() {
   console.log("\n============================================================");
   console.log("HISTORICAL CORPUS PRIZE SCHEME VALIDATION REPORT");
   console.log("============================================================");
-  console.log(`TOTAL DRAWS:             ${totalDraws}`);
-  console.log(`SCHEME RESOLVED:         ${schemeResolvedCount}`);
-  console.log(`SCHEME NOT FOUND:        ${schemeNotFoundCount}`);
-  console.log(`SCHEME AMBIGUOUS:        ${schemeAmbiguousCount}`);
-  console.log(`SCHEME VALIDATED:        ${schemeValidatedCount}`);
-  console.log(`SCHEME MISMATCH:         ${schemeMismatchCount}`);
+  console.log(`TOTAL DRAWS:                     ${totalDraws}`);
+  console.log(`SCHEME RESOLVED:                 ${schemeResolvedCount} (100%)`);
+  console.log(`  - OFFICIAL_SCHEME:             ${officialSchemeCount}`);
+  console.log(`  - OBSERVED_SCHEME_ARCHETYPE:   ${observedArchetypeCount}`);
+  console.log(`SCHEME NOT FOUND:                ${schemeNotFoundCount}`);
+  console.log(`SCHEME AMBIGUOUS:                ${schemeAmbiguousCount}`);
+  console.log(`SCHEME VALIDATED:                ${schemeValidatedCount} (100%)`);
+  console.log(`SCHEME MISMATCH:                 ${schemeMismatchCount}`);
   console.log("------------------------------------------------------------");
   console.log("Lottery Resolution Breakdown:");
-  for (const [lottery, counts] of resolutionBreakdown.entries()) {
+  for (const [lottery, info] of resolutionBreakdown.entries()) {
     console.log(
-      `  - ${lottery.padEnd(28)} Resolved: ${String(counts.resolved).padStart(2)}, Not Found: ${String(counts.notFound).padStart(2)}`
+      `  - ${lottery.padEnd(30)} Resolved: ${String(info.resolved).padStart(2)}, Not Found: ${String(info.notFound).padStart(2)} [${info.authority}]`
     );
   }
   console.log("============================================================\n");
 
   // Invariant checks on the 98 draws:
   if (totalDraws !== 98) throw new Error(`Expected 98 draws, got ${totalDraws}`);
-  if (schemeResolvedCount !== 43) {
-    throw new Error(`Expected exactly 43 resolved draws (41 weekly with SROs + 2 bumpers with official result publications), got ${schemeResolvedCount}`);
+  if (schemeResolvedCount !== 98) {
+    throw new Error(`Expected all 98 draws to resolve to schemes, got ${schemeResolvedCount}`);
   }
-  if (schemeNotFoundCount !== 55) {
-    throw new Error(`Expected exactly 55 not-found draws without official scheme sources (14 SS + 15 SK + 12 KR + 14 SM), got ${schemeNotFoundCount}`);
+  if (officialSchemeCount !== 97) {
+    throw new Error(`Expected exactly 97 draws with OFFICIAL_SCHEME (7 weekly lotteries + Monsoon Bumper), got ${officialSchemeCount}`);
+  }
+  if (observedArchetypeCount !== 1) {
+    throw new Error(`Expected exactly 1 draw with OBSERVED_SCHEME_ARCHETYPE (Thiruvonam Bumper), got ${observedArchetypeCount}`);
+  }
+  if (schemeNotFoundCount !== 0) {
+    throw new Error(`Expected 0 not-found draws in the known 98-draw corpus, got ${schemeNotFoundCount}`);
   }
   if (schemeAmbiguousCount !== 0) {
     throw new Error(`Expected 0 ambiguous draws, got ${schemeAmbiguousCount}`);
   }
-  if (schemeValidatedCount !== 43) {
-    throw new Error(`Expected all 43 resolved draws to validate with 0 mismatches, got ${schemeValidatedCount}`);
+  if (schemeValidatedCount !== 98) {
+    throw new Error(`Expected all 98 resolved draws to validate with 0 mismatches, got ${schemeValidatedCount}`);
   }
   if (schemeMismatchCount !== 0) {
     throw new Error(`Expected 0 scheme mismatches, got ${schemeMismatchCount}`);
   }
 
-  // 5. Verification of the Six Canonical September Baseline Draws
-  console.log("5. Verifying Canonical Baseline Draws (September 2026)...");
+  // 7. Canonical Baseline Draws (September 2026)
+  console.log("7. Verifying Six Canonical Baseline Draws (September 2026)...");
   const baselines = [
-    { date: "12/09/2026", lottery: "KARUNYA", id: "KR-768th", expectedStatus: "SCHEME_NOT_FOUND" },
-    { date: "13/09/2026", lottery: "SAMRUDHI", id: "SM-72nd", expectedStatus: "SCHEME_NOT_FOUND" },
-    { date: "14/09/2026", lottery: "BHAGYATHARA", id: "BT-71st", expectedStatus: "SCHEME_RESOLVED", versionId: "scheme_ver_bt_v2025-11-sro1297" },
-    { date: "15/09/2026", lottery: "STHREE-SAKTHI", id: "SS-537th", expectedStatus: "SCHEME_NOT_FOUND" },
-    { date: "16/09/2026", lottery: "DHANALEKSHMI", id: "DL-69th", expectedStatus: "SCHEME_RESOLVED", versionId: "scheme_ver_dl_v2025-11-sro1296" },
-    { date: "17/09/2026", lottery: "KARUNYA PLUS", id: "KN-641st", expectedStatus: "SCHEME_RESOLVED", versionId: "scheme_ver_kn_v2025-11-sro1294" }
+    { date: "12/09/2026", lottery: "KARUNYA", id: "KR-768th", versionId: "scheme_ver_kr_v2025-11-sro1295" },
+    { date: "13/09/2026", lottery: "SAMRUDHI", id: "SM-72nd", versionId: "scheme_ver_sm_v2025-11-sro1293" },
+    { date: "14/09/2026", lottery: "BHAGYATHARA", id: "BT-71st", versionId: "scheme_ver_bt_v2025-11-sro1297" },
+    { date: "15/09/2026", lottery: "STHREE-SAKTHI", id: "SS-537th", versionId: "scheme_ver_ss_v2025-11-sro1292" },
+    { date: "16/09/2026", lottery: "DHANALEKSHMI", id: "DL-69th", versionId: "scheme_ver_dl_v2025-11-sro1296" },
+    { date: "17/09/2026", lottery: "KARUNYA PLUS", id: "KN-641st", versionId: "scheme_ver_kn_v2025-11-sro1294" }
   ];
 
   for (const b of baselines) {
@@ -239,39 +323,22 @@ async function verifyMilestone7A6() {
       drawDate: b.date
     });
 
-    if (res.status !== b.expectedStatus) {
-      throw new Error(`Baseline draw ${b.id} (${b.lottery}) expected ${b.expectedStatus}, got ${res.status}`);
+    if (res.status !== "SCHEME_RESOLVED") {
+      throw new Error(`Baseline draw ${b.id} (${b.lottery}) expected SCHEME_RESOLVED, got ${res.status}`);
     }
-    if (b.versionId && res.schemeVersion?.id !== b.versionId) {
-      throw new Error(`Baseline draw ${b.id} resolved to unexpected version ${res.schemeVersion?.id}`);
+    if (res.schemeVersion?.id !== b.versionId) {
+      throw new Error(`Baseline draw ${b.id} resolved to unexpected version ${res.schemeVersion?.id}, expected ${b.versionId}`);
+    }
+    if (res.authorityLevel !== "OFFICIAL_SCHEME") {
+      throw new Error(`Baseline draw ${b.id} must have authorityLevel OFFICIAL_SCHEME`);
     }
     console.log(
-      `   ✓ Baseline ${b.id} (${b.date}, ${b.lottery.padEnd(14)}) -> Status: ${res.status}${res.schemeVersion ? " (" + res.schemeVersion.id + ")" : ""}`
+      `   ✓ Baseline ${b.id} (${b.date}, ${b.lottery.padEnd(14)}) -> Resolved to ${res.schemeVersion.id} [${res.authorityLevel}]`
     );
   }
 
-  // 6. Verification of Bumper Resolution & Validation
-  console.log("\n6. Verifying Bumper Draws Against Bumper Scheme Archetypes...");
-  const bumperResMonsoon = registry.resolveSchemeForDraw({
-    lotteryName: "MONSOON BUMPER",
-    drawDate: "18/07/2026"
-  });
-  if (bumperResMonsoon.status !== "SCHEME_RESOLVED" || bumperResMonsoon.schemeVersion?.schemeType !== "BUMPER") {
-    throw new Error("Monsoon Bumper draw must resolve to BUMPER scheme version");
-  }
-  console.log(`   ✓ Monsoon Bumper resolved to: ${bumperResMonsoon.schemeVersion.id} (schemeType: BUMPER)`);
-
-  const bumperResOnam = registry.resolveSchemeForDraw({
-    lotteryName: "THIRUVONAM BUMPER LOTTERY",
-    drawDate: "26/09/2026"
-  });
-  if (bumperResOnam.status !== "SCHEME_RESOLVED" || bumperResOnam.schemeVersion?.schemeType !== "BUMPER") {
-    throw new Error("Thiruvonam Bumper draw must resolve to BUMPER scheme version");
-  }
-  console.log(`   ✓ Thiruvonam Bumper resolved to: ${bumperResOnam.schemeVersion.id} (schemeType: BUMPER)`);
-
-  // 7. Deterministic IDs & Repeated Execution Equivalence
-  console.log("\n7. Verifying Determinism & Stability...");
+  // 8. Deterministic IDs & Repeated Execution Equivalence
+  console.log("\n8. Verifying Determinism & Stability...");
   const reg2 = createAuthoritativePrizeSchemeRegistry();
   const v1List = registry.getAllVersions();
   const v2List = reg2.getAllVersions();
@@ -281,26 +348,12 @@ async function verifyMilestone7A6() {
   }
   console.log(`   ✓ Registry generation is 100% deterministic and equivalent across repeated executions.`);
 
-  // 8. Source PDF Immutability Check
-  console.log("\n8. Verifying Source PDF Immutability...");
-  const sroFiles = [
-    { path: "data/source-documents/prize-structure/sro-bhagyathara-bt.pdf", sha: BT_SRO_SHA256 },
-    { path: "data/source-documents/prize-structure/sro-dhanalekshmi-dl.pdf", sha: DL_SRO_SHA256 },
-    { path: "data/source-documents/prize-structure/sro-karunya-plus-kn.pdf", sha: KN_SRO_SHA256 }
-  ];
-  for (const s of sroFiles) {
-    const bytes = readFileSync(join(process.cwd(), s.path));
-    const sha = computeSha256(new Uint8Array(bytes));
-    if (sha !== s.sha) throw new Error(`Source file ${s.path} was modified! SHA mismatch: ${sha}`);
-  }
-  console.log(`   ✓ All physical source SRO PDFs intact and verified with immutable SHA-256 hashes.`);
-
   console.log("\n============================================================");
-  console.log("MILESTONE 7A.6 VERIFICATION: ALL GATES PASSED [100% SUCCESS]");
+  console.log("MILESTONE 7A.6-CORRECTION: ALL GATES PASSED [100% SUCCESS]");
   console.log("============================================================\n");
 }
 
-verifyMilestone7A6().catch((err) => {
+verifyMilestone7A6Correction().catch((err) => {
   console.error("Verification failed:", err);
   process.exit(1);
 });
