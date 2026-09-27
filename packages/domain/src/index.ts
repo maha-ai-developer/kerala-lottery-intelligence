@@ -585,3 +585,8 @@ export interface DataQualityIssue {
   resolvedAt?: string;
   resolvedBy?: string;
 }
+
+// ============================================================================
+// Milestone 7A.6: Versioned Prize Scheme / Prize Structure Registry
+// ============================================================================
+export * from "./prize-scheme";
