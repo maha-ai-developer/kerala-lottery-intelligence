@@ -674,6 +674,16 @@ export function validateDrawAgainstPrizeScheme(
           .filter((s): s is string => typeof s === "string" && s.length > 0);
 
         if (observedSeriesList.length > 0 && nPerSeries > 0) {
+          if (scheme.seriesCodes && scheme.seriesCodes.length > 0) {
+            for (const s of observedSeriesList) {
+              if (!scheme.seriesCodes.includes(s)) {
+                discrepancies.push(
+                  `N_PER_SERIES unknown series '${s}' in '${rule.tierName}'. Expected one of: ${scheme.seriesCodes.join(", ")}`
+                );
+              }
+            }
+          }
+
           const seriesCounts = new Map<string, number>();
           for (const s of observedSeriesList) {
             seriesCounts.set(s, (seriesCounts.get(s) || 0) + 1);
@@ -683,6 +693,21 @@ export function validateDrawAgainstPrizeScheme(
               discrepancies.push(
                 `N_PER_SERIES allocation overflow in '${rule.tierName}': series '${seriesCode}' has ${count} prizes, expected at most ${nPerSeries}`
               );
+            }
+          }
+
+          if (
+            observedSeriesList.length === rule.drawCount &&
+            scheme.seriesCodes &&
+            scheme.seriesCodes.length === scheme.numberOfSeries
+          ) {
+            for (const expectedSeries of scheme.seriesCodes) {
+              const actualCount = seriesCounts.get(expectedSeries) || 0;
+              if (actualCount !== nPerSeries) {
+                discrepancies.push(
+                  `N_PER_SERIES allocation mismatch in '${rule.tierName}': series '${expectedSeries}' has ${actualCount} prizes, expected exactly ${nPerSeries}`
+                );
+              }
             }
           }
         }

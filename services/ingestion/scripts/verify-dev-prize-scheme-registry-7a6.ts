@@ -193,7 +193,8 @@ async function verifyMilestone7A6Correction() {
   let schemeResolvedCount = 0;
   let schemeNotFoundCount = 0;
   let schemeAmbiguousCount = 0;
-  let schemeValidatedCount = 0;
+  let officialSchemesValidatedCount = 0;
+  let observedArchetypeCompatibleCount = 0;
   let schemeMismatchCount = 0;
   let officialSchemeCount = 0;
   let observedArchetypeCount = 0;
@@ -245,7 +246,11 @@ async function verifyMilestone7A6Correction() {
       );
 
       if (validation.isValid) {
-        schemeValidatedCount++;
+        if (resolution.authorityLevel === "OFFICIAL_SCHEME") {
+          officialSchemesValidatedCount++;
+        } else {
+          observedArchetypeCompatibleCount++;
+        }
       } else {
         schemeMismatchCount++;
         console.warn(`[MISMATCH] Draw ${drawNumber} (${lotteryName}): ${validation.discrepancies.join("; ")}`);
@@ -271,7 +276,8 @@ async function verifyMilestone7A6Correction() {
   console.log(`  - OBSERVED_SCHEME_ARCHETYPE:   ${observedArchetypeCount}`);
   console.log(`SCHEME NOT FOUND:                ${schemeNotFoundCount}`);
   console.log(`SCHEME AMBIGUOUS:                ${schemeAmbiguousCount}`);
-  console.log(`SCHEME VALIDATED:                ${schemeValidatedCount} (100%)`);
+  console.log(`OFFICIAL SCHEMES VALIDATED:      ${officialSchemesValidatedCount}`);
+  console.log(`OBSERVED SCHEME ARCHETYPE COMPATIBLE: ${observedArchetypeCompatibleCount}`);
   console.log(`SCHEME MISMATCH:                 ${schemeMismatchCount}`);
   console.log("------------------------------------------------------------");
   console.log("Lottery Resolution Breakdown:");
@@ -299,8 +305,11 @@ async function verifyMilestone7A6Correction() {
   if (schemeAmbiguousCount !== 0) {
     throw new Error(`Expected 0 ambiguous draws, got ${schemeAmbiguousCount}`);
   }
-  if (schemeValidatedCount !== 98) {
-    throw new Error(`Expected all 98 resolved draws to validate with 0 mismatches, got ${schemeValidatedCount}`);
+  if (officialSchemesValidatedCount !== 97) {
+    throw new Error(`Expected exactly 97 official schemes validated, got ${officialSchemesValidatedCount}`);
+  }
+  if (observedArchetypeCompatibleCount !== 1) {
+    throw new Error(`Expected exactly 1 observed scheme archetype compatible, got ${observedArchetypeCompatibleCount}`);
   }
   if (schemeMismatchCount !== 0) {
     throw new Error(`Expected 0 scheme mismatches, got ${schemeMismatchCount}`);

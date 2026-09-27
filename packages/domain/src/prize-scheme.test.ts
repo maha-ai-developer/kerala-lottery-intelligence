@@ -779,4 +779,191 @@ describe("Milestone 7A.6 — Prize Structure & Scheme Registry Integrity", () =>
     expect(hasOfficialGazetteSro("THIRUVONAM_BUMPER")).toBe(false); // Observed archetype
     expect(hasOfficialGazetteSro("FIFTY_FIFTY")).toBe(false);
   });
+
+  // 32. Explicit N_PER_SERIES validation for Thiruvonam Bumper BR-111
+  it("32. bumper N_PER_SERIES validation: validates exact N_PER_SERIES allocation for Thiruvonam Bumper BR-111", () => {
+    const onam = registry.getSchemeVersion("scheme_ver_thiruvonam_bumper_2026_br111")!;
+    const declaredSeries = onam.seriesCodes!; // ["TA", "TB", "TC", "TD", "TE", "TG", "TH", "TJ", "TK", "TL"]
+    expect(declaredSeries).toHaveLength(10);
+
+    const mockTiers = onam.tierRules.map((r) => ({
+      name: r.tierName,
+      rank: r.rank,
+      amount: r.amount,
+      isSuffix: r.isSuffix
+    }));
+
+    // Build baseline winning results for non-tested tiers to satisfy scheme completeness
+    const baselineResults: Array<{
+      prizeTierName: string;
+      rank: number;
+      amount: number;
+      canonicalNumber: string;
+      numberLength: number;
+      isSuffix: boolean;
+      series?: string;
+    }> = [];
+
+    for (const rule of onam.tierRules) {
+      if (rule.rank === 2) continue; // Tested explicitly in Tier 2
+
+      if (rule.rank === 1) {
+        baselineResults.push({
+          prizeTierName: rule.tierName,
+          rank: 1,
+          amount: rule.amount,
+          canonicalNumber: "123456",
+          numberLength: 6,
+          isSuffix: false,
+          series: declaredSeries[0]
+        });
+      } else if (rule.isConsolation) {
+        for (let i = 1; i < declaredSeries.length; i++) {
+          baselineResults.push({
+            prizeTierName: rule.tierName,
+            rank: 0,
+            amount: rule.amount,
+            canonicalNumber: "123456",
+            numberLength: 6,
+            isSuffix: false,
+            series: declaredSeries[i]
+          });
+        }
+      } else if (rule.selectionBasis === "ONE_PER_SERIES") {
+        for (const s of declaredSeries) {
+          baselineResults.push({
+            prizeTierName: rule.tierName,
+            rank: rule.rank,
+            amount: rule.amount,
+            canonicalNumber: "234567",
+            numberLength: 6,
+            isSuffix: false,
+            series: s
+          });
+        }
+      } else if (rule.selectionBasis === "N_PER_SERIES") {
+        const n = rule.drawCount / declaredSeries.length;
+        for (const s of declaredSeries) {
+          for (let k = 0; k < n; k++) {
+            baselineResults.push({
+              prizeTierName: rule.tierName,
+              rank: rule.rank,
+              amount: rule.amount,
+              canonicalNumber: `3000${k}0`,
+              numberLength: 6,
+              isSuffix: false,
+              series: s
+            });
+          }
+        }
+      } else if (rule.isSuffix) {
+        for (let k = 0; k < rule.drawCount; k++) {
+          baselineResults.push({
+            prizeTierName: rule.tierName,
+            rank: rule.rank,
+            amount: rule.amount,
+            canonicalNumber: String(1000 + k).padStart(4, "0"),
+            numberLength: 4,
+            isSuffix: true
+          });
+        }
+      }
+    }
+
+    // 1. Valid: exactly 2 prizes in each of the 10 declared series (total count = 20)
+    const validTier2Results = declaredSeries.flatMap((s, idx) => [
+      {
+        prizeTierName: "2nd Prize",
+        rank: 2,
+        amount: 10000000,
+        canonicalNumber: String(410000 + idx * 2 + 1),
+        numberLength: 6,
+        isSuffix: false,
+        series: s
+      },
+      {
+        prizeTierName: "2nd Prize",
+        rank: 2,
+        amount: 10000000,
+        canonicalNumber: String(410000 + idx * 2 + 2),
+        numberLength: 6,
+        isSuffix: false,
+        series: s
+      }
+    ]);
+    expect(validTier2Results).toHaveLength(20);
+
+    const validDraw = validateDrawAgainstPrizeScheme(
+      {
+        id: "valid_onam_draw",
+        lotteryName: "THIRUVONAM BUMPER LOTTERY",
+        drawDate: "2026-09-26",
+        prizeTiers: mockTiers,
+        winningResults: [...baselineResults, ...validTier2Results]
+      },
+      onam
+    );
+    expect(validDraw.isValid).toBe(true);
+    expect(validDraw.discrepancies).toHaveLength(0);
+
+    // 2. Invalid: one series has 3 and another has 1 (preserving total count = 20)
+    // "TA" has 3, "TB" has 1, remaining 8 series have 2 each -> total = 20
+    const invalidUnevenTier2Results = [
+      // 3 prizes in TA
+      { prizeTierName: "2nd Prize", rank: 2, amount: 10000000, canonicalNumber: "410001", numberLength: 6, isSuffix: false, series: "TA" },
+      { prizeTierName: "2nd Prize", rank: 2, amount: 10000000, canonicalNumber: "410002", numberLength: 6, isSuffix: false, series: "TA" },
+      { prizeTierName: "2nd Prize", rank: 2, amount: 10000000, canonicalNumber: "410099", numberLength: 6, isSuffix: false, series: "TA" },
+      // 1 prize in TB
+      { prizeTierName: "2nd Prize", rank: 2, amount: 10000000, canonicalNumber: "410003", numberLength: 6, isSuffix: false, series: "TB" },
+      // 2 prizes each in remaining 8 series (TC..TL) -> 16 prizes
+      ...validTier2Results.filter((r) => r.series !== "TA" && r.series !== "TB")
+    ];
+    expect(invalidUnevenTier2Results).toHaveLength(20); // total expected count preserved
+
+    const invalidUnevenDraw = validateDrawAgainstPrizeScheme(
+      {
+        id: "invalid_uneven_onam_draw",
+        lotteryName: "THIRUVONAM BUMPER LOTTERY",
+        drawDate: "2026-09-26",
+        prizeTiers: mockTiers,
+        winningResults: [...baselineResults, ...invalidUnevenTier2Results]
+      },
+      onam
+    );
+    expect(invalidUnevenDraw.isValid).toBe(false);
+    expect(
+      invalidUnevenDraw.discrepancies.some(
+        (d) => d.includes("N_PER_SERIES allocation overflow") || d.includes("N_PER_SERIES allocation mismatch")
+      )
+    ).toBe(true);
+
+    // 3. Invalid: unknown series code (preserving total count = 20)
+    // Replace one prize with unknown series "XX"
+    const invalidUnknownSeriesTier2Results = [
+      ...validTier2Results.slice(0, 19),
+      {
+        prizeTierName: "2nd Prize",
+        rank: 2,
+        amount: 10000000,
+        canonicalNumber: "410099",
+        numberLength: 6,
+        isSuffix: false,
+        series: "XX" // Unknown series!
+      }
+    ];
+    expect(invalidUnknownSeriesTier2Results).toHaveLength(20); // total expected count preserved
+
+    const invalidUnknownSeriesDraw = validateDrawAgainstPrizeScheme(
+      {
+        id: "invalid_unknown_series_onam_draw",
+        lotteryName: "THIRUVONAM BUMPER LOTTERY",
+        drawDate: "2026-09-26",
+        prizeTiers: mockTiers,
+        winningResults: [...baselineResults, ...invalidUnknownSeriesTier2Results]
+      },
+      onam
+    );
+    expect(invalidUnknownSeriesDraw.isValid).toBe(false);
+    expect(invalidUnknownSeriesDraw.discrepancies.some((d) => d.includes("N_PER_SERIES unknown series 'XX'"))).toBe(true);
+  });
 });
