@@ -354,3 +354,26 @@ export interface ModelRunRepository {
   getModelRunById(id: string): Promise<HistoricalModelRunRecord | null>;
   listModelRuns(limit?: number): Promise<HistoricalModelRunRecord[]>;
 }
+
+// ============================================================================
+// 13. Milestone 7C: Canonical Historical Modeling Dataset Constants
+// ============================================================================
+
+export const CANONICAL_7C_CORPUS_ID = "corpus_12aff12eb1d7379b";
+export const CANONICAL_7C_CORPUS_HASH = "12aff12eb1d7379b";
+export const CANONICAL_7C_FEATURE_MATRIX_ID = "fmat_b04691e1fbc45e1c";
+export const CANONICAL_7C_MODEL_MATRIX_ID = "mfmat_4560bb81a69039d1";
+export const CANONICAL_7C_MODELING_DATASET_ID = "mdset_738186f2dabc458b";
+export const CANONICAL_7C_HOLDOUT_SPLIT_ID = "split_002d0341556ebcf9";
+export const CANONICAL_7C_EVALUATED_AT = "2026-09-28T00:00:00.000Z";
+export const CANONICAL_7C_TOTAL_DRAWS = 99;
+export const CANONICAL_7C_TOTAL_RESULTS = 38038;
+export const CANONICAL_7C_FULL_TICKET_COUNT = 1448;
+export const CANONICAL_7C_SUFFIX_COUNT = 36590;
+export const CANONICAL_7C_HOLDOUT_TRAIN_DRAWS = 80;
+export const CANONICAL_7C_HOLDOUT_TEST_DRAWS = 19;
+export const CANONICAL_7C_HOLDOUT_TRAIN_ROWS = 30570;
+export const CANONICAL_7C_HOLDOUT_TEST_ROWS = 7468;
+export const CANONICAL_7C_WALK_FORWARD_WINDOWS = 19;
+export const CANONICAL_7C_NEW_INPUT_PDF = "277-2342-27-09-2026.pdf";
+export const CANONICAL_7C_NEW_INPUT_SHA = "dbddb237a5c96d2b6a12ee87a9279ebb5db2bb42fc62d0805b78003dd30d211b";

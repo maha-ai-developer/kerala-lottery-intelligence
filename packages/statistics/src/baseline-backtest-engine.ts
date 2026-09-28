@@ -1154,11 +1154,23 @@ export interface GenerateBaselineComparisonReportOptions {
     parity: ModelingDataset;
   };
   createdAt?: string;
+  trainDrawCount?: number;
+  testDrawCount?: number;
+  minTrainDraws?: number;
+  customHoldoutSplit?: DatasetSplit;
+  customWfSplits?: DatasetSplit[];
 }
 
 export function generateBaselineComparisonReport(
   datasetOrOptions: ModelingDataset | GenerateBaselineComparisonReportOptions,
-  options?: { createdAt?: string }
+  options?: {
+    createdAt?: string;
+    trainDrawCount?: number;
+    testDrawCount?: number;
+    minTrainDraws?: number;
+    customHoldoutSplit?: DatasetSplit;
+    customWfSplits?: DatasetSplit[];
+  }
 ): BaselineComparisonReport {
   let datasetMap: {
     lastDigit: ModelingDataset;
@@ -1166,6 +1178,13 @@ export function generateBaselineComparisonReport(
     parity: ModelingDataset;
   };
   let createdAt = "2026-09-27T12:00:00.000Z";
+  let splitOptions: {
+    trainDrawCount?: number;
+    testDrawCount?: number;
+    minTrainDraws?: number;
+    customHoldoutSplit?: DatasetSplit;
+    customWfSplits?: DatasetSplit[];
+  } = {};
 
   if ("rows" in datasetOrOptions && Array.isArray((datasetOrOptions as ModelingDataset).rows)) {
     const ds = datasetOrOptions as ModelingDataset;
@@ -1175,10 +1194,12 @@ export function generateBaselineComparisonReport(
       parity: deriveDatasetWithTarget(ds, createObservedParityTarget())
     };
     if (options?.createdAt) createdAt = options.createdAt;
+    splitOptions = options || {};
   } else {
     const opts = datasetOrOptions as GenerateBaselineComparisonReportOptions;
     datasetMap = opts.datasetMap;
     if (opts.createdAt) createdAt = opts.createdAt;
+    splitOptions = opts;
   }
 
   const { lastDigit, firstDigit, parity } = datasetMap;
@@ -1197,8 +1218,19 @@ export function generateBaselineComparisonReport(
   const windowBreakdownTable: BaselineWindowDetailRow[] = [];
 
   for (const { targetName, dataset } of targetDatasets) {
-    const chronoSplit = createChronologicalSplit(dataset, 4, 2);
-    const wfSplits = createWalkForwardSplits(dataset, 2);
+    const totalDraws = new Set(dataset.rows.map((r) => r.sourceDrawId)).size;
+    let chronoSplit = splitOptions.customHoldoutSplit;
+    if (!chronoSplit) {
+      const trainCount = splitOptions.trainDrawCount ?? (totalDraws <= 6 ? 4 : Math.floor(totalDraws * 0.8));
+      const testCount = splitOptions.testDrawCount ?? (totalDraws - trainCount);
+      chronoSplit = createChronologicalSplit(dataset, trainCount, testCount);
+    }
+
+    let wfSplits = splitOptions.customWfSplits;
+    if (!wfSplits) {
+      const minTrain = splitOptions.minTrainDraws ?? (totalDraws <= 6 ? 2 : Math.floor(totalDraws * 0.8));
+      wfSplits = createWalkForwardSplits(dataset, minTrain);
+    }
 
     for (const mType of modelTypes) {
       // 1. Chronological Holdout
