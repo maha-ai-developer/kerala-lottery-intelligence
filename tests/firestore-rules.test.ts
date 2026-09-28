@@ -71,6 +71,14 @@ describe.skipIf(!isEmulatorActive)("Firestore Security Rules Authorization Verif
       const unauthedDb = testEnv.unauthenticatedContext().firestore();
       await assertFails(setDoc(doc(unauthedDb, "auditLogs", "log-01"), { event: "TEST" }));
     });
+
+    it("denies unauthenticated read and write to ingestion runs and locks", async () => {
+      const unauthedDb = testEnv.unauthenticatedContext().firestore();
+      await assertFails(getDoc(doc(unauthedDb, "ingestion_runs", "run-01")));
+      await assertFails(setDoc(doc(unauthedDb, "ingestion_runs", "run-01"), { status: "SUCCEEDED" }));
+      await assertFails(getDoc(doc(unauthedDb, "ingestion_locks", "daily_ingestion_lock")));
+      await assertFails(setDoc(doc(unauthedDb, "ingestion_locks", "daily_ingestion_lock"), { ownerRunId: "hacker" }));
+    });
   });
 
   // --------------------------------------------------------------------------
@@ -189,6 +197,8 @@ describe.skipIf(!isEmulatorActive)("Firestore Security Rules Authorization Verif
       await assertFails(setDoc(doc(viewerDb, "historical_robustness_reports", "rob-01"), { robustnessId: "rob-01" }));
       await assertFails(setDoc(doc(viewerDb, "historical_feature_evaluations", "feval-01"), { evaluationId: "feval-01" }));
       await assertFails(setDoc(doc(viewerDb, "historical_model_feature_matrices", "mfmat-01"), { matrixId: "mfmat-01" }));
+      await assertFails(setDoc(doc(viewerDb, "ingestion_runs", "run-01"), { status: "SUCCEEDED" }));
+      await assertFails(setDoc(doc(viewerDb, "ingestion_locks", "daily_ingestion_lock"), { ownerRunId: "viewer" }));
 
       // Authenticated read is allowed
       await assertSucceeds(getDoc(doc(viewerDb, "knowledge_nodes", "node-01")));
@@ -203,6 +213,8 @@ describe.skipIf(!isEmulatorActive)("Firestore Security Rules Authorization Verif
       await assertSucceeds(getDoc(doc(viewerDb, "historical_model_feature_matrices", "mfmat-01")));
       await assertSucceeds(getDoc(doc(viewerDb, "historical_modeling_datasets", "mdset-01")));
       await assertSucceeds(getDoc(doc(viewerDb, "historical_model_runs", "mrun-01")));
+      await assertSucceeds(getDoc(doc(viewerDb, "ingestion_runs", "run-01")));
+      await assertSucceeds(getDoc(doc(viewerDb, "ingestion_locks", "daily_ingestion_lock")));
     });
   });
 
@@ -313,6 +325,18 @@ describe.skipIf(!isEmulatorActive)("Firestore Security Rules Authorization Verif
         setDoc(doc(researcherDb, "historical_model_runs", "mrun-doc-01"), {
           runId: "mrun-doc-01",
           executionVersion: "v1"
+        })
+      );
+      await assertSucceeds(
+        setDoc(doc(researcherDb, "ingestion_runs", "run-doc-01"), {
+          runId: "run-doc-01",
+          status: "SUCCEEDED"
+        })
+      );
+      await assertSucceeds(
+        setDoc(doc(researcherDb, "ingestion_locks", "daily_ingestion_lock"), {
+          lockId: "daily_ingestion_lock",
+          ownerRunId: "run-doc-01"
         })
       );
     });
