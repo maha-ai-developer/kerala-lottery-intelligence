@@ -95,17 +95,20 @@ async function verifyMilestone7C() {
   // Gate 1: Corpus Discovery
   // ==========================================================================
   console.log("1. Gate 1: Verifying Corpus Discovery Across Lottery Results Directory...");
-  const pdfFiles = readdirSync(resultsDir)
+  const allPdfFiles = readdirSync(resultsDir)
     .filter((f) => f.endsWith(".pdf"))
     .sort();
 
-  console.log(`   ✓ Discovered ${pdfFiles.length} source PDF documents in ${resultsDir}.`);
-  if (pdfFiles.length !== CANONICAL_7C_TOTAL_DRAWS) {
-    throw new Error(`Gate 1 Failed: Expected ${CANONICAL_7C_TOTAL_DRAWS} PDFs, discovered ${pdfFiles.length}`);
+  console.log(`   ✓ Discovered ${allPdfFiles.length} source PDF documents in ${resultsDir}.`);
+  if (allPdfFiles.length < CANONICAL_7C_TOTAL_DRAWS) {
+    throw new Error(`Gate 1 Failed: Expected at least ${CANONICAL_7C_TOTAL_DRAWS} PDFs, discovered ${allPdfFiles.length}`);
   }
-  if (!pdfFiles.includes(CANONICAL_7C_NEW_INPUT_PDF)) {
+  if (!allPdfFiles.includes(CANONICAL_7C_NEW_INPUT_PDF)) {
     throw new Error(`Gate 1 Failed: Expected new real-world PDF ${CANONICAL_7C_NEW_INPUT_PDF} not found.`);
   }
+
+  // Milestone 7C verifies the canonical 7C 99-draw dataset (99 historical gazette PDFs)
+  const pdfFiles = allPdfFiles.filter((f) => /^\d{3}-\d{4}-\d{2}-\d{2}-\d{4}\.pdf$/.test(f));
 
   // ==========================================================================
   // Gate 2: SHA Uniqueness

@@ -228,6 +228,74 @@ The 15 canonical quality gates verified by `services/ingestion/scripts/verify-de
 10. **Gate 10: Idempotency Across Repeated Executions (Scenario D)** — 0 new docs, 0 duplicate results on repeat.
 11. **Gate 11: Conflict Handling (Scenario F)** — Draw collision detected without silent overwrite.
 12. **Gate 12: Dry-Run Non-Mutation** — Full in-memory validation with 0 persistent disk/database mutations.
-13. **Gate 13: Real-World Baseline Compatibility (Scenario B)** — 99 draws, 38,038 winning results recognized as already known.
-14. **Gate 14: Deterministic Results** — Bit-for-bit identical corpus IDs across executions (`corpus_12aff12eb1d7379b`).
+13. **Gate 13: Real-World Baseline Compatibility (Scenario B)** — Baseline draws recognized as already known, with seamless support for expanding daily corpus.
+14. **Gate 14: Deterministic Results** — Bit-for-bit identical corpus IDs across executions.
 15. **Gate 15: Audit Completeness & Observability** — Full candidate records and balanced counts captured.
+
+---
+
+## 11. Live Official Portal Verification (`BT-73` Draw, 28/09/2026)
+
+On September 28, 2026, the live ingestion pipeline was verified against the live official Directorate of Kerala State Lotteries result portal (`https://statelottery.kerala.gov.in/English/index.php/lottery-result-view`).
+
+### 11.1 Live Discovery Request & Candidates
+- **Portal Endpoint**: `https://statelottery.kerala.gov.in/English/index.php/lottery-result-view`
+- **Total Candidates Discovered**: 42 portal entries
+- **Remote Candidate Resolution**: 41 candidates matched historical draws already present in the canonical manifest and local corpus. Exactly 1 candidate was identified as genuinely new: `BT-73` (Bhagyathara draw conducted on 28/09/2026).
+
+### 11.2 Dry-Run Verification (`--dry-run`)
+Command executed:
+```bash
+npm run ingest:daily -- --dry-run --verbose --since 2026-09-27
+```
+- **Discovered Files**: 62 candidates (61 local + 1 remote candidate)
+- **Already Known**: 61 candidates marked `ALREADY_KNOWN`
+- **Candidate Validated**: `BT-73.pdf` (SHA: `cddb3d4d05c102b98f38050ac1ff297ad15bc442b12087c0505927f7bb1cf3dc`)
+  - Lottery: `BHAGYATHARA`
+  - Draw: `BT-73rd`
+  - Date: `28/09/2026`
+  - Scheme: `scheme_ver_bt_v2025-11-sro1297` (`OFFICIAL_SCHEME`)
+  - Action Taken: `VALIDATED`
+- **Disk / Cache Mutations**: Exactly 0 files written to disk; manifest unmutated.
+
+### 11.3 Live Acquisition & Ingestion
+Command executed:
+```bash
+npm run ingest:daily -- --verbose --since 2026-09-27
+```
+- **Acquired URL**: `http://result.keralalotteries.com/viewlotisresult.php?drawserial=BT-73` (Redirects to HTTPS)
+- **HTTP Header Content-Disposition**: `inline; filename="BT-73.pdf"`
+- **Downloaded Byte Size**: 87,173 bytes
+- **Computed SHA-256**: `cddb3d4d05c102b98f38050ac1ff297ad15bc442b12087c0505927f7bb1cf3dc`
+- **Resolved Draw**: `BHAGYATHARA`, Draw `BT-73rd`, Date `28/09/2026`
+- **Statutory Scheme**: `scheme_ver_bt_v2025-11-sro1297` (`OFFICIAL_SCHEME`, S.R.O. 1297/2025)
+- **Extracted Winning Results**: 378 results (14 full-ticket, 364 suffix, 0 discrepancies)
+- **Persistence Target**: `data/source-documents/lottery-results/BT-73.pdf`
+- **Cache Manifest**: Updated to 100 valid documents in `data/processed-cache/manifest.json`
+
+### 11.4 Downstream Promotion
+Following document ingestion, downstream canonical datasets and models were refreshed:
+- **Corpus Expansion**: Draws expanded from 99 to 100; total results expanded from 38,038 to 38,416.
+- **Full-Ticket Results**: 1,462 (1,448 + 14)
+- **Suffix Results**: 36,954 (36,590 + 364)
+- **Promotion Cascade Verification**:
+  - `Historical Statistics (5A)`: PASS
+  - `Historical Analysis (5C)`: PASS
+  - `Experiments (5D)`: PASS
+  - `Robustness (5E)`: PASS
+  - `Feature Engineering (6A)`: PASS
+  - `Feature Evaluation (6B)`: PASS
+  - `Feature Selection (6C)`: PASS
+  - `Modeling Dataset (7A/7C)`: PASS
+
+### 11.5 Idempotency Re-Run
+Command re-executed:
+```bash
+npm run ingest:daily -- --verbose --since 2026-09-27
+```
+- **Files Discovered**: 62
+- **Already Ingested**: 62
+- **New Documents**: 0
+- **Candidate Audit**: `[ALREADY_KNOWN] BT-73.pdf (SHA: cddb3d4d05c102b98f38050ac1ff297ad15bc442b12087c0505927f7bb1cf3dc)`
+- **Corpus State**: 100% idempotent; 0 duplicate entries created.
+

@@ -255,8 +255,8 @@ export class DailyIngestionEngine {
     this.verbose = options?.verbose ?? false;
     this.runId = options?.runId;
     this.officialSource = options?.officialSource ?? KERALA_STATE_LOTTERY_PORTAL;
-    this.discoveryService = options?.discoveryService;
-    this.acquisitionService = options?.acquisitionService;
+    this.discoveryService = options?.discoveryService ?? new OfficialSourceDiscoveryService();
+    this.acquisitionService = options?.acquisitionService ?? new DocumentAcquisitionService();
     this.sourceIngestionService = options?.sourceIngestionService;
     this.enableRemoteDiscovery = options?.enableRemoteDiscovery ?? false;
     this.injectedCandidates = options?.injectedCandidates;
@@ -308,17 +308,56 @@ export class DailyIngestionEngine {
     if (this.enableRemoteDiscovery && this.discoveryService) {
       try {
         const discovered = await this.discoveryService.discover(this.officialSource);
+        const manifestDocs = Object.values(this.cacheManager.getManifest().documents);
+
         for (const doc of discovered) {
-          const fileName = doc.documentUrl.split("/").pop() || `discovered-${Date.now()}.pdf`;
-          if (!candidateMap.has(fileName)) {
-            candidateMap.set(fileName, {
-              fileName,
-              sourceUrl: doc.documentUrl,
-              title: doc.title,
-              drawDate: doc.drawDate,
-              drawNumber: doc.drawNumber,
-              lotteryCode: doc.lotteryCode
-            });
+          const docDateIso = normalizeDateToIso(doc.drawDate || "");
+          const cleanDocNum = (doc.drawNumber || "").replace(/(st|nd|rd|th)$/i, "").toUpperCase();
+
+          const existingRecord = manifestDocs.find((c) => {
+            const cDateIso = normalizeDateToIso(c.drawDate);
+            const cleanCNum = c.drawNumber.replace(/(st|nd|rd|th)$/i, "").toUpperCase();
+            return (
+              Boolean(cleanDocNum) &&
+              Boolean(cleanCNum) &&
+              cleanDocNum === cleanCNum &&
+              Boolean(docDateIso) &&
+              Boolean(cDateIso) &&
+              docDateIso === cDateIso
+            );
+          });
+
+          if (existingRecord) {
+            const fileName = existingRecord.fileName;
+            const fullPath = join(this.sourceDir, fileName);
+            if (!candidateMap.has(fileName)) {
+              candidateMap.set(fileName, {
+                fileName,
+                fullPath: existsSync(fullPath) ? fullPath : undefined,
+                sourceUrl: doc.documentUrl,
+                title: doc.title,
+                drawDate: existingRecord.drawDate,
+                drawNumber: existingRecord.drawNumber,
+                lotteryCode: existingRecord.lotteryCode
+              });
+            }
+          } else {
+            let fileName = doc.drawNumber
+              ? `${doc.drawNumber}.pdf`
+              : (doc.documentUrl.split("/").pop() || `discovered-${Date.now()}.pdf`);
+            if (!fileName.toLowerCase().endsWith(".pdf")) {
+              fileName = `${fileName.split("?")[0]}.pdf`;
+            }
+            if (!candidateMap.has(fileName)) {
+              candidateMap.set(fileName, {
+                fileName,
+                sourceUrl: doc.documentUrl,
+                title: doc.title,
+                drawDate: doc.drawDate,
+                drawNumber: doc.drawNumber,
+                lotteryCode: doc.lotteryCode
+              });
+            }
           }
         }
       } catch (err: unknown) {
@@ -425,6 +464,9 @@ export class DailyIngestionEngine {
               title: candidate.title
             });
             uint8 = acq.fileBuffer;
+            if (acq.fileName && acq.fileName.toLowerCase().endsWith(".pdf")) {
+              candidate.fileName = acq.fileName;
+            }
             downloadedCount++;
           }
         }
