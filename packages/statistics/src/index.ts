@@ -24,6 +24,8 @@ export * from "./feature-selection-types";
 export * from "./feature-selection-engine";
 export * from "./modeling-types";
 export * from "./modeling-engine";
+export * from "./baseline-backtest-types";
+export * from "./baseline-backtest-engine";
 
 // ============================================================================
 // Core Statistical Math Utilities (Legacy & Mathematical Primitives)

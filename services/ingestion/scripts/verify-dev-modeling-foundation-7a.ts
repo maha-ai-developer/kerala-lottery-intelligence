@@ -78,7 +78,8 @@ import {
   InMemoryModelingDatasetRepository,
   InMemoryModelRunRepository,
   DatasetSplit,
-  ModelingDataset
+  ModelingDataset,
+  CANONICAL_6_BASELINE_FILES
 } from "@kerala-lottery/statistics";
 
 async function runDevModelingFoundation7A(): Promise<void> {
@@ -96,8 +97,9 @@ async function runDevModelingFoundation7A(): Promise<void> {
     throw new Error(`Directory ${resultsDir} does not exist!`);
   }
 
+  const canonicalSet = new Set<string>(CANONICAL_6_BASELINE_FILES);
   const pdfFiles = readdirSync(resultsDir)
-    .filter((f) => f.endsWith(".pdf") && f !== "dhanalekshmi-dl-40.pdf")
+    .filter((f) => canonicalSet.has(f))
     .sort();
 
   console.log(`1. Ingesting & processing ${pdfFiles.length} Official Real Gazette PDFs through 3C->3D->3E->4A...`);
