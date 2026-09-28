@@ -292,7 +292,7 @@ async function runDevBaselineBacktest7B(): Promise<void> {
   if (!audit.sourceIdentifiersNotPredictive) {
     throw new Error("Gate 8 Failed: sourceIdentifiersNotPredictive invariant violated");
   }
-  console.log("   ✓ Gate 8 Passed: Zero leakage confirmed across 8 distinct checks including adversarial perturbation.\n");
+  console.log("   ✓ Gate 8 Passed: Zero leakage confirmed across all 9 leakage checks including adversarial perturbation.\n");
 
   // ==========================================================================
   // Gate 9: Reproducibility

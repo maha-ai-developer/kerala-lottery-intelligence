@@ -152,15 +152,16 @@ Evaluates 4 expanding chronological windows with 1-draw step size:
 
 ## 7. Leakage Controls & Invariants
 
-The backtesting engine enforces 8 rigorous leakage audits:
-1. **Test Labels Never Used in Fitting**: Evaluated via adversarial perturbation (mutating test labels does not alter model fitted state).
-2. **Empirical Frequencies Training-Only**: Frequencies and counts calculated exclusively from training rows.
-3. **Majority Class Training-Only**: Mode class selected strictly from training rows.
-4. **Chronological Ordering Preserved**: $\max(t_{\text{train}}) \le \min(t_{\text{test}})$ in holdout and all walk-forward windows.
-5. **No Future Row Influence**: Earliest window evaluation never influenced by subsequent draws.
-6. **Target Columns Not in Features**: Target column strictly filtered out of feature sets.
-7. **Source Identifiers Not Predictive**: Document SHA-256, draw IDs, and result IDs cannot serve as features.
-8. **Deterministic Reproducibility**: Repeated runs produce bit-for-bit identical IDs, hashes, and metric values.
+The backtesting engine enforces all 9 leakage checks:
+1. **Disjoint Draw & Result Partitions**: Zero draw ID or result ID overlap between train and test partitions.
+2. **Test Labels Never Used in Fitting**: Evaluated via adversarial perturbation (mutating test labels does not alter model fitted state).
+3. **Empirical Frequencies Training-Only**: Frequencies and counts calculated exclusively from training rows.
+4. **Majority Class Training-Only**: Mode class selected strictly from training rows.
+5. **Chronological Ordering Preserved**: $\max(t_{\text{train}}) \le \min(t_{\text{test}})$ in holdout and all walk-forward windows.
+6. **No Future Row Influence**: Earliest window evaluation never influenced by subsequent draws.
+7. **Target Columns Not in Features**: Target column strictly filtered out of feature sets.
+8. **Source Identifiers Not Predictive**: Document SHA-256, draw IDs, and result IDs cannot serve as features.
+9. **Deterministic Reproducibility**: Repeated runs produce bit-for-bit identical IDs, hashes, and metric values.
 
 ---
 

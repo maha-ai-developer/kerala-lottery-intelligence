@@ -466,7 +466,7 @@ describe("Milestone 7B: Baseline Models & Historical Backtesting", () => {
   // N: Leakage Resistance (Adversarial Testing)
   // --------------------------------------------------------------------------
   describe("7B.8 & 7B.11N: Leakage Resistance", () => {
-    it("passes all 8 leakage audit checks including adversarial perturbation", () => {
+    it("passes all 9 leakage checks including adversarial perturbation", () => {
       const audit = auditBaselineLeakageResistance(realDataset);
       expect(audit.passed).toBe(true);
       expect(audit.testLabelsNeverUsedInFitting).toBe(true);
