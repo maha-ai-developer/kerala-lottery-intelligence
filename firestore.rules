@@ -242,6 +242,17 @@ service cloud.firestore {
       allow write: if isResearcher();
     }
 
+    // Operational ingestion runs & single-flight locks (Milestone 8B)
+    match /ingestion_runs/{runId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+
+    match /ingestion_locks/{lockId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+
     // Audit logs are append-only by backend/admin, never modified or deleted
     match /auditLogs/{logId} {
       allow read: if isAdmin();
