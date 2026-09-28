@@ -16,7 +16,8 @@
     "test:watch": "vitest",
     "lint": "eslint . --ext .ts,.tsx,.js",
     "typecheck": "tsc --noEmit --project tsconfig.base.json",
-    "ingest:daily": "npx tsx services/ingestion/scripts/daily-ingestion.ts"
+    "ingest:daily": "npx tsx services/ingestion/scripts/daily-ingestion.ts",
+    "ingest:scheduled": "npx tsx services/ingestion/scripts/scheduled-ingestion.ts"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.2",
