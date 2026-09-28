@@ -155,9 +155,9 @@ async function verifyExpansionMilestone7A5() {
   console.log(`   ✓ 6B Feature Evaluation:       ID ${run1.artifacts?.evaluationReport.id} (Features: ${run1.artifacts?.evaluationReport.totalFeaturesEvaluated})`);
   console.log(`   ✓ 6C Feature Selection:        ID ${run1.artifacts?.modelMatrix.id} (Retained: ${run1.artifacts?.modelMatrix.selectedColumnNames.length}, Excluded: ${run1.artifacts?.modelMatrix.excludedDecisions.length})`);
   console.log(`   ✓ 7A Modeling Dataset:         ID ${run1.artifacts?.modelingDataset.id} (Rows: ${run1.artifacts?.modelingDataset.totalRows})`);
-  console.log(`   ✓ 7A Uniform Baseline Acc:     ${run1.artifacts?.baselineRuns.uniform.evaluation.metrics["accuracy"]?.value.toFixed(4)}`);
-  console.log(`   ✓ 7A Empirical Baseline Acc:   ${run1.artifacts?.baselineRuns.empirical.evaluation.metrics["accuracy"]?.value.toFixed(4)}`);
-  console.log(`   ✓ 7A Majority Baseline Acc:    ${run1.artifacts?.baselineRuns.majority.evaluation.metrics["accuracy"]?.value.toFixed(4)}`);
+  console.log(`   ✓ 7A Uniform Baseline Acc:     ${run1.artifacts?.baselineRuns?.uniform.evaluation.metrics["accuracy"]?.value.toFixed(4)}`);
+  console.log(`   ✓ 7A Empirical Baseline Acc:   ${run1.artifacts?.baselineRuns?.empirical.evaluation.metrics["accuracy"]?.value.toFixed(4)}`);
+  console.log(`   ✓ 7A Majority Baseline Acc:    ${run1.artifacts?.baselineRuns?.majority.evaluation.metrics["accuracy"]?.value.toFixed(4)}`);
 
   // Verify all 8 layers passed
   for (const [layer, status] of Object.entries(run1.derivedRefresh)) {
