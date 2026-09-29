@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "projects/kerala-lottery-intelligence/locations/asia-south1/jobs/prod-daily-lottery-ingestion",
+  "description": "Milestone 8C: Production automated Kerala State Lottery result ingestion in PROD. Runs daily at 17:00 IST after official Directorate results publication buffer.",
+  "schedule": "0 17 * * *",
+  "timeZone": "Asia/Kolkata",
+  "state": "DISABLED",
+  "attemptDeadline": "600s",
+  "retryConfig": {
+    "retryCount": 3,
+    "maxRetryDuration": "900s",
+    "minBackoffDuration": "30s",
+    "maxBackoffDuration": "300s",
+    "maxDoublings": 3
+  },
+  "httpTarget": {
+    "uri": "https://kerala-lottery-intelligence.web.app/api/internal/daily-ingestion",
+    "httpMethod": "POST",
+    "headers": {
+      "Content-Type": "application/json",
+      "User-Agent": "Google-Cloud-Scheduler/prod-daily-lottery-ingestion"
+    },
+    "body": "{\"trigger\":\"SCHEDULED\",\"verbose\":true}",
+    "oidcToken": {
+      "serviceAccountEmail": "prod-ingestion-scheduler@kerala-lottery-intelligence.iam.gserviceaccount.com",
+      "audience": "https://kerala-lottery-intelligence.web.app/api/internal/daily-ingestion"
+    }
+  },
+  "labels": {
+    "environment": "prod",
+    "component": "ingestion",
+    "milestone": "8c",
+    "managed-by": "developer"
+  }
+}

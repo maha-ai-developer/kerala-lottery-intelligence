@@ -185,6 +185,7 @@ export interface OperationalHealthStatus {
 
 export interface ScheduledIngestionOrchestratorOptions {
   environment?: "DEV" | "PROD";
+  targetEnvironment?: "DEV" | "PROD";
   projectId?: string;
   lockTtlSeconds?: number;
   dryRun?: boolean;

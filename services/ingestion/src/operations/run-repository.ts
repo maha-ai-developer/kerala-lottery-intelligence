@@ -22,13 +22,15 @@ export interface IngestionRunRepository {
  * Sanitizes object by removing any potential secret keys or authorization tokens.
  */
 export function sanitizeOperationalRecord<T extends Record<string, any>>(record: T): T {
-  const secretPattern = /token|secret|password|credential|private_key|api_key|apikey|_key|auth|bearer|pat/i;
+  const secretPattern = /token|secret|password|credential|private[_-]?key|api[_-]?key|key|auth|bearer|pat/i;
 
   function deepSanitize(val: any): any {
     if (val === null || val === undefined) return val;
     if (typeof val === "string") {
       return val
         .replace(/(bearer\s+)[a-zA-Z0-9_\-\.]+/gi, "$1[REDACTED]")
+        .replace(/\b((?:api_?key|token|auth_?token|auth|key|secret|password)\s*=\s*)[^\s&,;]+/gi, "$1[REDACTED]")
+        .replace(/\bAIza[0-9A-Za-z_\-]{35}\b/g, "[REDACTED_API_KEY]")
         .replace(/([?&](?:token|auth_token|auth|key|api_key|secret)=)[^&\s]+/gi, "$1[REDACTED]");
     }
     if (typeof val !== "object") return val;
@@ -124,7 +126,19 @@ export class FirestoreIngestionRunRepository implements IngestionRunRepository {
   private readonly db?: any;
 
   constructor(options?: { db?: any }) {
-    this.db = options?.db;
+    if (options?.db) {
+      this.db = options.db;
+    } else {
+      try {
+        const { getApps, getApp } = require("firebase/app");
+        if (getApps().length > 0) {
+          const { getFirestore } = require("firebase/firestore");
+          this.db = getFirestore(getApp());
+        }
+      } catch {
+        // Safe fallback to in-memory
+      }
+    }
     this.inMemoryFallback = new InMemoryIngestionRunRepository();
   }
 

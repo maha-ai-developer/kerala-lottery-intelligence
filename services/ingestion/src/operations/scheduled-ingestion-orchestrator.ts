@@ -23,7 +23,7 @@ import {
 } from "./types";
 import { IngestionLockManager, InMemoryIngestionLockManager } from "./concurrency-lock";
 import { IngestionRunRepository, InMemoryIngestionRunRepository } from "./run-repository";
-import { assertDevEnvironment } from "./environment-guard";
+import { assertDevEnvironment, assertProdEnvironment } from "./environment-guard";
 import { DailyIngestionEngine, DailyIngestionOptions, DailyIngestionResult } from "../daily-ingestion-engine";
 import { calculateNextScheduledExecution } from "./health";
 
@@ -31,17 +31,20 @@ export interface ScheduledIngestionOrchestratorDependencies {
   lockManager?: IngestionLockManager;
   runRepository?: IngestionRunRepository;
   engineFactory?: (options?: DailyIngestionOptions) => DailyIngestionEngine;
+  targetEnvironment?: "DEV" | "PROD";
 }
 
 export class ScheduledIngestionOrchestrator {
   private readonly lockManager: IngestionLockManager;
   private readonly runRepository: IngestionRunRepository;
   private readonly engineFactory: (options?: DailyIngestionOptions) => DailyIngestionEngine;
+  private readonly targetEnvironment?: "DEV" | "PROD";
 
   constructor(deps?: ScheduledIngestionOrchestratorDependencies) {
     this.lockManager = deps?.lockManager ?? new InMemoryIngestionLockManager();
     this.runRepository = deps?.runRepository ?? new InMemoryIngestionRunRepository();
     this.engineFactory = deps?.engineFactory ?? ((opts) => new DailyIngestionEngine(opts));
+    this.targetEnvironment = deps?.targetEnvironment;
   }
 
   /**
@@ -55,14 +58,23 @@ export class ScheduledIngestionOrchestrator {
     const dryRun = options?.dryRun ?? false;
     const environment = options?.environment ?? "DEV";
     const lockTtlSeconds = options?.lockTtlSeconds ?? 900;
+    const effectiveTargetEnv = options?.targetEnvironment ?? this.targetEnvironment ?? "DEV";
 
-    // 1. Environment Safety Guard (Requirement 8B.16)
+    // 1. Environment Safety Guard (Requirements 8B.16, 8C.1 & 8C.6)
     try {
-      assertDevEnvironment({
-        projectId: options?.projectId,
-        environment,
-        allowOffline: options?.allowOffline
-      });
+      if (effectiveTargetEnv === "PROD") {
+        assertProdEnvironment({
+          projectId: options?.projectId,
+          environment,
+          allowOffline: options?.allowOffline
+        });
+      } else {
+        assertDevEnvironment({
+          projectId: options?.projectId,
+          environment,
+          allowOffline: options?.allowOffline
+        });
+      }
     } catch (envErr: unknown) {
       const runId = `run_${trigger.toLowerCase()}_failed_env_${Date.now()}`;
       const failError =

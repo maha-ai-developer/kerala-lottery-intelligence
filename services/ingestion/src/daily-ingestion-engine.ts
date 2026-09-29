@@ -153,6 +153,8 @@ export interface DailyIngestionOptions {
   sourceIngestionService?: SourceIngestionService;
   enableRemoteDiscovery?: boolean;
   injectedCandidates?: InjectedCandidate[];
+  environment?: "DEV" | "PROD";
+  projectId?: string;
 }
 
 export interface NewDrawInfo {

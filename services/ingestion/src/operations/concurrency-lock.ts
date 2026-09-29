@@ -117,7 +117,19 @@ export class FirestoreIngestionLockManager implements IngestionLockManager {
 
   constructor(options?: { db?: any; lockId?: string }) {
     this.lockId = options?.lockId ?? DEFAULT_LOCK_ID;
-    this.db = options?.db;
+    if (options?.db) {
+      this.db = options.db;
+    } else {
+      try {
+        const { getApps, getApp } = require("firebase/app");
+        if (getApps().length > 0) {
+          const { getFirestore } = require("firebase/firestore");
+          this.db = getFirestore(getApp());
+        }
+      } catch {
+        // Safe fallback to in-memory
+      }
+    }
     this.inMemoryFallback = new InMemoryIngestionLockManager(this.lockId);
   }
 

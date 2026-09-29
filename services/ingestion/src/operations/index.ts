@@ -10,3 +10,4 @@ export * from "./concurrency-lock";
 export * from "./run-repository";
 export * from "./health";
 export * from "./scheduled-ingestion-orchestrator";
+export * from "./prod-bootstrap";
