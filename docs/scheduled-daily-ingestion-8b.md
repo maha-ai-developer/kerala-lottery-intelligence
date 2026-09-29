@@ -63,10 +63,12 @@ flowchart TD
 
 ## 2. Cloud Scheduler Specification
 
+- **Project ID**: `kerala-lottery-intel-dev`
+- **Project Number**: `608186999779`
 - **Job Name**: `projects/kerala-lottery-intel-dev/locations/asia-south1/jobs/dev-daily-lottery-ingestion`
 - **Schedule**: `0 17 * * *`
 - **Timezone**: `Asia/Kolkata` (IST, UTC+5:30)
-- **Target URL**: `https://kerala-lottery-intel-dev.web.app/api/internal/daily-ingestion`
+- **Target URL**: `https://kerala-lottery-platform--kerala-lottery-intel-dev.asia-southeast1.hosted.app/api/internal/daily-ingestion`
 - **HTTP Method**: `POST`
 - **Attempt Deadline**: `600s` (10 minutes)
 - **Retry Policy**:
@@ -77,7 +79,7 @@ flowchart TD
 
 ### Schedule Justification
 
-Official Kerala State Lottery draws occur daily at **3:00 PM IST (15:00 IST)**. Directorate result PDFs are typically generated, signed, and uploaded to `statelottery.kerala.gov.in` between **3:45 PM and 4:45 PM IST**. Setting the scheduled execution window to **5:00 PM IST (17:00 IST)** guarantees that official documents are fully published, indexed, and available for acquisition.
+Official Kerala State Lottery draws occur daily at **3:00 PM IST (15:00 IST)**. Directorate result PDFs are typically generated, signed, and uploaded to `statelottery.kerala.gov.in` between **3:45 PM and 4:45 PM IST**. Setting the scheduled execution window to **5:00 PM IST (17:00 IST)** establishes an observed publication buffer of 15 to 75 minutes post-upload, accommodating normal Directorate publishing variations without claiming an absolute availability guarantee.
 
 ---
 
@@ -168,7 +170,7 @@ npx tsx services/ingestion/scripts/scheduled-ingestion.ts --dry-run
 ### Checking Heartbeat & Health
 Query the internal health status:
 ```bash
-curl -X GET https://kerala-lottery-intel-dev.web.app/api/internal/daily-ingestion \
+curl -X GET https://kerala-lottery-platform--kerala-lottery-intel-dev.asia-southeast1.hosted.app/api/internal/daily-ingestion \
   -H "Authorization: Bearer <DEV_SECRET_TOKEN>"
 ```
 Response:

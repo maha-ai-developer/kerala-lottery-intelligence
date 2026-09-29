@@ -13,7 +13,7 @@
     "maxDoublings": 3
   },
   "httpTarget": {
-    "uri": "https://kerala-lottery-platform-dev-asia-south1.a.run.app/api/internal/daily-ingestion",
+    "uri": "https://kerala-lottery-platform--kerala-lottery-intel-dev.asia-southeast1.hosted.app/api/internal/daily-ingestion",
     "httpMethod": "POST",
     "headers": {
       "Content-Type": "application/json",
@@ -22,7 +22,7 @@
     "body": "{\"trigger\":\"SCHEDULED\",\"verbose\":true}",
     "oidcToken": {
       "serviceAccountEmail": "dev-ingestion-scheduler@kerala-lottery-intel-dev.iam.gserviceaccount.com",
-      "audience": "https://kerala-lottery-platform-dev-asia-south1.a.run.app"
+      "audience": "https://kerala-lottery-platform--kerala-lottery-intel-dev.asia-southeast1.hosted.app/api/internal/daily-ingestion"
     }
   },
   "labels": {
