@@ -198,12 +198,14 @@ export async function POST(req: NextRequest) {
   const runRepo = new FirestoreIngestionRunRepository({ db });
   const orchestrator = new ScheduledIngestionOrchestrator({
     lockManager,
-    runRepository: runRepo
+    runRepository: runRepo,
+    targetEnvironment: environment
   });
 
   const result = await orchestrator.execute(trigger, {
     projectId,
     environment,
+    targetEnvironment: environment,
     dryRun,
     verbose,
     since,

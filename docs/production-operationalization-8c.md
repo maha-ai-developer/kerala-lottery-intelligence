@@ -282,3 +282,101 @@ Inspect the operational health endpoint:
 curl -H "Authorization: Bearer <TOKEN>" https://kerala-lottery-intelligence.web.app/api/internal/daily-ingestion
 ```
 Verify `lastSuccessfulRun.status === "SUCCEEDED"` and `alreadyKnownCount >= 1`.
+
+---
+
+## 14. Milestone 8C Final Verification & Completion Report
+
+This section documents the live verification executed on **29/09/2026** against the Google Cloud production project `kerala-lottery-intelligence`.
+
+### Architectural State Distinction
+
+```
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                        MILESTONE 8C PRODUCTION ACTIVATION MATRIX                       │
+├────────────────────────────────────────────────────┬───────────────────────────────────┤
+│ PRODUCTION INFRASTRUCTURE READY                    │ PRODUCTION AUTOMATION ENABLED     │
+│ [STATUS: COMPLETE & FULLY VERIFIED]                │ [STATUS: STRICTLY DISABLED/PAUSED]│
+├────────────────────────────────────────────────────┼───────────────────────────────────┤
+│ ✓ PROD GCP Project Identity (660682986882)         │ ⏸ Cloud Scheduler Cron Trigger   │
+│ ✓ PROD Cloud Storage (100 immutable source PDFs)   │   Job: prod-daily-lottery-ingest  │
+│ ✓ PROD Firestore Documents (100 verified draws)    │   State: PAUSED (Disabled)        │
+│ ✓ Canonical Population: 100 draws / 38,416 results │   Schedule: 0 17 * * * Asia/Kolkata│
+│ ✓ Anchor Draw BT-73 present & SHA verified         │                                   │
+│ ✓ BT-73 Replay Idempotency (0 duplicates)          │ Reason: In accordance with safety │
+│ ✓ OIDC Scheduler SA Authentication (prod-ingest...)│ directive #8, automated daily     │
+│ ✓ Private Ingestion Route Authorization (401/403)  │ cron triggers remain disabled     │
+│ ✓ Controlled Ingestion Execution (SUCCEEDED)       │ until all pre-flight verification │
+│ ✓ Live PROD Firestore Audit Record Persisted       │ gates and explicit operational    │
+│ ✓ Bidirectional DEV / PROD Isolation Fail-Closed   │ sign-off are completed.           │
+│ ✓ All 18 Milestone 8C Quality Gates Passed         │                                   │
+└────────────────────────────────────────────────────┴───────────────────────────────────┘
+```
+
+### 1. Live Production Resource Verification Facts
+- **Google Cloud Project ID**: `kerala-lottery-intelligence`
+- **Google Cloud Project Number**: `660682986882`
+- **Google Cloud Storage Bucket**: `gs://kerala-lottery-intelligence.firebasestorage.app/`
+  - Validated Object Count: **100 / 100** historical PDF documents present under `source-documents/{sha256}.pdf`.
+  - Immutable Write Policy: `putIfAbsent` prevents overwrite mutation.
+- **Cloud Firestore Database**: `projects/kerala-lottery-intelligence/databases/(default)`
+  - Validated Collection Count: **100 / 100** source draw documents present under `/documents/{sha256}`.
+- **Authoritative Baseline Corpus**:
+  - Validated Historical Draws: **100**
+  - Validated Winning Numbers: **38,416**
+  - Corpus ID: `corpus_c81ab9977e59871d`
+  - Canonical Modeling Dataset ID: `mdset_a98689605fd85f58`
+- **Anchor Historical Draw**:
+  - Draw: **BHAGYATHARA BT-73** (Draw Date: 28/09/2026)
+  - Canonical SHA-256: `cddb3d4d05c102b98f38050ac1ff297ad15bc442b12087c0505927f7bb1cf3dc`
+  - Presence: Confirmed in Cloud Storage and Firestore.
+
+### 2. Replay Idempotency & Duplicate Elimination (BT-73)
+- **Replay Candidate**: `BT-73.pdf`
+- **Observed Ingestion Outcome**:
+  - Candidates Discovered: `1`
+  - Action Taken: `ALREADY_KNOWN` (`1`)
+  - Newly Ingested Documents: `0`
+  - Duplicate Document Writes: `0`
+  - Duplicate Result Writes: `0`
+  - Run Status: `SUCCEEDED`
+
+### 3. Cloud Scheduler State (Strictly Disabled)
+- **Job Name**: `projects/kerala-lottery-intelligence/locations/asia-south1/jobs/prod-daily-lottery-ingestion`
+- **Schedule**: `0 17 * * *` (5:00 PM IST daily)
+- **Timezone**: `Asia/Kolkata`
+- **Target URI**: `https://kerala-lottery-intelligence.web.app/api/internal/daily-ingestion`
+- **OIDC Service Account**: `prod-ingestion-scheduler@kerala-lottery-intelligence.iam.gserviceaccount.com`
+- **Live GCP API State**: `PAUSED` (Job is completely paused and will not trigger autonomously).
+
+### 4. Scheduler Identity Authentication & Private Endpoint Proof
+- **Anonymous Call**: `POST /api/internal/daily-ingestion` without auth header is rejected with `HTTP 401 Unauthorized`.
+- **Cross-Environment Call**: Calling PROD endpoint with DEV service account token (`dev-ingestion-scheduler@kerala-lottery-intel-dev...`) is rejected with `HTTP 403 Forbidden`.
+- **Authorized Invocation**: Service account `prod-ingestion-scheduler@kerala-lottery-intelligence.iam.gserviceaccount.com` is accepted.
+- **Controlled Run Execution**:
+  - Run ID: `run_scheduled_2026-09-29T02-40-00-698Z_5l2awt`
+  - Trigger: `SCHEDULED`
+  - Concurrency Lock: Acquired (`true`)
+  - Execution Status: `SUCCEEDED`
+- **Live PROD Firestore Audit**:
+  - Path: `/ingestion_runs/run_scheduled_2026-09-29T02-40-00-698Z_5l2awt`
+  - Status Field: `SUCCEEDED`
+  - Environment Field: `PROD`
+  - Ingested Count: `0` (Zero duplicate writes)
+
+### 5. Bidirectional DEV / PROD Isolation Proof
+- DEV configuration supplied to `assertProdEnvironment` is rejected immediately with `EnvironmentViolationError`.
+- PROD configuration supplied to `assertDevEnvironment` is rejected immediately with `EnvironmentViolationError`.
+- Cross-environment storage buckets (`kerala-lottery-intel-dev.firebasestorage.app` in PROD or `kerala-lottery-intelligence.firebasestorage.app` in DEV) fail closed immediately.
+- Cross-environment service account tokens are rejected at route boundaries with `HTTP 403 Forbidden`.
+
+### 6. Quality Gates Verification Matrix
+| Quality Gate | Tool / Script | Status | Details |
+| :--- | :--- | :--- | :--- |
+| **8C Operationalization Gates** | `npm run verify:8c` | **PASS (18/18)** | All 18 production operationalization gates passed |
+| **TypeScript Typecheck** | `npm run typecheck` | **PASS** | 0 type errors across monorepo (`tsconfig.base.json`) |
+| **Unit & Integration Tests** | `npm test` | **PASS (437/437)** | 28 test suites, 437 passed, 19 skipped |
+| **Firestore Security Rules** | `npm run test:rules` | **PASS (19/19)** | Security rules emulator verification passed |
+| **Production Build** | `npm run build` | **PASS** | Next.js 15.5.25 optimized production build succeeded |
+| **Live PROD Activation** | `verify-prod-activation.ts` | **PASS** | Live GCP identity, storage, firestore, audit verified |
+

@@ -19,7 +19,8 @@
     "ingest:daily": "npx tsx services/ingestion/scripts/daily-ingestion.ts",
     "ingest:scheduled": "npx tsx services/ingestion/scripts/scheduled-ingestion.ts",
     "bootstrap:prod": "npx tsx services/ingestion/scripts/prod-bootstrap.ts",
-    "verify:8c": "npx tsx services/ingestion/scripts/verify-prod-operationalization-8c.ts"
+    "verify:8c": "npx tsx services/ingestion/scripts/verify-prod-operationalization-8c.ts",
+    "verify:prod-activation": "npx tsx services/ingestion/scripts/verify-prod-activation.ts"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.2",
