@@ -2174,5 +2174,4 @@ export {
   type ExecuteModelRunOptions
 } from "@kerala-lottery/statistics";
 
-
-
+export * from "./research-service";
