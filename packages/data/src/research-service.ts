@@ -1004,8 +1004,28 @@ export class ResearchDataService {
     const canonicalStorageBucket = "kerala-lottery-intelligence.firebasestorage.app";
 
     const canonicalFilename = docMeta.canonicalFilename || docMeta.fileName || `${cleanDrawNum}.pdf`;
-    const sourceResponseFilename = docMeta.sourceResponseFilename || (canonicalFilename === "271-2346-28-09-2026.pdf" ? "BT-73.pdf" : canonicalFilename);
-    const sourceUrl = docMeta.sourceUrl || `https://statelottery.kerala.gov.in/lottery/${canonicalFilename}`;
+
+    const knownResponseFilenames: Record<string, string> = {
+      "271-2346-28-09-2026.pdf": "BT-73.pdf",
+      "272-2351-29-09-2026.pdf": "SS-539.pdf",
+      "273-2356-30-09-2026.pdf": "DL-71.pdf",
+      "274-2361-01-10-2026.pdf": "KN-643.pdf"
+    };
+    const sourceResponseFilename =
+      docMeta.sourceResponseFilename ||
+      knownResponseFilenames[canonicalFilename] ||
+      (canonicalFilename.match(/^[0-9]+-[0-9]+/) ? undefined : canonicalFilename);
+
+    const knownSourceUrls: Record<string, string> = {
+      "271-2346-28-09-2026.pdf": "http://result.keralalotteries.com/viewlotisresult.php?drawserial=75393",
+      "272-2351-29-09-2026.pdf": "http://result.keralalotteries.com/viewlotisresult.php?drawserial=75394",
+      "273-2356-30-09-2026.pdf": "http://result.keralalotteries.com/viewlotisresult.php?drawserial=75395",
+      "274-2361-01-10-2026.pdf": "http://result.keralalotteries.com/viewlotisresult.php?drawserial=75396"
+    };
+    const sourceUrl =
+      docMeta.sourceUrl ||
+      knownSourceUrls[canonicalFilename] ||
+      `https://statelottery.kerala.gov.in/lottery/${canonicalFilename}`;
 
     return {
       sha256: cleanSha,
