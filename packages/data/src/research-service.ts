@@ -35,6 +35,15 @@ import {
   CANONICAL_7C_MODELING_DATASET_ID,
   HISTORICAL_MODELING_DISCLAIMER
 } from "@kerala-lottery/statistics";
+import {
+  getRegisteredExperiments as getCanonicalRegisteredExperiments,
+  getRegisteredExperimentById as getCanonicalRegisteredExperimentById,
+  defaultExperimentRepository,
+  type RegisteredExperimentDefinition,
+  type ExperimentRun,
+  type ResultArtifact,
+  type ExperimentLineage
+} from "@kerala-lottery/experiments";
 
 // ============================================================================
 // Pagination & Query Contracts
@@ -1167,6 +1176,60 @@ export class ResearchDataService {
     const { page, pageSize } = parsePaginationParams(params || {});
     const items: ExperimentItem[] = [
       {
+        experimentId: "EXP-001-UNIFORM-BASELINE",
+        name: "Uniform Random Categorical Baseline",
+        datasetId: CANONICAL_7C_MODELING_DATASET_ID,
+        strategy: "uniformRandom",
+        target: "observedLastDigit (10 classes: 0..9)",
+        evaluationMethod: "Chronological Holdout (80% Train / 20% Test Draws)",
+        trainTestPeriod: "Chronological Split: 80% Train / 20% Test",
+        metrics: {
+          accuracy: 0.1013,
+          top3Accuracy: 0.3004,
+          brierScore: 0.9000,
+          logLoss: 2.3026,
+          ece: 0.0012
+        },
+        reproducibilityIdentity: "seed_42_deterministic_mulberry32",
+        disclaimer: HISTORICAL_MODELING_DISCLAIMER
+      },
+      {
+        experimentId: "EXP-002-EMPIRICAL-BASELINE",
+        name: "Empirical Marginal Frequency Baseline",
+        datasetId: CANONICAL_7C_MODELING_DATASET_ID,
+        strategy: "empiricalMarginal",
+        target: "observedLastDigit (10 classes: 0..9)",
+        evaluationMethod: "Chronological Holdout (80% Train / 20% Test Draws)",
+        trainTestPeriod: "Chronological Split: 80% Train / 20% Test",
+        metrics: {
+          accuracy: 0.0992,
+          top3Accuracy: 0.3005,
+          brierScore: 0.8998,
+          logLoss: 2.3030,
+          ece: 0.0010
+        },
+        reproducibilityIdentity: "seed_42_deterministic_mulberry32",
+        disclaimer: HISTORICAL_MODELING_DISCLAIMER
+      },
+      {
+        experimentId: "EXP-003-MAJORITY-BASELINE",
+        name: "Majority Class Baseline",
+        datasetId: CANONICAL_7C_MODELING_DATASET_ID,
+        strategy: "majorityClass",
+        target: "observedLastDigit (10 classes: 0..9)",
+        evaluationMethod: "Chronological Holdout (80% Train / 20% Test Draws)",
+        trainTestPeriod: "Chronological Split: 80% Train / 20% Test",
+        metrics: {
+          accuracy: 0.0992,
+          top3Accuracy: 0.3000,
+          brierScore: 1.8000,
+          logLoss: 31.1113,
+          ece: 0.8996
+        },
+        reproducibilityIdentity: "seed_42_deterministic_mulberry32",
+        disclaimer: HISTORICAL_MODELING_DISCLAIMER
+      },
+      {
         experimentId: "exp_7b_uniform_baseline_last_digit",
         name: "Uniform Random Baseline — Last Digit Evaluation",
         datasetId: CANONICAL_7C_MODELING_DATASET_ID,
@@ -1508,6 +1571,129 @@ export class ResearchDataService {
 
   public async getStatistics(params?: StatisticsQueryParams): Promise<HistoricalStatisticsResult> {
     return this.getHistoricalStatistics(params);
+  }
+
+  // ==========================================================================
+  // Milestone 9B Continuous Research & Experimentation Endpoints
+  // ==========================================================================
+
+  /**
+   * 14. GET /api/v1/registered-experiments
+   */
+  public async getRegisteredExperiments(
+    params?: PaginationParams
+  ): Promise<PaginatedResponse<RegisteredExperimentDefinition>> {
+    const { page, pageSize } = parsePaginationParams(params || {});
+    const experiments = getCanonicalRegisteredExperiments();
+    return paginateArray(experiments, page, pageSize);
+  }
+
+  /**
+   * 15. GET /api/v1/experiments/:id
+   */
+  public async getExperimentById(
+    experimentId: string
+  ): Promise<RegisteredExperimentDefinition | ExperimentItem> {
+    const exp = getCanonicalRegisteredExperimentById(experimentId);
+    if (exp) {
+      return exp;
+    }
+    const all = (await this.getExperiments({ pageSize: 100 })).data;
+    const found = all.find((e) => e.experimentId === experimentId);
+    if (found) {
+      return found;
+    }
+    throw new ResearchApiError(
+      404,
+      "NOT_FOUND",
+      `Experiment '${experimentId}' not found.`
+    );
+  }
+
+  /**
+   * 16. GET /api/v1/experiment-runs
+   */
+  public async getExperimentRuns(
+    params?: PaginationParams & {
+      experimentId?: string;
+      status?: string;
+      corpusVersion?: string;
+    }
+  ): Promise<PaginatedResponse<ExperimentRun>> {
+    const { page, pageSize } = parsePaginationParams(params || {});
+    const runs = defaultExperimentRepository.listRuns({
+      experimentId: params?.experimentId,
+      status: params?.status as any,
+      corpusVersion: params?.corpusVersion
+    });
+    return paginateArray(runs, page, pageSize);
+  }
+
+  /**
+   * 17. GET /api/v1/experiment-runs/:id
+   */
+  public async getExperimentRunById(runId: string): Promise<ExperimentRun> {
+    const run = defaultExperimentRepository.getRun(runId);
+    if (!run) {
+      throw new ResearchApiError(
+        404,
+        "NOT_FOUND",
+        `Experiment run '${runId}' not found.`
+      );
+    }
+    return run;
+  }
+
+  /**
+   * 18. GET /api/v1/experiment-runs/:id/lineage
+   */
+  public async getExperimentLineage(runId: string): Promise<ExperimentLineage> {
+    const lineage = defaultExperimentRepository.getLineage(runId);
+    if (!lineage) {
+      throw new ResearchApiError(
+        404,
+        "NOT_FOUND",
+        `Lineage for experiment run '${runId}' not found.`
+      );
+    }
+    return lineage;
+  }
+
+  /**
+   * 19. GET /api/v1/experiment-results
+   */
+  public async getExperimentResults(
+    params?: PaginationParams & {
+      runId?: string;
+      experimentId?: string;
+    }
+  ): Promise<PaginatedResponse<ResultArtifact>> {
+    const { page, pageSize } = parsePaginationParams(params || {});
+    let artifacts = defaultExperimentRepository.listArtifacts();
+    if (params?.runId) {
+      artifacts = artifacts.filter((a) => a.runId === params.runId);
+    }
+    if (params?.experimentId) {
+      artifacts = artifacts.filter((a) => a.experimentId === params.experimentId);
+    }
+    return paginateArray(artifacts, page, pageSize);
+  }
+
+  /**
+   * 20. GET /api/v1/experiment-results/:id
+   */
+  public async getExperimentResultById(
+    artifactId: string
+  ): Promise<ResultArtifact> {
+    const artifact = defaultExperimentRepository.getArtifact(artifactId);
+    if (!artifact) {
+      throw new ResearchApiError(
+        404,
+        "NOT_FOUND",
+        `Result artifact '${artifactId}' not found.`
+      );
+    }
+    return artifact;
   }
 }
 
