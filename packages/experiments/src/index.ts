@@ -102,3 +102,11 @@ export * from "./registry";
 export * from "./runner";
 export * from "./repository";
 export * from "./orchestrator";
+
+// 9C Scientific Validation Exports
+export * from "./validation-types";
+export * from "./inference";
+export * from "./null-models";
+export * from "./multiple-testing";
+export * from "./walk-forward";
+export * from "./validation-engine";

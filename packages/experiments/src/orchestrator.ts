@@ -100,6 +100,16 @@ export function loadGraphsFromCache(
 }
 
 /**
+ * Loads and constructs the canonical research corpus from knowledge graphs in cache.
+ */
+export function loadCanonicalResearchCorpus(
+  cacheDir: string = join(process.cwd(), "data/processed-cache")
+): MultiDrawLotteryCorpus {
+  const graphs = loadGraphsFromCache(cacheDir);
+  return buildMultiDrawCorpus(graphs);
+}
+
+/**
  * Builds the canonical feature matrix and modeling dataset from a MultiDrawLotteryCorpus.
  */
 export function buildResearchModelingDataset(

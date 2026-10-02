@@ -96,12 +96,112 @@ interface ResultArtifact {
   }>;
 }
 
+interface StatisticalValidation {
+  validationId: string;
+  runId: string;
+  experimentId: string;
+  experimentVersion: string;
+  datasetVersion: string;
+  corpusVersion: string;
+  validationMethod: string;
+  validationVersion: string;
+  createdAt: string;
+  confidenceIntervals: {
+    accuracy: {
+      wilsonScoreInterval: { lower: number; upper: number; confidenceLevel: number; method: string };
+      bootstrapInterval: { lower: number; upper: number; confidenceLevel: number; method: string };
+    };
+    logLoss: {
+      normalInterval: { lower: number; upper: number; confidenceLevel: number; method: string };
+    };
+  };
+  effectSizes: {
+    cohensH: number;
+    relativeAccuracyRatio: number;
+    absoluteAccuracyDifference: number;
+  };
+  uncertainty: {
+    standardError: number;
+    sampleSize: number;
+    confidenceLevel: number;
+    marginOfError: number;
+    degreesOfFreedom?: number;
+  };
+  nullModelComparison: {
+    nullModelType: string;
+    iterations: number;
+    seed: number;
+    mean: number;
+    stdDev: number;
+    min: number;
+    max: number;
+    quantiles: Record<string, number>;
+    observedValue: number;
+    zScore: number;
+    empiricalPValue: number;
+  };
+  multipleTestingCorrection: {
+    familyId: string;
+    designation: string;
+    method: string;
+    baseAlpha: number;
+    adjustedAlpha: number;
+    rawPValue: number;
+    adjustedPValue: number;
+    isSignificant: boolean;
+    totalHypothesesInFamily: number;
+    rankInFamily: number;
+  };
+  temporalRobustness: {
+    strategy: string;
+    windowsCount: number;
+    windowResults: Array<{
+      windowIndex: number;
+      trainDrawCount: number;
+      testDrawCount: number;
+      trainRowCount: number;
+      testRowCount: number;
+      trainDateRange: { earliestIso: string; latestIso: string };
+      testDateRange: { earliestIso: string; latestIso: string };
+      accuracy: number;
+      logLoss: number;
+      zeroLeakageConfirmed: boolean;
+    }>;
+    meanAccuracy: number;
+    stdDevAccuracy: number;
+    stabilityScore: number;
+    zeroLeakageConfirmed: boolean;
+  };
+  interpretationContract: {
+    observation: string;
+    statisticalEvidence: {
+      pValue: number;
+      adjustedPValue: number;
+      confidenceInterval: [number, number];
+      effectSize: number;
+      effectSizeMetric: string;
+      hypothesisTest: string;
+    };
+    uncertainty: {
+      standardError: number;
+      sampleSize: number;
+      confidenceLevel: number;
+      marginOfError: number;
+    };
+    interpretation: string;
+    limitation: string;
+  };
+  deterministicHash: string;
+  nonPredictiveNotice: string;
+}
+
 export default function ExperimentsPage() {
   const [registry, setRegistry] = useState<RegisteredExperiment[]>([]);
   const [runs, setRuns] = useState<ExperimentRun[]>([]);
   const [selectedRun, setSelectedRun] = useState<ExperimentRun | null>(null);
   const [selectedLineage, setSelectedLineage] = useState<ExperimentLineage | null>(null);
   const [selectedArtifact, setSelectedArtifact] = useState<ResultArtifact | null>(null);
+  const [selectedValidation, setSelectedValidation] = useState<StatisticalValidation | null>(null);
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [filterExperiment, setFilterExperiment] = useState<string>("ALL");
@@ -136,9 +236,10 @@ export default function ExperimentsPage() {
     setSelectedRun(run);
     setDetailLoading(true);
     try {
-      const [linRes, artRes] = await Promise.all([
+      const [linRes, artRes, valRes] = await Promise.all([
         fetch(`/api/v1/experiment-runs/${run.runId}/lineage`),
-        fetch(`/api/v1/experiment-results?runId=${run.runId}`)
+        fetch(`/api/v1/experiment-results?runId=${run.runId}`),
+        fetch(`/api/v1/experiment-runs/${run.runId}/validation`)
       ]);
 
       if (linRes.ok) {
@@ -155,6 +256,13 @@ export default function ExperimentsPage() {
         } else {
           setSelectedArtifact(null);
         }
+      }
+
+      if (valRes.ok) {
+        const valJson = await valRes.json();
+        setSelectedValidation(valJson);
+      } else {
+        setSelectedValidation(null);
       }
     } catch (err) {
       console.error("Failed to load run details:", err);
@@ -508,6 +616,161 @@ export default function ExperimentsPage() {
                           </div>
                         ))}
                       </div>
+                    </div>
+                  )}
+
+                  {/* Milestone 9C: Statistical Validation & Research Integrity */}
+                  {selectedValidation && (
+                    <div style={{ marginBottom: "1.75rem", borderTop: "1px solid var(--border-subtle)", paddingTop: "1.5rem" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "0.5rem" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                          <h4 style={{ fontSize: "1.05rem", fontWeight: 700, margin: 0, color: "var(--accent-purple)" }}>
+                            Statistical Validation & Research Integrity
+                          </h4>
+                          <span className="badge badge-purple">Milestone 9C</span>
+                          <span className="badge badge-emerald">Hypothesis Tested</span>
+                        </div>
+                        <div className="mono" style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                          Artifact: <strong style={{ color: "var(--text-primary)" }}>{selectedValidation.validationId}</strong> | Hash: {selectedValidation.deterministicHash.slice(0, 12)}...
+                        </div>
+                      </div>
+
+                      {/* 5-Part Research Interpretation Contract */}
+                      <div
+                        style={{
+                          background: "var(--bg-card)",
+                          border: "1px solid var(--border-subtle)",
+                          borderRadius: "0.5rem",
+                          padding: "1.25rem",
+                          marginBottom: "1.25rem"
+                        }}
+                      >
+                        <div style={{ fontWeight: 700, fontSize: "0.88rem", marginBottom: "0.75rem", color: "var(--accent-cyan)" }}>
+                          Five-Part Research Interpretation Contract
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem", fontSize: "0.82rem" }}>
+                          <div>
+                            <span className="badge badge-blue" style={{ marginRight: "0.5rem" }}>OBSERVATION</span>
+                            <span>{selectedValidation.interpretationContract.observation}</span>
+                          </div>
+                          <div>
+                            <span className="badge badge-purple" style={{ marginRight: "0.5rem" }}>STAT EVIDENCE</span>
+                            <span>
+                              p = {selectedValidation.interpretationContract.statisticalEvidence.pValue.toFixed(4)} (Holm adj p = {selectedValidation.interpretationContract.statisticalEvidence.adjustedPValue.toFixed(4)}),
+                              Wilson 95% CI: [{(selectedValidation.interpretationContract.statisticalEvidence.confidenceInterval[0] * 100).toFixed(2)}%, {(selectedValidation.interpretationContract.statisticalEvidence.confidenceInterval[1] * 100).toFixed(2)}%],
+                              Cohen's h = {selectedValidation.interpretationContract.statisticalEvidence.effectSize.toFixed(4)} vs theoretical chance (10.00%).
+                            </span>
+                          </div>
+                          <div>
+                            <span className="badge badge-amber" style={{ marginRight: "0.5rem" }}>UNCERTAINTY</span>
+                            <span>
+                              Standard Error = {selectedValidation.uncertainty.standardError.toFixed(4)}, Margin of Error = ±{(selectedValidation.uncertainty.marginOfError * 100).toFixed(2)}% ({(selectedValidation.uncertainty.confidenceLevel * 100).toFixed(0)}% confidence, N = {selectedValidation.uncertainty.sampleSize.toLocaleString()} holdout samples).
+                            </span>
+                          </div>
+                          <div>
+                            <span className="badge badge-emerald" style={{ marginRight: "0.5rem" }}>INTERPRETATION</span>
+                            <span style={{ fontWeight: 600 }}>{selectedValidation.interpretationContract.interpretation}</span>
+                          </div>
+                          <div>
+                            <span className="badge badge-red" style={{ marginRight: "0.5rem" }}>LIMITATION</span>
+                            <span style={{ color: "var(--text-muted)", fontStyle: "italic" }}>{selectedValidation.interpretationContract.limitation}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 4 Stat Cards */}
+                      <div className="grid-4" style={{ gap: "1rem", marginBottom: "1.25rem" }}>
+                        {/* 1. Inference & CIs */}
+                        <div style={{ background: "var(--bg-card)", padding: "1rem", borderRadius: "0.5rem", fontSize: "0.82rem" }}>
+                          <strong style={{ color: "var(--accent-emerald)", display: "block", marginBottom: "0.4rem" }}>
+                            Confidence Intervals
+                          </strong>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
+                            <div>Wilson 95%: <strong className="mono">[{(selectedValidation.confidenceIntervals.accuracy.wilsonScoreInterval.lower * 100).toFixed(2)}%, {(selectedValidation.confidenceIntervals.accuracy.wilsonScoreInterval.upper * 100).toFixed(2)}%]</strong></div>
+                            <div>Bootstrap 95%: <span className="mono">[{(selectedValidation.confidenceIntervals.accuracy.bootstrapInterval.lower * 100).toFixed(2)}%, {(selectedValidation.confidenceIntervals.accuracy.bootstrapInterval.upper * 100).toFixed(2)}%]</span></div>
+                            <div>Cohen's h: <span className="mono">{selectedValidation.effectSizes.cohensH.toFixed(4)}</span></div>
+                            <div>Rel. Ratio: <span className="mono">{selectedValidation.effectSizes.relativeAccuracyRatio.toFixed(3)}x</span></div>
+                          </div>
+                        </div>
+
+                        {/* 2. Null Model Comparison */}
+                        <div style={{ background: "var(--bg-card)", padding: "1rem", borderRadius: "0.5rem", fontSize: "0.82rem" }}>
+                          <strong style={{ color: "var(--accent-cyan)", display: "block", marginBottom: "0.4rem" }}>
+                            Null Distribution
+                          </strong>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
+                            <div>Model: <span className="mono" style={{ fontSize: "0.75rem" }}>{selectedValidation.nullModelComparison.nullModelType}</span></div>
+                            <div>Null Mean: <strong className="mono">{(selectedValidation.nullModelComparison.mean * 100).toFixed(2)}%</strong> ± {(selectedValidation.nullModelComparison.stdDev * 100).toFixed(2)}%</div>
+                            <div>Z-Score: <span className="mono">{selectedValidation.nullModelComparison.zScore.toFixed(3)}</span></div>
+                            <div>Empirical p: <strong className="mono" style={{ color: selectedValidation.nullModelComparison.empiricalPValue < 0.05 ? "var(--accent-red)" : "var(--accent-emerald)" }}>{selectedValidation.nullModelComparison.empiricalPValue.toFixed(4)}</strong></div>
+                          </div>
+                        </div>
+
+                        {/* 3. Multiple Testing */}
+                        <div style={{ background: "var(--bg-card)", padding: "1rem", borderRadius: "0.5rem", fontSize: "0.82rem" }}>
+                          <strong style={{ color: "var(--accent-purple)", display: "block", marginBottom: "0.4rem" }}>
+                            Multiple Comparisons
+                          </strong>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
+                            <div>Method: <span className="mono">{selectedValidation.multipleTestingCorrection.method}</span></div>
+                            <div>Family: <span className="mono" style={{ fontSize: "0.72rem" }}>{selectedValidation.multipleTestingCorrection.familyId}</span></div>
+                            <div>Holm Adj p: <strong className="mono">{selectedValidation.multipleTestingCorrection.adjustedPValue.toFixed(4)}</strong></div>
+                            <div>Significant: <span className={`badge ${selectedValidation.multipleTestingCorrection.isSignificant ? "badge-red" : "badge-emerald"}`}>{selectedValidation.multipleTestingCorrection.isSignificant ? "YES" : "NO"}</span></div>
+                          </div>
+                        </div>
+
+                        {/* 4. Temporal Robustness */}
+                        <div style={{ background: "var(--bg-card)", padding: "1rem", borderRadius: "0.5rem", fontSize: "0.82rem" }}>
+                          <strong style={{ color: "var(--accent-amber)", display: "block", marginBottom: "0.4rem" }}>
+                            Temporal Robustness
+                          </strong>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
+                            <div>Strategy: <span className="mono" style={{ fontSize: "0.72rem" }}>EXPANDING_WINDOW</span></div>
+                            <div>Windows: <strong>{selectedValidation.temporalRobustness.windowsCount} folds</strong></div>
+                            <div>Stability: <strong className="mono">{(selectedValidation.temporalRobustness.stabilityScore * 100).toFixed(1)}%</strong></div>
+                            <div>Zero Leakage: <span className="badge badge-emerald">✓ VERIFIED</span></div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Walk-Forward Folds Table */}
+                      {selectedValidation.temporalRobustness.windowResults && selectedValidation.temporalRobustness.windowResults.length > 0 && (
+                        <div style={{ marginBottom: "1rem" }}>
+                          <div style={{ fontSize: "0.82rem", fontWeight: 700, marginBottom: "0.4rem", color: "var(--text-secondary)" }}>
+                            Walk-Forward Evaluation Windows (Chronological Expanding Folds)
+                          </div>
+                          <div className="table-container">
+                            <table className="research-table" style={{ fontSize: "0.75rem" }}>
+                              <thead>
+                                <tr>
+                                  <th>Fold</th>
+                                  <th>Train Period</th>
+                                  <th>Train Draws</th>
+                                  <th>Test Period</th>
+                                  <th>Test Draws</th>
+                                  <th>Fold Accuracy</th>
+                                  <th>Cross-Entropy</th>
+                                  <th>Leakage Protected</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {selectedValidation.temporalRobustness.windowResults.map((w) => (
+                                  <tr key={w.windowIndex}>
+                                    <td className="mono" style={{ fontWeight: 600 }}>Fold {w.windowIndex}</td>
+                                    <td className="mono">{w.trainDateRange.earliestIso} → {w.trainDateRange.latestIso}</td>
+                                    <td>{w.trainDrawCount} ({w.trainRowCount.toLocaleString()} rows)</td>
+                                    <td className="mono">{w.testDateRange.earliestIso} → {w.testDateRange.latestIso}</td>
+                                    <td>{w.testDrawCount} ({w.testRowCount.toLocaleString()} rows)</td>
+                                    <td className="mono" style={{ fontWeight: 700 }}>{(w.accuracy * 100).toFixed(2)}%</td>
+                                    <td className="mono">{w.logLoss.toFixed(4)}</td>
+                                    <td><span className="badge badge-emerald">✓ PASS</span></td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 

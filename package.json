@@ -22,13 +22,17 @@
     "verify:8c": "npx tsx services/ingestion/scripts/verify-prod-operationalization-8c.ts",
     "verify:9a": "npx tsx services/ingestion/scripts/verify-prod-research-surface-9a.ts",
     "verify:9b": "npx tsx services/ingestion/scripts/verify-continuous-research-9b.ts",
+    "verify:9c": "npx tsx services/ingestion/scripts/verify-scientific-validation-9c.ts",
     "verify:catchup": "npx tsx services/ingestion/scripts/verify-catchup-103.ts",
     "verify:prod-activation": "npx tsx services/ingestion/scripts/verify-prod-activation.ts",
     "experiments:list": "npx tsx services/ingestion/scripts/experiments-cli.ts list",
     "experiments:run": "npx tsx services/ingestion/scripts/experiments-cli.ts run",
     "experiments:run-all": "npx tsx services/ingestion/scripts/experiments-cli.ts run-all",
     "refresh:research": "npx tsx services/ingestion/scripts/experiments-cli.ts refresh",
-    "experiments:inspect": "npx tsx services/ingestion/scripts/experiments-cli.ts inspect"
+    "experiments:inspect": "npx tsx services/ingestion/scripts/experiments-cli.ts inspect",
+    "experiments:validate": "npx tsx services/ingestion/scripts/experiments-cli.ts validate",
+    "experiments:validate-all": "npx tsx services/ingestion/scripts/experiments-cli.ts validate-all",
+    "experiments:inspect-validation": "npx tsx services/ingestion/scripts/experiments-cli.ts inspect-validation"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.2",

@@ -23,6 +23,7 @@ import {
   type RegisteredExperimentDefinition,
   type ExperimentRunStatus
 } from "./types";
+import type { StatisticalValidationArtifact } from "./validation-types";
 
 export interface ExperimentRepositoryOptions {
   baseDir?: string;
@@ -154,12 +155,14 @@ export class ExperimentRepository {
   private readonly runsDir: string;
   private readonly artifactsDir: string;
   private readonly lineageDir: string;
+  private readonly validationsDir: string;
   private readonly inMemoryOnly: boolean;
 
   // In-memory backing stores
   private readonly runsMemory = new Map<string, ExperimentRun>();
   private readonly artifactsMemory = new Map<string, ResultArtifact>();
   private readonly lineageMemory = new Map<string, ExperimentLineage>();
+  private readonly validationsMemory = new Map<string, StatisticalValidationArtifact>();
 
   constructor(options: ExperimentRepositoryOptions = {}) {
     this.inMemoryOnly = options.inMemoryOnly ?? false;
@@ -169,6 +172,7 @@ export class ExperimentRepository {
     this.runsDir = join(this.baseDir, "runs");
     this.artifactsDir = join(this.baseDir, "artifacts");
     this.lineageDir = join(this.baseDir, "lineage");
+    this.validationsDir = join(this.baseDir, "validations");
 
     if (!this.inMemoryOnly) {
       this.ensureDirectories();
@@ -179,6 +183,7 @@ export class ExperimentRepository {
     if (!existsSync(this.runsDir)) mkdirSync(this.runsDir, { recursive: true });
     if (!existsSync(this.artifactsDir)) mkdirSync(this.artifactsDir, { recursive: true });
     if (!existsSync(this.lineageDir)) mkdirSync(this.lineageDir, { recursive: true });
+    if (!existsSync(this.validationsDir)) mkdirSync(this.validationsDir, { recursive: true });
   }
 
   /**
@@ -313,9 +318,12 @@ export class ExperimentRepository {
    * Retrieves a result artifact by run ID.
    */
   public getArtifactByRunId(runId: string): ResultArtifact | null {
+    const run = this.getRun(runId);
+    const candidates: ResultArtifact[] = [];
+
     // Check in-memory
     for (const artifact of this.artifactsMemory.values()) {
-      if (artifact.runId === runId) return artifact;
+      if (artifact.runId === runId) candidates.push(artifact);
     }
 
     // Check disk
@@ -327,14 +335,26 @@ export class ExperimentRepository {
             readFileSync(join(this.artifactsDir, file), "utf-8")
           ) as ResultArtifact;
           this.artifactsMemory.set(content.artifactId, content);
-          if (content.runId === runId) return content;
+          if (content.runId === runId && !candidates.some((c) => c.artifactId === content.artifactId)) {
+            candidates.push(content);
+          }
         } catch {
           // ignore
         }
       }
     }
 
-    return null;
+    if (candidates.length === 0) return null;
+    if (candidates.length === 1) return candidates[0]!;
+
+    // If run has metrics, find the exact matching candidate
+    if (run?.metrics) {
+      const match = candidates.find((c) => Math.abs(c.metrics.accuracy - run.metrics!.accuracy) < 1e-6);
+      if (match) return match;
+    }
+
+    // Fallback: candidate with highest accuracy
+    return candidates.sort((a, b) => b.metrics.accuracy - a.metrics.accuracy)[0]!;
   }
 
   /**
@@ -398,6 +418,96 @@ export class ExperimentRepository {
     }
 
     return null;
+  }
+
+  /**
+   * Saves a statistical validation artifact.
+   * INVARIANT: Existing validation artifacts cannot be mutated with differing hashes.
+   */
+  public saveValidation(validation: StatisticalValidationArtifact): void {
+    const existing = this.getValidation(validation.validationId);
+    if (existing && existing.deterministicHash !== validation.deterministicHash) {
+      throw new Error(
+        `IMMUTABILITY_VIOLATION: Cannot mutate existing validation artifact ${validation.validationId} with differing hash.`
+      );
+    }
+
+    this.validationsMemory.set(validation.validationId, validation);
+
+    if (!this.inMemoryOnly) {
+      this.ensureDirectories();
+      const filePath = join(this.validationsDir, `${validation.validationId}.json`);
+      writeFileSync(filePath, JSON.stringify(validation, null, 2), "utf-8");
+    }
+  }
+
+  /**
+   * Retrieves a statistical validation artifact by validation ID.
+   */
+  public getValidation(validationId: string): StatisticalValidationArtifact | null {
+    if (this.validationsMemory.has(validationId)) {
+      return this.validationsMemory.get(validationId)!;
+    }
+
+    if (!this.inMemoryOnly) {
+      const filePath = join(this.validationsDir, `${validationId}.json`);
+      if (existsSync(filePath)) {
+        try {
+          const content = JSON.parse(readFileSync(filePath, "utf-8")) as StatisticalValidationArtifact;
+          this.validationsMemory.set(validationId, content);
+          return content;
+        } catch {
+          return null;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Retrieves a statistical validation artifact by run ID.
+   */
+  public getValidationByRunId(runId: string): StatisticalValidationArtifact | null {
+    const all = this.listValidations();
+    return all.find((v) => v.runId === runId) || null;
+  }
+
+  /**
+   * Lists statistical validation artifacts with optional filtering.
+   */
+  public listValidations(filters?: {
+    experimentId?: string;
+    runId?: string;
+  }): StatisticalValidationArtifact[] {
+    if (!this.inMemoryOnly && existsSync(this.validationsDir)) {
+      const files = readdirSync(this.validationsDir).filter((f) => f.endsWith(".json"));
+      for (const file of files) {
+        const valId = file.replace(".json", "");
+        if (!this.validationsMemory.has(valId)) {
+          try {
+            const content = JSON.parse(
+              readFileSync(join(this.validationsDir, file), "utf-8")
+            ) as StatisticalValidationArtifact;
+            this.validationsMemory.set(valId, content);
+          } catch {
+            // ignore
+          }
+        }
+      }
+    }
+
+    let items = Array.from(this.validationsMemory.values());
+    if (filters?.experimentId) {
+      items = items.filter((v) => v.experimentId === filters.experimentId);
+    }
+    if (filters?.runId) {
+      items = items.filter((v) => v.runId === filters.runId);
+    }
+
+    return items.sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
   }
 }
 

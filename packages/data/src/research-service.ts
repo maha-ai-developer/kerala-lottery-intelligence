@@ -42,7 +42,8 @@ import {
   type RegisteredExperimentDefinition,
   type ExperimentRun,
   type ResultArtifact,
-  type ExperimentLineage
+  type ExperimentLineage,
+  type StatisticalValidationArtifact
 } from "@kerala-lottery/experiments";
 
 // ============================================================================
@@ -1694,6 +1695,64 @@ export class ResearchDataService {
       );
     }
     return artifact;
+  }
+
+  // ==========================================================================
+  // Milestone 9C Scientific Validation & Research Integrity Endpoints
+  // ==========================================================================
+
+  /**
+   * 21. GET /api/v1/validations
+   */
+  public async getValidations(
+    params?: PaginationParams & {
+      runId?: string;
+      experimentId?: string;
+    }
+  ): Promise<PaginatedResponse<StatisticalValidationArtifact>> {
+    const { page, pageSize } = parsePaginationParams(params || {});
+    let validations = defaultExperimentRepository.listValidations();
+    if (params?.runId) {
+      validations = validations.filter((v) => v.runId === params.runId);
+    }
+    if (params?.experimentId) {
+      validations = validations.filter((v) => v.experimentId === params.experimentId);
+    }
+    return paginateArray(validations, page, pageSize);
+  }
+
+  /**
+   * 22. GET /api/v1/validations/:id
+   */
+  public async getValidationById(
+    validationArtifactId: string
+  ): Promise<StatisticalValidationArtifact> {
+    const validation = defaultExperimentRepository.getValidation(validationArtifactId);
+    if (!validation) {
+      throw new ResearchApiError(
+        404,
+        "NOT_FOUND",
+        `Statistical validation artifact '${validationArtifactId}' not found.`
+      );
+    }
+    return validation;
+  }
+
+  /**
+   * 23. GET /api/v1/experiment-runs/:id/validation
+   */
+  public async getValidationByRunId(
+    runId: string
+  ): Promise<StatisticalValidationArtifact> {
+    const validation = defaultExperimentRepository.getValidationByRunId(runId);
+    if (!validation) {
+      throw new ResearchApiError(
+        404,
+        "NOT_FOUND",
+        `Statistical validation for experiment run '${runId}' not found.`
+      );
+    }
+    return validation;
   }
 }
 
