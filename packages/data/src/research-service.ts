@@ -389,10 +389,18 @@ export interface BacktestItem {
 export interface ModelItem {
   modelId: string;
   modelName: string;
-  modelType: string;
+  modelType: "UNIFORM" | "EMPIRICAL" | "MAJORITY";
+  classification: "FORMAL_STATISTICAL_BASELINE";
+  modelVersion: string;
+  provenance: string;
+  targetId: string;
+  targetName: string;
   description: string;
   formula: string;
   assumptions: string;
+  theoreticalAccuracy: number;
+  expectedLoss: number;
+  descriptiveOnly: true;
   disclaimer: string;
 }
 
@@ -546,6 +554,31 @@ export class ResearchDataService {
         ? "OBSERVED_SCHEME_ARCHETYPE"
         : resolution.schemeVersion?.authorityLevel || "OFFICIAL_SCHEME";
 
+      let fullTicketCount = doc.fullTicketCount ?? 0;
+      let suffixCount = doc.suffixCount ?? 0;
+      let totalResults = doc.totalResults || 0;
+
+      // Reconcile and verify against canonical graph result population:
+      // If fullTicketCount + suffixCount !== totalResults or fullTicketCount === 0 while totalResults > 0
+      if (totalResults > 0 && (fullTicketCount === 0 || fullTicketCount + suffixCount !== totalResults)) {
+        const graph = this.loadGraph(sha256);
+        if (graph?.nodes) {
+          let gFull = 0;
+          let gSuffix = 0;
+          for (const node of graph.nodes) {
+            if (node.type === "WinningResult") {
+              if (node.properties?.isSuffix === false) gFull++;
+              else gSuffix++;
+            }
+          }
+          if (gFull + gSuffix > 0) {
+            fullTicketCount = gFull;
+            suffixCount = gSuffix;
+            totalResults = gFull + gSuffix;
+          }
+        }
+      }
+
       summaries.push({
         drawId,
         drawNumber: doc.drawNumber || cleanDrawNum,
@@ -553,9 +586,9 @@ export class ResearchDataService {
         lotteryName: doc.lotteryName,
         drawDate: doc.drawDate,
         sourceDocumentSha256: sha256,
-        totalResults: doc.totalResults || 0,
-        fullTicketCount: doc.fullTicketCount || 0,
-        suffixCount: doc.suffixCount || 0,
+        totalResults,
+        fullTicketCount,
+        suffixCount,
         validationStatus: doc.status === "VALID" ? "VALID" : "FLAGGED",
         prizeSchemeId: resolution.schemeVersion?.id || (isBr111 ? "scheme_bhagyamithra_br111_observed" : undefined),
         schemeAuthorityLevel: authorityLevel
@@ -963,26 +996,28 @@ export class ResearchDataService {
     const drawSummary = this.getCachedDraws().find(d => d.sourceDocumentSha256.toLowerCase() === cleanSha);
     const cleanDrawNum = (docMeta.drawNumber || "").replace(/(st|nd|rd|th)$/i, "").trim();
 
+    const canonicalStorageBucket = "kerala-lottery-intelligence.firebasestorage.app";
+
     return {
       sha256: cleanSha,
       fileName: docMeta.fileName || `${cleanDrawNum}.pdf`,
       fileSize: docMeta.fileSize || 0,
       mimeType: "application/pdf",
-      storagePath: `gs://kerala-lottery-intelligence-prod-sources/source-documents/${cleanSha}.pdf`,
+      storagePath: `gs://${canonicalStorageBucket}/source-documents/${cleanSha}.pdf`,
       retrievedAt: docMeta.ingestedAt || "2026-09-28T12:00:35.361Z",
       drawNumber: docMeta.drawNumber || cleanDrawNum,
       lotteryName: docMeta.lotteryName,
       drawDate: docMeta.drawDate,
-      totalResults: docMeta.totalResults || 0,
-      fullTicketCount: docMeta.fullTicketCount || 0,
-      suffixCount: docMeta.suffixCount || 0,
+      totalResults: drawSummary?.totalResults ?? (docMeta.totalResults || 0),
+      fullTicketCount: drawSummary?.fullTicketCount ?? (docMeta.fullTicketCount || 0),
+      suffixCount: drawSummary?.suffixCount ?? (docMeta.suffixCount || 0),
       status: docMeta.status === "VALID" ? "VALID" : "QUARANTINED",
       provenance: {
         sourceOrganization: "Government of Kerala Directorate of State Lotteries",
         retrievedUrl: `https://statelottery.kerala.gov.in/lottery/${docMeta.fileName || cleanDrawNum + '.pdf'}`,
         verifiedImmutable: true,
         canonicalHashAlgorithm: "SHA-256",
-        cloudStorageBucket: "kerala-lottery-intelligence-prod-sources"
+        cloudStorageBucket: canonicalStorageBucket
       },
       associatedDraw: {
         drawId: drawSummary?.drawId || `draw_${cleanDrawNum}`,
@@ -1264,29 +1299,53 @@ export class ResearchDataService {
     return [
       {
         modelId: "model_uniform_random_baseline",
-        modelName: "Uniform Random Baseline Model",
+        modelName: "Uniform Categorical Baseline Model",
         modelType: "UNIFORM",
+        classification: "FORMAL_STATISTICAL_BASELINE",
+        modelVersion: "v1.0.0-baseline-backtest",
+        provenance: "@kerala-lottery/statistics (Milestone 7B/7C Formal Baseline Specification)",
+        targetId: "observed_last_digit",
+        targetName: "Observed Last Digit (0-9)",
         description: "Maximum-entropy reference model assigning equal probability (1/K) across all K target categories.",
         formula: "P(y = c) = 1 / K",
         assumptions: "Complete lack of prior information; perfectly independent and identically distributed draws.",
+        theoreticalAccuracy: 0.1000,
+        expectedLoss: 2.3026,
+        descriptiveOnly: true,
         disclaimer: HISTORICAL_MODELING_DISCLAIMER
       },
       {
         modelId: "model_empirical_marginal_baseline",
         modelName: "Empirical Marginal Baseline Model",
         modelType: "EMPIRICAL",
+        classification: "FORMAL_STATISTICAL_BASELINE",
+        modelVersion: "v1.0.0-baseline-backtest",
+        provenance: "@kerala-lottery/statistics (Milestone 7B/7C Formal Baseline Specification)",
+        targetId: "observed_last_digit",
+        targetName: "Observed Last Digit (0-9)",
         description: "Observed marginal frequency distribution estimated strictly from historical training rows.",
         formula: "P(y = c) = N_c / N_train",
         assumptions: "Historical marginal proportions are stationary across draw dates.",
+        theoreticalAccuracy: 0.1002,
+        expectedLoss: 2.3024,
+        descriptiveOnly: true,
         disclaimer: HISTORICAL_MODELING_DISCLAIMER
       },
       {
         modelId: "model_majority_class_baseline",
         modelName: "Majority Class Baseline Model",
         modelType: "MAJORITY",
+        classification: "FORMAL_STATISTICAL_BASELINE",
+        modelVersion: "v1.0.0-baseline-backtest",
+        provenance: "@kerala-lottery/statistics (Milestone 7B/7C Formal Baseline Specification)",
+        targetId: "observed_last_digit",
+        targetName: "Observed Last Digit (0-9)",
         description: "Deterministic point-prediction baseline predicting the modal class observed in training.",
         formula: "c* = argmax_c N_c (with lexicographical tie-breaking)",
         assumptions: "Predicts the single most frequent historical outcome with probability 1.0.",
+        theoreticalAccuracy: 0.1004,
+        expectedLoss: 31.069,
+        descriptiveOnly: true,
         disclaimer: HISTORICAL_MODELING_DISCLAIMER
       }
     ];

@@ -127,7 +127,10 @@ describe("Directive 9A: Production Research API & Read-Only Surface Invariants",
     expect(source?.associatedDraw.drawId).toBe("draw_BT-73");
     expect(source?.drawNumber).toBe("BT-73rd");
     expect(source?.mimeType).toBe("application/pdf");
-    expect(source?.storagePath).toContain("kerala-lottery-intelligence-prod-sources");
+    expect(source?.storagePath).toBe(
+      `gs://kerala-lottery-intelligence.firebasestorage.app/source-documents/${sha}.pdf`
+    );
+    expect(source?.provenance.cloudStorageBucket).toBe("kerala-lottery-intelligence.firebasestorage.app");
     expect(source?.status).toBe("VALID");
   });
 
@@ -135,6 +138,8 @@ describe("Directive 9A: Production Research API & Read-Only Surface Invariants",
     const stats = await researchService.getStatistics();
     expect(stats.population.totalDraws).toBe(100);
     expect(stats.population.totalResults).toBe(38416);
+    expect(stats.population.fullTicketCount).toBe(1462);
+    expect(stats.population.suffixCount).toBe(36954);
     expect(Object.keys(stats.lastDigitDistribution).length).toBe(10);
     expect(Object.keys(stats.firstDigitDistribution).length).toBe(10);
 
@@ -169,8 +174,11 @@ describe("Directive 9A: Production Research API & Read-Only Surface Invariants",
 
     const models = await researchService.getModels();
     expect(models.length).toBe(3); // Uniform, Empirical, Majority
-    const uniform = models.find((m) => m.modelId === "model_uniform_random_baseline" || m.modelType === "UNIFORM");
-    expect(uniform).toBeDefined();
+    for (const m of models) {
+      expect(m.classification).toBe("FORMAL_STATISTICAL_BASELINE");
+      expect(m.provenance).toContain("@kerala-lottery/statistics");
+      expect(m.descriptiveOnly).toBe(true);
+    }
   });
 
   it("Invariant 9: Ingestion runs are sanitized of all operational secrets and reflect PAUSED scheduler", async () => {

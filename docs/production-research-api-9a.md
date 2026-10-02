@@ -34,7 +34,7 @@ Milestone 9A delivers the official read-only research surface for the verified K
                                     ▼
 ┌────────────────────────────────────────────────────────────────────────┐
 │                WEB RESEARCH APPLICATION (apps/web)                     │
-│  - 10 Dedicated Research & Provenance Inspection Screens               │
+│  - 11 Dedicated Research & Provenance Inspection Screens               │
 │  - Anchor Investigation: BHAGYATHARA BT-73 End-to-End Traversal        │
 │  - Canonical Leading Zero String Preservation ("0276")                 │
 │  - Prominent Non-Predictive Scientific Boundary Notices                │
@@ -122,7 +122,7 @@ The canonical reference draw **BHAGYATHARA BT-73** acts as the platform's anchor
 - **Draw Number**: `BT-73rd`
 - **Draw Date**: `28/09/2026`
 - **Source Document SHA-256**: `cddb3d4d05c102b98f38050ac1ff297ad15bc442b12087c0505927f7bb1cf3dc`
-- **Storage Location**: `gs://kerala-lottery-intelligence-prod-sources/source-documents/cddb3d4d05c102b98f38050ac1ff297ad15bc442b12087c0505927f7bb1cf3dc.pdf`
+- **Storage Location**: `gs://kerala-lottery-intelligence.firebasestorage.app/source-documents/cddb3d4d05c102b98f38050ac1ff297ad15bc442b12087c0505927f7bb1cf3dc.pdf`
 - **Governing Scheme**: `scheme_ver_bt_v2025-11-sro1297` (`OFFICIAL_SCHEME`, S.R.O. No. 1297/2025)
 - **Winning Numbers**: Exactly 378 verified winning numbers:
   - **Full Ticket (1st Prize + Consolation)**: 14 tickets (e.g. `WA 75382`)
@@ -158,7 +158,7 @@ The platform explicitly differentiates statutory rules from observed draw patter
 
 ## 6. Empirical Statistics & Non-Predictive Boundary
 
-Empirical analysis over the complete 38,416-result corpus:
+Empirical analysis over the complete 38,416-result corpus (1,462 full-ticket, 36,954 suffix):
 - **Shannon Entropy**: $H = 3.3219$ bits (near the theoretical discrete uniform maximum $\log_2(10) \approx 3.3219$ bits, $>99.99\%$ efficiency).
 - **Chi-Square Goodness-of-Fit Uniformity**: Computed across digits 0–9 with degrees of freedom $df = 9$.
 - **Hypothesis Result**: Consistent with uniform physical randomness.
@@ -169,7 +169,7 @@ Empirical analysis over the complete 38,416-result corpus:
 
 ## 7. Web Application Research Screens (`apps/web`)
 
-10 dedicated screens built in modern dark-mode scientific aesthetic:
+11 dedicated screens built in modern dark-mode scientific aesthetic:
 
 1. **Overview (`/`)**: Key metrics (100 draws, 38,416 results, 100% SHA verified, 16 schemes), BT-73 anchor card, global search, and recent verified draws table.
 2. **Lotteries (`/lotteries`)**: Grid of 9 lottery families with verified draw counts and active status.
@@ -193,16 +193,16 @@ The automated verifier `services/ingestion/scripts/verify-prod-research-surface-
 Gate 01 [PASS]: Read-Only Safety Invariant (405 Method Not Allowed rejected)
 Gate 02 [PASS]: 12 Data Domains Coverage (All domains active)
 Gate 03 [PASS]: 100 Verified Historical Draws (Deterministic descending order)
-Gate 04 [PASS]: 38,416 Total Results Invariant (Zero data loss or omission)
+Gate 04 [PASS]: 38,416 Total Results Invariant (1,462 full-ticket, 36,954 suffix)
 Gate 05 [PASS]: Real-World Anchor BT-73 (28/09/2026, 378 results verified)
 Gate 06 [PASS]: Canonical String Integrity (Leading zeros preserved)
 Gate 07 [PASS]: Prize Scheme Classification (15 Official, 1 Observed BR-111)
-Gate 08 [PASS]: Source Document Cryptographic Grounding (GCS prod bucket)
+Gate 08 [PASS]: Source Document Cryptographic Grounding (kerala-lottery-intelligence.firebasestorage.app)
 Gate 09 [PASS]: Bounded Deterministic Pagination (Default 20, max clamped 100)
 Gate 10 [PASS]: HTTP Header & Cache Contracts (Immutable cache & no-store)
 Gate 11 [PASS]: Secret Scrubbing & Sanitization (Zero credentials exposed)
 Gate 12 [PASS]: Operational State Integrity (Scheduler PAUSED, Lock IDLE)
 Gate 13 [PASS]: Statistical Uniformity & Entropy (H = 3.3219 bits, df = 9)
-Gate 14 [PASS]: Temporal Separation & Benchmarks (Holdout & Walk-forward)
+Gate 14 [PASS]: Temporal Separation & Benchmarks (Holdout & Walk-forward, 3 formal models)
 Gate 15 [PASS]: Non-Predictive Scientific Boundary (Mandatory disclaimers)
 ```

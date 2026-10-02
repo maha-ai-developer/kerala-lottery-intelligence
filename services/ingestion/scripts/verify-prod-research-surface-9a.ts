@@ -192,6 +192,12 @@ async function runProdResearchSurfaceVerifier9A(): Promise<void> {
     if (stats.population.totalDraws !== 100) {
       throw new Error(`Expected 100 total draws in population, got ${stats.population.totalDraws}`);
     }
+    if (stats.population.fullTicketCount !== 1462) {
+      throw new Error(`Expected 1,462 full-ticket results, got ${stats.population.fullTicketCount}`);
+    }
+    if (stats.population.suffixCount !== 36954) {
+      throw new Error(`Expected 36,954 suffix results, got ${stats.population.suffixCount}`);
+    }
 
     results.push({
       gateNumber: 4,
@@ -199,7 +205,7 @@ async function runProdResearchSurfaceVerifier9A(): Promise<void> {
       passed: true,
       details: `Exact total of 38,416 results verified across 100 draws (Full Ticket: ${stats.population.fullTicketCount}, Suffix: ${stats.population.suffixCount}).`
     });
-    console.log("  ✓ Gate 4 PASS: 38,416 winning results verified with zero omission.\n");
+    console.log("  ✓ Gate 4 PASS: 38,416 winning results verified with zero omission (1,462 full-ticket, 36,954 suffix).\n");
   } catch (err: any) {
     results.push({
       gateNumber: 4,
@@ -358,8 +364,11 @@ async function runProdResearchSurfaceVerifier9A(): Promise<void> {
     if (source.sha256 !== TARGET_BT73_SHA) {
       throw new Error("Source SHA mismatch");
     }
-    if (!source.storagePath.includes("kerala-lottery-intelligence-prod-sources")) {
+    if (!source.storagePath.includes("kerala-lottery-intelligence.firebasestorage.app")) {
       throw new Error(`Source storagePath does not reference production storage bucket: ${source.storagePath}`);
+    }
+    if (source.provenance.cloudStorageBucket !== "kerala-lottery-intelligence.firebasestorage.app") {
+      throw new Error(`Source cloudStorageBucket mismatch: expected kerala-lottery-intelligence.firebasestorage.app, got ${source.provenance.cloudStorageBucket}`);
     }
     if (source.mimeType !== "application/pdf") {
       throw new Error(`Unexpected MIME type: ${source.mimeType}`);
@@ -571,13 +580,29 @@ async function runProdResearchSurfaceVerifier9A(): Promise<void> {
       throw new Error(`Uniform random benchmark accuracy outside expected range ~0.10: got ${uniformBacktest.metrics.accuracy}`);
     }
 
+    const models = await service.getModels();
+    if (models.length !== 3) {
+      throw new Error(`Expected exactly 3 formal baseline models, got ${models.length}`);
+    }
+    for (const m of models) {
+      if (m.classification !== "FORMAL_STATISTICAL_BASELINE") {
+        throw new Error(`Model ${m.modelId} lacks FORMAL_STATISTICAL_BASELINE classification`);
+      }
+      if (!m.provenance || !m.provenance.includes("@kerala-lottery/statistics")) {
+        throw new Error(`Model ${m.modelId} lacks formal @kerala-lottery/statistics provenance`);
+      }
+      if (m.descriptiveOnly !== true) {
+        throw new Error(`Model ${m.modelId} must be descriptiveOnly: true`);
+      }
+    }
+
     results.push({
       gateNumber: 14,
       title: "Temporal Separation & Benchmarks",
       passed: true,
-      details: `Chronological holdout validation verified. Uniform random baseline accuracy = ${(uniformBacktest.metrics.accuracy * 100).toFixed(2)}%.`
+      details: `Chronological holdout validation verified. Uniform random baseline accuracy = ${(uniformBacktest.metrics.accuracy * 100).toFixed(2)}%. All ${models.length} baseline models verified with formal @kerala-lottery/statistics provenance.`
     });
-    console.log("  ✓ Gate 14 PASS: Temporal separation and baseline benchmarks verified.\n");
+    console.log(`  ✓ Gate 14 PASS: Temporal separation, baseline benchmarks, and ${models.length} formal models verified.\n`);
   } catch (err: any) {
     results.push({
       gateNumber: 14,
