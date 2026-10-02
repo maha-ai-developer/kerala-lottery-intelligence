@@ -47,7 +47,15 @@ import {
   type ResearchFinding,
   type EvidenceBundle,
   type ResearchFindingLineage,
-  type PublicationReport
+  type PublicationReport,
+  GeographicRepository,
+  GeographicAnalysisEngine,
+  type GeographicWinnerDataset,
+  type GeographicObservation,
+  type DistrictSummaryRecord,
+  type GeographicAnalysis,
+  type TicketDistributionExposure,
+  type GeographicFindingLineage
 } from "@kerala-lottery/experiments";
 
 // ============================================================================
@@ -1870,6 +1878,113 @@ export class ResearchDataService {
     const { page, pageSize } = parsePaginationParams(params || {});
     const reports = defaultExperimentRepository.listReports();
     return paginateArray(reports, page, pageSize);
+  }
+
+  // ==========================================================================
+  // Milestone 10A: Geographic Research Surface (Requirements 10A.17-25)
+  // ==========================================================================
+
+  private geoRepo = new GeographicRepository();
+
+  /**
+   * 31. GET /api/v1/geography
+   * Retrieves the full canonical geographic winner dataset.
+   */
+  public async getGeographicDataset(): Promise<GeographicWinnerDataset> {
+    const dataset = this.geoRepo.getGeographicDataset();
+    if (!dataset) {
+      throw new ResearchApiError(404, "NOT_FOUND", "Geographic winner dataset not found in cache.");
+    }
+    return dataset;
+  }
+
+  /**
+   * 32. GET /api/v1/geography/winners
+   * Paginated list of geographic observations with optional district, drawId, prizeTier filters.
+   */
+  public async getGeographicObservations(
+    params?: PaginationParams & { district?: string; drawId?: string; prizeTier?: string }
+  ): Promise<PaginatedResponse<GeographicObservation>> {
+    const { page, pageSize } = parsePaginationParams(params || {});
+    const observations = this.geoRepo.getGeographicObservations({
+      district: params?.district,
+      drawId: params?.drawId,
+      prizeTier: params?.prizeTier
+    });
+    return paginateArray(observations, page, pageSize);
+  }
+
+  /**
+   * 33. GET /api/v1/geography/districts
+   * Authoritative summary of winner counts across all 14 Kerala revenue districts.
+   */
+  public async getDistrictSummaries(): Promise<DistrictSummaryRecord[]> {
+    const analysis = this.geoRepo.getGeographicAnalysis();
+    if (analysis && analysis.districtSummaries) {
+      return analysis.districtSummaries;
+    }
+    const dataset = this.geoRepo.getGeographicDataset();
+    if (!dataset) return [];
+    const analysisEngine = new GeographicAnalysisEngine();
+    return analysisEngine.buildDistrictSummaries(dataset.observations);
+  }
+
+  /**
+   * 34. GET /api/v1/geography/draws/:id
+   * Published geographic observations for a specific draw.
+   */
+  public async getGeographicObservationsByDrawId(drawId: string): Promise<GeographicObservation[]> {
+    const obs = this.geoRepo.getGeographicObservations({ drawId });
+    if (obs.length === 0) {
+      const draw = await this.getDrawById(drawId).catch(() => null);
+      if (!draw) {
+        throw new ResearchApiError(404, "NOT_FOUND", `Draw '${drawId}' not found.`);
+      }
+    }
+    return obs;
+  }
+
+  /**
+   * 35. GET /api/v1/geography/exposure
+   * District-level ticket distribution exposure data (or EXPOSURE_UNAVAILABLE notification).
+   */
+  public async getTicketExposure(params?: { drawId?: string }): Promise<{
+    status: string;
+    exposureData: TicketDistributionExposure[];
+    message: string;
+  }> {
+    const data = this.geoRepo.getTicketExposure(params?.drawId);
+    return {
+      status: data.length > 0 ? "AVAILABLE" : "UNAVAILABLE",
+      exposureData: data,
+      message: data.length > 0
+        ? "Ticket exposure data retrieved."
+        : "EXPOSURE_UNAVAILABLE: District-level ticket sales and unsold counterfoil returns are not published in official Kerala Government Gazette result sheets. In the absence of valid exposure denominators, observed winner counts represent retrospective descriptive occurrences and cannot be interpreted as district winning probabilities."
+    };
+  }
+
+  /**
+   * 36. GET /api/v1/geography/analysis
+   * Descriptive statistical analysis and exposure hypothesis evaluation.
+   */
+  public async getGeographicAnalysis(): Promise<GeographicAnalysis> {
+    const analysis = this.geoRepo.getGeographicAnalysis();
+    if (!analysis) {
+      throw new ResearchApiError(404, "NOT_FOUND", "Geographic analysis artifact not found.");
+    }
+    return analysis;
+  }
+
+  /**
+   * 37. GET /api/v1/geography/lineage
+   * Full 11-stage provenance lineage DAG for geographic observations.
+   */
+  public async getGeographicLineage(findingId: string): Promise<GeographicFindingLineage> {
+    const lineage = this.geoRepo.getGeographicLineage(findingId);
+    if (!lineage) {
+      throw new ResearchApiError(404, "NOT_FOUND", `Geographic lineage for '${findingId}' not found.`);
+    }
+    return lineage;
   }
 }
 

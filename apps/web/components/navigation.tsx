@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { href: "/statistics", label: "Statistics" },
   { href: "/experiments", label: "Experiments" },
   { href: "/findings", label: "Findings & Evidence" },
+  { href: "/geography", label: "Geography & Exposure" },
   { href: "/ingestion", label: "Ingestion" }
 ];
 

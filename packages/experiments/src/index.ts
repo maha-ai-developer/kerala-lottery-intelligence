@@ -115,3 +115,11 @@ export * from "./validation-engine";
 export * from "./findings-types";
 export * from "./findings-engine";
 export * from "./report-generator";
+
+// 10A Winning Geography, Ticket Distribution & Geographic Provenance Exports
+export * from "./geographic-types";
+export * from "./district-normalization";
+export * from "./geographic-extraction-engine";
+export * from "./geographic-analysis-engine";
+export * from "./geographic-repository";
+

@@ -625,8 +625,8 @@ const gates: VerificationGate[] = [
       }
 
       // 3. Production Corpus specification & invariant (100 draws, 38,416 results)
-      const PROD_DRAWS_COUNT = 100;
-      const PROD_RESULTS_COUNT = 38416;
+      const PROD_DRAWS_COUNT: number = 100;
+      const PROD_RESULTS_COUNT: number = 38416;
 
       // 4. Machine-checkable invariant: Research Corpus != Production Corpus
       if (researchDrawCount === PROD_DRAWS_COUNT) {
