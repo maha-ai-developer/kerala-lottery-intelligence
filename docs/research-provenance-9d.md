@@ -320,7 +320,13 @@ Gate 12/12: Production Boundary & Scheduler Invariance Guard... [PASS]
 
 ## 11. Production Boundary & Safety Guarantees
 
-1. **PROD Data Unmodified**: The verified production database remains untouched with exactly 100 draws and 38,416 winning results.
-2. **Ingestion Scheduler Disabled**: The ingestion scheduler remains strictly `PAUSED` / `DISABLED`.
-3. **Main Branch Untouched**: Git branch `main` remains untouched at `728ebc532303719345daaf0d6698f5651974702b`.
-4. **Develop Branch Only**: All Milestone 9D changes exist exclusively on branch `develop`.
+1. **Production Corpus (PROD)**: The verified production database remains untouched with exactly **100 draws and 38,416 winning results**.
+2. **Canonical Research Corpus (RESEARCH / DEV)**: The canonical research corpus comprises exactly **103 draws and 39,550 winning results** (grounded in all 103 gazetted PDF source documents).
+3. **Environment Boundary Invariant (`Research Corpus != Production Corpus`)**:
+   - `Canonical Research Corpus (103 draws / 39,550 results) != Production Corpus (100 draws / 38,416 results)`
+   - The research corpus and production corpus are strictly decoupled. The 103-draw / 39,550-result research dataset must never be claimed, attributed, or represented as the production corpus.
+   - The verifier independently checks both environments and fails closed if 103 draws / 39,550 results are attributed to PROD.
+4. **Ingestion Scheduler Disabled**: The ingestion scheduler remains strictly `PAUSED` / `DISABLED`.
+5. **Zero PROD Data Mutation**: No mutations occur in the production environment.
+6. **Main Branch Untouched**: Git branch `main` remains untouched at `728ebc532303719345daaf0d6698f5651974702b`.
+7. **Develop Branch Only**: All research experiments, findings, and provenance layers exist exclusively on branch `develop`.

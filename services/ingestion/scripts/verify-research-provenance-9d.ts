@@ -588,7 +588,7 @@ const gates: VerificationGate[] = [
   },
 
   // ==========================================================================
-  // Gate 12: Production Boundary & Non-Predictive Invariance (9D.12)
+  // Gate 12: Production Boundary & Scheduler Invariance Guard (9D.12)
   // ==========================================================================
   {
     id: "GATE_12_PROD_BOUNDARY",
@@ -612,23 +612,61 @@ const gates: VerificationGate[] = [
         }
       }
 
-      // 2. Research corpus statistics invariant (103 draws, 39,550 results)
+      // 2. Canonical Research Corpus invariant (103 draws, 39,550 results)
       const stats = await service.getHistoricalStatistics();
-      if (stats.population.totalDraws !== 103) {
-        throw new Error(`Expected 103 draws in research service, found ${stats.population.totalDraws}`);
+      const researchDrawCount = stats.population.totalDraws;
+      const researchResultCount = stats.population.totalResults;
+
+      if (researchDrawCount !== 103) {
+        throw new Error(`Expected 103 draws in canonical research corpus, found ${researchDrawCount}`);
       }
-      if (stats.population.totalResults !== 39550) {
-        throw new Error(`Expected 39550 total results in research service, found ${stats.population.totalResults}`);
+      if (researchResultCount !== 39550) {
+        throw new Error(`Expected 39,550 total results in canonical research corpus, found ${researchResultCount}`);
       }
 
-      // 3. Git branch main remains untouched at 728ebc5
+      // 3. Production Corpus specification & invariant (100 draws, 38,416 results)
+      const PROD_DRAWS_COUNT = 100;
+      const PROD_RESULTS_COUNT = 38416;
+
+      // 4. Machine-checkable invariant: Research Corpus != Production Corpus
+      if (researchDrawCount === PROD_DRAWS_COUNT) {
+        throw new Error(
+          `ENVIRONMENT BOUNDARY VIOLATION: Research draw count (${researchDrawCount}) must not equal PROD draw count (${PROD_DRAWS_COUNT}).`
+        );
+      }
+      if (researchResultCount === PROD_RESULTS_COUNT) {
+        throw new Error(
+          `ENVIRONMENT BOUNDARY VIOLATION: Research result count (${researchResultCount}) must not equal PROD result count (${PROD_RESULTS_COUNT}).`
+        );
+      }
+
+      // 5. Fail if 103 draws or 39,550 results is ever attributed to PROD
+      const assertNotProdRepresentation = (drawCount: number, resultCount: number, claimedEnv: string) => {
+        if (claimedEnv.toUpperCase() === "PROD" && (drawCount === 103 || resultCount === 39550)) {
+          throw new Error(
+            `PROD CORPUS INTEGRITY VIOLATION: 103 draws / 39,550 results belongs to Canonical Research Corpus (DEV), NEVER to PROD.`
+          );
+        }
+      };
+      assertNotProdRepresentation(researchDrawCount, researchResultCount, "DEV");
+      let caughtProdMisrepresentation = false;
+      try {
+        assertNotProdRepresentation(103, 39550, "PROD");
+      } catch {
+        caughtProdMisrepresentation = true;
+      }
+      if (!caughtProdMisrepresentation) {
+        throw new Error("PROD CORPUS INTEGRITY GUARD FAILED: Guard failed to reject 103/39,550 as PROD representation.");
+      }
+
+      // 6. Git branch main remains untouched at 728ebc5
       const mainCommit = execSync("git rev-parse main", { encoding: "utf-8" }).trim();
       const expectedMain = "728ebc532303719345daaf0d6698f5651974702b";
       if (!mainCommit.startsWith("728ebc5")) {
         throw new Error(`PRODUCTION SAFETY VIOLATION: Branch 'main' commit has moved from ${expectedMain} to ${mainCommit}`);
       }
 
-      // 4. Current branch is develop
+      // 7. Current branch is develop
       const currentBranch = execSync("git rev-parse --abbrev-ref HEAD", { encoding: "utf-8" }).trim();
       if (currentBranch !== "develop") {
         throw new Error(`SAFETY VIOLATION: Active branch is '${currentBranch}'. All work must be on 'develop'.`);
