@@ -121,7 +121,10 @@ The canonical reference draw **BHAGYATHARA BT-73** acts as the platform's anchor
 
 - **Draw Number**: `BT-73rd`
 - **Draw Date**: `28/09/2026`
-- **Source Document SHA-256**: `cddb3d4d05c102b98f38050ac1ff297ad15bc442b12087c0505927f7bb1cf3dc`
+- **Canonical Repository Filename**: `271-2346-28-09-2026.pdf` (adheres strictly to the repository's observed official gazette naming convention `<code1>-<code2>-<DD-MM-YYYY>.pdf`, where 2346 is the consecutive Monday sequence index following 2343, 2344, 2345)
+- **Source HTTP Response Filename**: `BT-73.pdf` (returned dynamically via `Content-Disposition: inline; filename="BT-73.pdf"`)
+- **Source Acquisition URL**: `http://result.keralalotteries.com/viewlotisresult.php?drawserial=75393`
+- **Immutable Byte Identity (SHA-256)**: `cddb3d4d05c102b98f38050ac1ff297ad15bc442b12087c0505927f7bb1cf3dc`
 - **Storage Location**: `gs://kerala-lottery-intelligence.firebasestorage.app/source-documents/cddb3d4d05c102b98f38050ac1ff297ad15bc442b12087c0505927f7bb1cf3dc.pdf`
 - **Governing Scheme**: `scheme_ver_bt_v2025-11-sro1297` (`OFFICIAL_SCHEME`, S.R.O. No. 1297/2025)
 - **Winning Numbers**: Exactly 378 verified winning numbers:

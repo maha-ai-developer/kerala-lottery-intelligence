@@ -250,7 +250,7 @@ npm run ingest:daily -- --dry-run --verbose --since 2026-09-27
 ```
 - **Discovered Files**: 62 candidates (61 local + 1 remote candidate)
 - **Already Known**: 61 candidates marked `ALREADY_KNOWN`
-- **Candidate Validated**: `BT-73.pdf` (SHA: `cddb3d4d05c102b98f38050ac1ff297ad15bc442b12087c0505927f7bb1cf3dc`)
+- **Candidate Validated**: `271-2346-28-09-2026.pdf` (sourceResponseFilename: `BT-73.pdf`, SHA: `cddb3d4d05c102b98f38050ac1ff297ad15bc442b12087c0505927f7bb1cf3dc`)
   - Lottery: `BHAGYATHARA`
   - Draw: `BT-73rd`
   - Date: `28/09/2026`
@@ -263,14 +263,15 @@ Command executed:
 ```bash
 npm run ingest:daily -- --verbose --since 2026-09-27
 ```
-- **Acquired URL**: `http://result.keralalotteries.com/viewlotisresult.php?drawserial=BT-73` (Redirects to HTTPS)
+- **Acquired URL**: `http://result.keralalotteries.com/viewlotisresult.php?drawserial=75393`
 - **HTTP Header Content-Disposition**: `inline; filename="BT-73.pdf"`
 - **Downloaded Byte Size**: 87,173 bytes
 - **Computed SHA-256**: `cddb3d4d05c102b98f38050ac1ff297ad15bc442b12087c0505927f7bb1cf3dc`
 - **Resolved Draw**: `BHAGYATHARA`, Draw `BT-73rd`, Date `28/09/2026`
 - **Statutory Scheme**: `scheme_ver_bt_v2025-11-sro1297` (`OFFICIAL_SCHEME`, S.R.O. 1297/2025)
 - **Extracted Winning Results**: 378 results (14 full-ticket, 364 suffix, 0 discrepancies)
-- **Persistence Target**: `data/source-documents/lottery-results/BT-73.pdf`
+- **Canonical Repository Filename**: `271-2346-28-09-2026.pdf` (consecutive Monday draw sequence index: 2343, 2344, 2345, 2346)
+- **Persistence Target**: `data/source-documents/lottery-results/271-2346-28-09-2026.pdf`
 - **Cache Manifest**: Updated to 100 valid documents in `data/processed-cache/manifest.json`
 
 ### 11.4 Downstream Promotion

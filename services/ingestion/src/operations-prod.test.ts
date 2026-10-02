@@ -44,7 +44,7 @@ import {
 import { executeProdBootstrap, TARGET_BT73_SHA } from "./operations/prod-bootstrap";
 
 describe("Milestone 8C: Production Operationalization", () => {
-  const realBt73Path = join(process.cwd(), "data/source-documents/lottery-results/BT-73.pdf");
+  const realBt73Path = join(process.cwd(), "data/source-documents/lottery-results/271-2346-28-09-2026.pdf");
 
   // ==========================================================================
   // 1. Environment Separation & Data Safety (8C.1 & 8C.6)

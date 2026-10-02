@@ -17,6 +17,9 @@ import type { LotteryKnowledgeGraph } from "@kerala-lottery/knowledge";
 export interface IngestedDocumentRecord {
   sha256: string;
   fileName: string;
+  canonicalFilename?: string;
+  sourceResponseFilename?: string;
+  sourceUrl?: string;
   fileSize: number;
   lotteryName: string;
   lotteryCode: string;

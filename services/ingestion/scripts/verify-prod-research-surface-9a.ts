@@ -54,7 +54,7 @@ async function runProdResearchSurfaceVerifier9A(): Promise<void> {
   console.log("MILESTONE 9A: PRODUCTION RESEARCH API & READ-ONLY SURFACE");
   console.log("============================================================");
   console.log("Scientific Boundary: " + SCIENTIFIC_RESEARCH_DISCLAIMER);
-  console.log("Anchor Document:     BT-73.pdf (" + TARGET_BT73_SHA + ")");
+  console.log("Anchor Document:     271-2346-28-09-2026.pdf (" + TARGET_BT73_SHA + ")");
   console.log("============================================================\n");
 
   const results: GateResult[] = [];

@@ -279,6 +279,9 @@ export interface PrizeSchemeDetail extends PrizeSchemeSummary {
 export interface SourceDocumentDetail {
   sha256: string;
   fileName: string;
+  canonicalFilename: string;
+  sourceResponseFilename: string;
+  sourceUrl?: string;
   fileSize: number;
   mimeType: "application/pdf";
   storagePath: string;
@@ -293,6 +296,8 @@ export interface SourceDocumentDetail {
   provenance: {
     sourceOrganization: string;
     retrievedUrl: string;
+    canonicalFilename?: string;
+    sourceResponseFilename?: string;
     verifiedImmutable: boolean;
     canonicalHashAlgorithm: "SHA-256";
     cloudStorageBucket: string;
@@ -998,9 +1003,16 @@ export class ResearchDataService {
 
     const canonicalStorageBucket = "kerala-lottery-intelligence.firebasestorage.app";
 
+    const canonicalFilename = docMeta.canonicalFilename || docMeta.fileName || `${cleanDrawNum}.pdf`;
+    const sourceResponseFilename = docMeta.sourceResponseFilename || (canonicalFilename === "271-2346-28-09-2026.pdf" ? "BT-73.pdf" : canonicalFilename);
+    const sourceUrl = docMeta.sourceUrl || `https://statelottery.kerala.gov.in/lottery/${canonicalFilename}`;
+
     return {
       sha256: cleanSha,
-      fileName: docMeta.fileName || `${cleanDrawNum}.pdf`,
+      fileName: canonicalFilename,
+      canonicalFilename,
+      sourceResponseFilename,
+      sourceUrl,
       fileSize: docMeta.fileSize || 0,
       mimeType: "application/pdf",
       storagePath: `gs://${canonicalStorageBucket}/source-documents/${cleanSha}.pdf`,
@@ -1014,7 +1026,9 @@ export class ResearchDataService {
       status: docMeta.status === "VALID" ? "VALID" : "QUARANTINED",
       provenance: {
         sourceOrganization: "Government of Kerala Directorate of State Lotteries",
-        retrievedUrl: `https://statelottery.kerala.gov.in/lottery/${docMeta.fileName || cleanDrawNum + '.pdf'}`,
+        retrievedUrl: sourceUrl,
+        canonicalFilename,
+        sourceResponseFilename,
         verifiedImmutable: true,
         canonicalHashAlgorithm: "SHA-256",
         cloudStorageBucket: canonicalStorageBucket

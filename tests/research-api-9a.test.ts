@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { researchService, ResearchApiError } from "../packages/data/src/research-service";
+import { computeSha256 } from "../packages/documents/src";
 import {
   methodNotAllowed,
   apiSuccess,
@@ -124,6 +127,12 @@ describe("Directive 9A: Production Research API & Read-Only Surface Invariants",
     const source = await researchService.getSourceBySha256(sha);
     expect(source).toBeDefined();
     expect(source?.sha256).toBe(sha);
+    expect(source?.canonicalFilename).toBe("271-2346-28-09-2026.pdf");
+    expect(source?.fileName).toBe("271-2346-28-09-2026.pdf");
+    expect(source?.sourceResponseFilename).toBe("BT-73.pdf");
+    expect(source?.sourceUrl).toBe("http://result.keralalotteries.com/viewlotisresult.php?drawserial=75393");
+    expect(source?.provenance.canonicalFilename).toBe("271-2346-28-09-2026.pdf");
+    expect(source?.provenance.sourceResponseFilename).toBe("BT-73.pdf");
     expect(source?.associatedDraw.drawId).toBe("draw_BT-73");
     expect(source?.drawNumber).toBe("BT-73rd");
     expect(source?.mimeType).toBe("application/pdf");
@@ -255,5 +264,34 @@ describe("Directive 9A: Production Research API & Read-Only Surface Invariants",
       expect(r.drawId).toBe(draw!.drawId);
       expect(r.sourceDocumentSha256).toBe(draw!.sourceDocumentSha256);
     }
+  });
+
+  it("Invariant 15: Separated Filename Model prevents arbitrary lottery-code filenames from becoming canonical", async () => {
+    const sha = "cddb3d4d05c102b98f38050ac1ff297ad15bc442b12087c0505927f7bb1cf3dc";
+    const source = await researchService.getSourceBySha256(sha);
+    expect(source).toBeDefined();
+
+    // 1. Separate fields check: sourceUrl, sourceResponseFilename, canonicalFilename, sha256
+    expect(source?.canonicalFilename).not.toBe(source?.sourceResponseFilename);
+    expect(source?.canonicalFilename).toBe("271-2346-28-09-2026.pdf");
+    expect(source?.sourceResponseFilename).toBe("BT-73.pdf");
+    expect(source?.sourceUrl).toBe("http://result.keralalotteries.com/viewlotisresult.php?drawserial=75393");
+    expect(source?.sha256).toBe(sha);
+
+    // 2. Arbitrary lottery code pattern (e.g. BT-73.pdf) is forbidden from being the canonicalFilename
+    expect(source?.canonicalFilename).toMatch(/^[0-9]+-[0-9]+-[0-9]{2}-[0-9]{2}-[0-9]{4}\.pdf$/);
+    expect(source?.canonicalFilename).not.toBe("BT-73.pdf");
+
+    // 3. Provenance records both original HTTP response filename and canonical repository filename
+    expect(source?.provenance.canonicalFilename).toBe("271-2346-28-09-2026.pdf");
+    expect(source?.provenance.sourceResponseFilename).toBe("BT-73.pdf");
+
+    // 4. Physical file on disk matches canonicalFilename with identical byte SHA-256
+    const diskPath = join(process.cwd(), "data/source-documents/lottery-results", source!.canonicalFilename);
+    expect(existsSync(diskPath)).toBe(true);
+    const diskBytes = readFileSync(diskPath);
+    const diskSha = computeSha256(new Uint8Array(diskBytes));
+    expect(diskSha).toBe(sha);
+    expect(diskSha).toBe("cddb3d4d05c102b98f38050ac1ff297ad15bc442b12087c0505927f7bb1cf3dc");
   });
 });

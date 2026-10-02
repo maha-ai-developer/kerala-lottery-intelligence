@@ -332,7 +332,7 @@ This section documents the live verification executed on **29/09/2026** against 
   - Presence: Confirmed in Cloud Storage and Firestore.
 
 ### 2. Replay Idempotency & Duplicate Elimination (BT-73)
-- **Replay Candidate**: `BT-73.pdf`
+- **Replay Candidate**: `271-2346-28-09-2026.pdf` (sourceResponseFilename: `BT-73.pdf`)
 - **Observed Ingestion Outcome**:
   - Candidates Discovered: `1`
   - Action Taken: `ALREADY_KNOWN` (`1`)

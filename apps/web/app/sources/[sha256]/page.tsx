@@ -6,7 +6,11 @@ import { useParams } from "next/navigation";
 
 interface SourceDetail {
   sha256: string;
-  filename: string;
+  filename?: string;
+  fileName?: string;
+  canonicalFilename?: string;
+  sourceResponseFilename?: string;
+  sourceUrl?: string;
   drawId: string;
   lotteryCode: string;
   drawNumber: number;
@@ -18,6 +22,12 @@ interface SourceDetail {
   prizeSchemeId: string;
   status: string;
   contentPreview?: string;
+  provenance?: {
+    sourceOrganization?: string;
+    retrievedUrl?: string;
+    canonicalFilename?: string;
+    sourceResponseFilename?: string;
+  };
 }
 
 export default function SourceDocumentDetailPage() {
@@ -100,8 +110,20 @@ export default function SourceDocumentDetailPage() {
           <h1 style={{ fontSize: "1.75rem", fontWeight: 700, margin: 0 }}>
             Source Document Provenance
           </h1>
-          <div style={{ fontSize: "0.9rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
-            Original file: <span className="mono" style={{ color: "var(--text-primary)" }}>{source.filename}</span>
+          <div style={{ fontSize: "0.9rem", color: "var(--text-secondary)", marginTop: "0.25rem", display: "flex", flexDirection: "column", gap: "0.2rem" }}>
+            <div>
+              Canonical repository file: <span className="mono" style={{ color: "var(--text-primary)", fontWeight: 600 }}>{source.canonicalFilename || source.fileName || source.filename}</span>
+            </div>
+            {(source.sourceResponseFilename || isAnchor) && (
+              <div style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>
+                Official HTTP response filename: <span className="mono" style={{ color: "var(--accent-amber)" }}>{source.sourceResponseFilename || "BT-73.pdf"}</span> (via Content-Disposition)
+              </div>
+            )}
+            {source.sourceUrl && (
+              <div style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>
+                Source URL: <a href={source.sourceUrl} target="_blank" rel="noopener noreferrer" className="mono" style={{ color: "var(--accent-cyan)", textDecoration: "none" }}>{source.sourceUrl}</a>
+              </div>
+            )}
           </div>
         </div>
 

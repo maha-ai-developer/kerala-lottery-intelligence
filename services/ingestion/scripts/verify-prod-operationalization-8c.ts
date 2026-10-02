@@ -70,10 +70,10 @@ async function runProdOperationalizationVerifier8C(): Promise<void> {
   console.log("PROD Project: " + PROD_PROJECT_ID);
   console.log("PROD Number:  " + PROD_PROJECT_NUMBER);
   console.log("Schedule:     0 17 * * * (5:00 PM IST)");
-  console.log("Target PDF:   BT-73.pdf (" + TARGET_BT73_SHA + ")");
+  console.log("Target PDF:   271-2346-28-09-2026.pdf (" + TARGET_BT73_SHA + ")");
   console.log("============================================================\n");
 
-  const realBt73Path = join(process.cwd(), "data/source-documents/lottery-results/BT-73.pdf");
+  const realBt73Path = join(process.cwd(), "data/source-documents/lottery-results/271-2346-28-09-2026.pdf");
   if (!existsSync(realBt73Path)) {
     throw new Error(`Real-world BT-73 PDF not found at ${realBt73Path}`);
   }

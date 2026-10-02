@@ -420,7 +420,7 @@ describe("Milestone 8B: Scheduled Daily Operations & Reliability", () => {
   // ==========================================================================
   describe("8B.13: Real-World BT-73 Idempotency & Repeat Safety", () => {
     it("recognizes existing live draw BT-73 as ALREADY_KNOWN on repeated execution", async () => {
-      const realPdfPath = join(process.cwd(), "data/source-documents/lottery-results/BT-73.pdf");
+      const realPdfPath = join(process.cwd(), "data/source-documents/lottery-results/271-2346-28-09-2026.pdf");
       if (!existsSync(realPdfPath)) return;
 
       const realPdfBytes = readFileSync(realPdfPath);

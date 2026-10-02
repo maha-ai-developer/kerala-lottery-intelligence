@@ -229,8 +229,8 @@ async function runActivationVerification() {
   if (!existsSync(bt73IsolatedDir)) {
     mkdirSync(bt73IsolatedDir, { recursive: true });
   }
-  const realBt73Path = join(process.cwd(), "data/source-documents/lottery-results/BT-73.pdf");
-  copyFileSync(realBt73Path, join(bt73IsolatedDir, "BT-73.pdf"));
+  const realBt73Path = join(process.cwd(), "data/source-documents/lottery-results/271-2346-28-09-2026.pdf");
+  copyFileSync(realBt73Path, join(bt73IsolatedDir, "271-2346-28-09-2026.pdf"));
   const realBt73Bytes = readFileSync(realBt73Path);
 
   const testLockMgr = new InMemoryIngestionLockManager();
@@ -249,7 +249,7 @@ async function runActivationVerification() {
     sourceDir: bt73IsolatedDir,
     injectedCandidates: [
       {
-        fileName: "BT-73.pdf",
+        fileName: "271-2346-28-09-2026.pdf",
         fileBuffer: new Uint8Array(realBt73Bytes)
       }
     ]
@@ -303,7 +303,7 @@ async function runActivationVerification() {
     sourceDir: bt73IsolatedDir,
     injectedCandidates: [
       {
-        fileName: "BT-73.pdf",
+        fileName: "271-2346-28-09-2026.pdf",
         fileBuffer: new Uint8Array(realBt73Bytes)
       }
     ]
@@ -340,8 +340,8 @@ async function runActivationVerification() {
       {
         candidateId: "cand_bt73",
         sha256: TARGET_BT73_SHA,
-        sourceUrl: "https://statelottery.kerala.gov.in/lottery/BT-73.pdf",
-        fileName: "BT-73.pdf",
+        sourceUrl: "http://result.keralalotteries.com/viewlotisresult.php?drawserial=75393",
+        fileName: "271-2346-28-09-2026.pdf",
         drawNumber: "BT-73",
         drawDate: "2026-09-28",
         lotteryName: "BHAGYATHARA",
