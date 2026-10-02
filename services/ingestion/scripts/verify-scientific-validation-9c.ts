@@ -167,8 +167,12 @@ async function runScientificValidationVerifier9C(): Promise<void> {
       throw new Error(`Unexpectedly large Cohen's h for baseline near chance: ${effectSizes.cohensH}`);
     }
 
-    // 6. Uncertainty Metadata
-    const uncertainty = computeUncertainty(0.10127, sampleSize, 0.95);
+    // 6. Uncertainty Metadata (Binomial Standard Error: sqrt(p*(1-p)/n))
+    const uncertainty = computeUncertainty(successes, sampleSize, 0.95);
+    const expectedSe = Math.sqrt(((successes / sampleSize) * (1 - successes / sampleSize)) / sampleSize);
+    if (Math.abs(uncertainty.standardError - expectedSe) > 1e-6) {
+      throw new Error(`SE formula mismatch: got ${uncertainty.standardError}, expected ${expectedSe}`);
+    }
     if (uncertainty.standardError <= 0 || uncertainty.marginOfError <= 0 || uncertainty.degreesOfFreedom !== sampleSize - 1) {
       throw new Error(`Invalid Uncertainty metadata: SE=${uncertainty.standardError}, MOE=${uncertainty.marginOfError}`);
     }
@@ -177,7 +181,7 @@ async function runScientificValidationVerifier9C(): Promise<void> {
       gateNumber: 1,
       title: "Statistical Inference Contracts",
       passed: true,
-      details: `Wilson 95% CI: [${(wilson.lower * 100).toFixed(2)}%, ${(wilson.upper * 100).toFixed(2)}%], Bootstrap CI: [${(boot.confidenceInterval.lower * 100).toFixed(2)}%, ${(boot.confidenceInterval.upper * 100).toFixed(2)}%], Cohen's h: ${effectSizes.cohensH.toFixed(4)}, SE: ${uncertainty.standardError.toFixed(4)}.`
+      details: `Wilson 95% CI: [${(wilson.lower * 100).toFixed(2)}%, ${(wilson.upper * 100).toFixed(2)}%], Bootstrap CI: [${(boot.confidenceInterval.lower * 100).toFixed(2)}%, ${(boot.confidenceInterval.upper * 100).toFixed(2)}%], Cohen's h: ${effectSizes.cohensH.toFixed(4)}, SE: ${(uncertainty.standardError * 100).toFixed(2)}% (${uncertainty.standardError.toFixed(4)}).`
     });
   } catch (err) {
     results.push({
@@ -644,6 +648,15 @@ async function runScientificValidationVerifier9C(): Promise<void> {
       // Temporal stability score must be >= 0.95
       if (val.temporalRobustness.stabilityScore < 0.95) {
         throw new Error(`${expId} temporal stability score (${(val.temporalRobustness.stabilityScore * 100).toFixed(1)}%) below 95%`);
+      }
+
+      // Standard Error must strictly match binomial sqrt(p*(1-p)/n) (~0.0034, never 0.00004313)
+      const expectedSe = Math.sqrt((observedAcc * (1 - observedAcc)) / val.uncertainty.sampleSize);
+      if (Math.abs(val.uncertainty.standardError - expectedSe) > 1e-6) {
+        throw new Error(`${expId} standard error mismatch: found ${val.uncertainty.standardError}, expected ${expectedSe}`);
+      }
+      if (val.uncertainty.standardError < 0.0030 || val.uncertainty.standardError > 0.0040) {
+        throw new Error(`${expId} standard error (${val.uncertainty.standardError}) outside expected ~0.0034 range`);
       }
     }
 

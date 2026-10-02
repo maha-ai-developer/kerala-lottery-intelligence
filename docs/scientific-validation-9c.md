@@ -135,6 +135,28 @@ Benchmarks:
 - $|h| \in [0.50, 0.80)$: Medium
 - $|h| \ge 0.80$: Large
 
+### 3.5 Binomial Standard Error & Uncertainty Quantification
+For an evaluation sample of size $n$ with observed binomial accuracy $\hat{p} = k / n$, the theoretical standard error is:
+
+$$SE(\hat{p}) = \sqrt{\frac{\hat{p}(1 - \hat{p})}{n}}$$
+
+The corresponding Margin of Error at $(1 - \alpha) = 95\%$ confidence ($z_{0.975} \approx 1.95996$) is:
+
+$$MoE = z_{1 - \alpha/2} \cdot SE(\hat{p})$$
+
+#### Exact Baseline Uncertainty Metrics ($N = 7,850$ holdout rows):
+- **EXP-001 (Uniform Random, $\hat{p} = 10.1274\%$):**
+  $$SE = \sqrt{\frac{0.101274 \times 0.898726}{7850}} = 0.00340508 \quad (\mathbf{0.3405\%})$$
+  $$MoE_{95\%} = 1.95996 \times 0.00340508 = 0.00667384 \quad (\mathbf{0.6674\%})$$
+- **EXP-002 & EXP-003 (Empirical & Majority, $\hat{p} = 9.9236\%$):**
+  $$SE = \sqrt{\frac{0.099236 \times 0.900764}{7850}} = 0.00337446 \quad (\mathbf{0.3374\%})$$
+  $$MoE_{95\%} = 1.95996 \times 0.00337446 = 0.00661383 \quad (\mathbf{0.6614\%})$$
+
+#### Audit Resolution of the $0.00004313$ Inconsistency:
+If an accuracy proportion $\hat{p} \approx 0.1013$ is erroneously passed to a function expecting an integer count of successes $k = 795$, the calculated proportion undergoes an accidental double division: $p_{\text{err}} = \frac{\hat{p}}{n} \approx 0.0000129$. Evaluating $\sqrt{\frac{p_{\text{err}}(1 - p_{\text{err}})}{n}}$ then yields an order-of-magnitude error of $\approx \frac{\sqrt{p}}{n} \approx 4.05 \times 10^{-5}$ to $4.31 \times 10^{-5}$ ($SE \approx 0.0000$). 
+
+To eliminate this class of error, `computeUncertainty` incorporates an explicit type guard that detects whether the argument is a proportion ($0 < x < 1$) or an integer count ($x \ge 1$), ensuring that the true binomial $SE = \sqrt{\frac{p(1-p)}{n}} \approx 0.0034$ is consistently returned regardless of caller convention.
+
 ---
 
 ## 4. Reproducible Null-Model Framework
@@ -198,11 +220,11 @@ Every validation artifact guarantees complete compliance with the 5-Part Interpr
 
 Evaluated across the 103-draw canonical research corpus ($N = 7,850$ holdout test observations):
 
-| Experiment ID | Model Family | Observed Accuracy | Wilson 95% CI | Null Mean | Empirical $p$ | Holm Adj $p$ | Significant? | Stability | Artifact ID |
-| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| **EXP-001** | Uniform Baseline | 10.13% | [9.48%, 10.81%] | 10.01% | 0.3696 | 1.0000 | **NO** | 97.5% | `val_a1b5b5e3dcda8015` |
-| **EXP-002** | Empirical Freq | 9.92% | [9.28%, 10.60%] | 10.01% | 0.5944 | 1.0000 | **NO** | 97.5% | `val_860932afd0336081` |
-| **EXP-003** | Majority Class | 9.92% | [9.28%, 10.60%] | 10.01% | 0.5944 | 1.0000 | **NO** | 97.5% | `val_4fe76a870380396c` |
+| Experiment ID | Model Family | Observed Accuracy | Standard Error (SE) | Margin of Error (95%) | Wilson 95% CI | Null Mean | Empirical $p$ | Holm Adj $p$ | Significant? | Stability | Artifact ID |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
+| **EXP-001** | Uniform Baseline | 10.13% | 0.3405% (0.0034) | ±0.6674% | [9.48%, 10.81%] | 10.01% | 0.3696 | 1.0000 | **NO** | 97.5% | `val_a1b5b5e3dcda8015` |
+| **EXP-002** | Empirical Freq | 9.92% | 0.3374% (0.0034) | ±0.6614% | [9.28%, 10.60%] | 10.01% | 0.5944 | 1.0000 | **NO** | 97.5% | `val_860932afd0336081` |
+| **EXP-003** | Majority Class | 9.92% | 0.3374% (0.0034) | ±0.6614% | [9.28%, 10.60%] | 10.01% | 0.5944 | 1.0000 | **NO** | 97.5% | `val_4fe76a870380396c` |
 
 ### Key Scientific Takeaway
 All three baseline models achieve holdout accuracy within $[9.92\%, 10.13\%]$, exactly matching the theoretical discrete uniform expectation of $10.00\%$. Holm-Bonferroni adjusted p-values are $1.0000$ (far above $\alpha = 0.05$). This definitively confirms that historical digit frequencies possess zero predictive validity over future Kerala State Lottery publications.

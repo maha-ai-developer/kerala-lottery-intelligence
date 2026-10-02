@@ -120,6 +120,54 @@ describe("Milestone 9C — Scientific Validation & Research Integrity", () => {
       expect(unc.standardError).toBeCloseTo(Math.sqrt((0.1 * 0.9) / 7850), 4);
       expect(unc.marginOfError).toBeCloseTo(1.96 * unc.standardError, 4);
     });
+
+    it("regression test: exact binomial SE for EXP-001 (p=10.127%, n=7850) is ~0.003405, NOT 0.00004313", () => {
+      const sampleSize = 7850;
+      const successes = 795;
+      const p = successes / sampleSize; // 0.10127388535031847
+
+      // True theoretical binomial SE = sqrt(p * (1 - p) / n)
+      const expectedSe = Math.sqrt((p * (1 - p)) / sampleSize);
+      expect(expectedSe).toBeCloseTo(0.00340508, 6);
+
+      // Verify call with integer successes
+      const uncFromCount = computeUncertainty(successes, sampleSize, 0.95);
+      expect(uncFromCount.standardError).toBeCloseTo(0.00340508, 6);
+      expect(uncFromCount.marginOfError).toBeCloseTo(1.95996 * uncFromCount.standardError, 6);
+      expect(uncFromCount.degreesOfFreedom).toBe(7849);
+
+      // Verify call with proportion p directly (preventing double division bug)
+      const uncFromProp = computeUncertainty(p, sampleSize, 0.95);
+      expect(uncFromProp.standardError).toBeCloseTo(0.00340508, 6);
+      expect(uncFromProp.standardError).toEqual(uncFromCount.standardError);
+
+      // Strictly assert SE is NOT the erroneous 0.00004313
+      expect(uncFromCount.standardError).not.toBeCloseTo(0.00004313, 5);
+      expect(uncFromCount.standardError).toBeGreaterThan(0.003);
+    });
+
+    it("regression test: handles binomial SE edge cases and input validation safely", () => {
+      const sampleSize = 7850;
+
+      // Zero successes: SE = 0
+      const uncZero = computeUncertainty(0, sampleSize, 0.95);
+      expect(uncZero.standardError).toBe(0);
+      expect(uncZero.marginOfError).toBe(0);
+
+      // 100% successes: SE = 0
+      const uncFull = computeUncertainty(sampleSize, sampleSize, 0.95);
+      expect(uncFull.standardError).toBe(0);
+      expect(uncFull.marginOfError).toBe(0);
+
+      // Single success (k = 1 count)
+      const uncOne = computeUncertainty(1, sampleSize, 0.95);
+      const pOne = 1 / sampleSize;
+      expect(uncOne.standardError).toBeCloseTo(Math.sqrt((pOne * (1 - pOne)) / sampleSize), 6);
+
+      // Invalid inputs
+      expect(() => computeUncertainty(10, 0, 0.95)).toThrow("Total must be > 0");
+      expect(() => computeUncertainty(-5, sampleSize, 0.95)).toThrow("must be >= 0");
+    });
   });
 
   // ==========================================================================

@@ -262,16 +262,40 @@ export function computeEffectSizes(observedAccuracy: number, nullChance: number 
 
 /**
  * Quantifies uncertainty and standard error for binomial accuracy.
+ *
+ * Mathematical formulation:
+ * SE(p) = sqrt( (p * (1 - p)) / n )
+ * MoE = z * SE
+ *
+ * Parameter Guard:
+ * Accepts either:
+ * - Integer success count (e.g. k = 795 out of n = 7850)
+ * - Decimal proportion (e.g. p = 0.10127 out of n = 7850)
+ * Prevents double-division bug where passing p in place of k would compute sqrt((p/n)*(1-p/n)/n).
  */
 export function computeUncertainty(
-  successes: number,
+  successesOrAccuracy: number,
   total: number,
   confidenceLevel: number = 0.95
 ): UncertaintyMetadata {
   if (total <= 0) {
     throw new Error(`Total must be > 0, received ${total}`);
   }
-  const p = successes / total;
+  if (successesOrAccuracy < 0) {
+    throw new Error(`successesOrAccuracy must be >= 0, received ${successesOrAccuracy}`);
+  }
+
+  // Guard against proportion vs count confusion:
+  // If input is a decimal proportion strictly between 0 and 1, treat as p.
+  // Otherwise compute proportion as successes / total.
+  let p: number;
+  if (successesOrAccuracy > 0 && successesOrAccuracy < 1) {
+    p = successesOrAccuracy;
+  } else {
+    p = successesOrAccuracy / total;
+  }
+  p = Math.max(0, Math.min(1, p));
+
   const standardError = Math.sqrt((p * (1 - p)) / total);
   const z = getNormalZCritical(confidenceLevel);
   const marginOfError = z * standardError;
