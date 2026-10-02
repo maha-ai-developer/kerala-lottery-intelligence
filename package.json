@@ -21,8 +21,14 @@
     "bootstrap:prod": "npx tsx services/ingestion/scripts/prod-bootstrap.ts",
     "verify:8c": "npx tsx services/ingestion/scripts/verify-prod-operationalization-8c.ts",
     "verify:9a": "npx tsx services/ingestion/scripts/verify-prod-research-surface-9a.ts",
+    "verify:9b": "npx tsx services/ingestion/scripts/verify-continuous-research-9b.ts",
     "verify:catchup": "npx tsx services/ingestion/scripts/verify-catchup-103.ts",
-    "verify:prod-activation": "npx tsx services/ingestion/scripts/verify-prod-activation.ts"
+    "verify:prod-activation": "npx tsx services/ingestion/scripts/verify-prod-activation.ts",
+    "experiments:list": "npx tsx services/ingestion/scripts/experiments-cli.ts list",
+    "experiments:run": "npx tsx services/ingestion/scripts/experiments-cli.ts run",
+    "experiments:run-all": "npx tsx services/ingestion/scripts/experiments-cli.ts run-all",
+    "refresh:research": "npx tsx services/ingestion/scripts/experiments-cli.ts refresh",
+    "experiments:inspect": "npx tsx services/ingestion/scripts/experiments-cli.ts inspect"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.2",
