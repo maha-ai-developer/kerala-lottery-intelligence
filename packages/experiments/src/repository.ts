@@ -24,6 +24,12 @@ import {
   type ExperimentRunStatus
 } from "./types";
 import type { StatisticalValidationArtifact } from "./validation-types";
+import type {
+  ResearchFinding,
+  EvidenceBundle,
+  ResearchFindingLineage,
+  PublicationReport
+} from "./findings-types";
 
 export interface ExperimentRepositoryOptions {
   baseDir?: string;
@@ -156,6 +162,10 @@ export class ExperimentRepository {
   private readonly artifactsDir: string;
   private readonly lineageDir: string;
   private readonly validationsDir: string;
+  private readonly findingsDir: string;
+  private readonly findingsLineageDir: string;
+  private readonly evidenceDir: string;
+  private readonly reportsDir: string;
   private readonly inMemoryOnly: boolean;
 
   // In-memory backing stores
@@ -163,6 +173,10 @@ export class ExperimentRepository {
   private readonly artifactsMemory = new Map<string, ResultArtifact>();
   private readonly lineageMemory = new Map<string, ExperimentLineage>();
   private readonly validationsMemory = new Map<string, StatisticalValidationArtifact>();
+  private readonly findingsMemory = new Map<string, ResearchFinding>();
+  private readonly findingsLineageMemory = new Map<string, ResearchFindingLineage>();
+  private readonly evidenceMemory = new Map<string, EvidenceBundle>();
+  private readonly reportsMemory = new Map<string, PublicationReport>();
 
   constructor(options: ExperimentRepositoryOptions = {}) {
     this.inMemoryOnly = options.inMemoryOnly ?? false;
@@ -173,6 +187,10 @@ export class ExperimentRepository {
     this.artifactsDir = join(this.baseDir, "artifacts");
     this.lineageDir = join(this.baseDir, "lineage");
     this.validationsDir = join(this.baseDir, "validations");
+    this.findingsDir = join(this.baseDir, "findings");
+    this.findingsLineageDir = join(this.baseDir, "findings-lineage");
+    this.evidenceDir = join(this.baseDir, "evidence");
+    this.reportsDir = join(this.baseDir, "reports");
 
     if (!this.inMemoryOnly) {
       this.ensureDirectories();
@@ -184,6 +202,10 @@ export class ExperimentRepository {
     if (!existsSync(this.artifactsDir)) mkdirSync(this.artifactsDir, { recursive: true });
     if (!existsSync(this.lineageDir)) mkdirSync(this.lineageDir, { recursive: true });
     if (!existsSync(this.validationsDir)) mkdirSync(this.validationsDir, { recursive: true });
+    if (!existsSync(this.findingsDir)) mkdirSync(this.findingsDir, { recursive: true });
+    if (!existsSync(this.findingsLineageDir)) mkdirSync(this.findingsLineageDir, { recursive: true });
+    if (!existsSync(this.evidenceDir)) mkdirSync(this.evidenceDir, { recursive: true });
+    if (!existsSync(this.reportsDir)) mkdirSync(this.reportsDir, { recursive: true });
   }
 
   /**
@@ -507,6 +529,296 @@ export class ExperimentRepository {
 
     return items.sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }
+
+  /**
+   * Saves a research finding.
+   * INVARIANT: Existing findings cannot be mutated with differing hashes.
+   */
+  public saveFinding(finding: ResearchFinding): void {
+    const existing = this.getFinding(finding.findingId);
+    if (existing && existing.deterministicHash !== finding.deterministicHash) {
+      throw new Error(
+        `IMMUTABILITY_VIOLATION: Cannot mutate existing research finding ${finding.findingId} with differing hash.`
+      );
+    }
+
+    this.findingsMemory.set(finding.findingId, finding);
+
+    if (!this.inMemoryOnly) {
+      this.ensureDirectories();
+      const filePath = join(this.findingsDir, `${finding.findingId}.json`);
+      writeFileSync(filePath, JSON.stringify(finding, null, 2), "utf-8");
+    }
+  }
+
+  /**
+   * Retrieves a research finding by finding ID.
+   */
+  public getFinding(findingId: string): ResearchFinding | null {
+    if (this.findingsMemory.has(findingId)) {
+      return this.findingsMemory.get(findingId)!;
+    }
+
+    if (!this.inMemoryOnly) {
+      const filePath = join(this.findingsDir, `${findingId}.json`);
+      if (existsSync(filePath)) {
+        try {
+          const content = JSON.parse(readFileSync(filePath, "utf-8")) as ResearchFinding;
+          this.findingsMemory.set(findingId, content);
+          return content;
+        } catch {
+          return null;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Retrieves a research finding by run ID.
+   */
+  public getFindingByRunId(runId: string): ResearchFinding | null {
+    const all = this.listFindings();
+    return all.find((f) => f.runId === runId) || null;
+  }
+
+  /**
+   * Lists research findings with optional filtering.
+   */
+  public listFindings(filters?: {
+    experimentId?: string;
+    claimType?: string;
+    runId?: string;
+  }): ResearchFinding[] {
+    if (!this.inMemoryOnly && existsSync(this.findingsDir)) {
+      const files = readdirSync(this.findingsDir).filter((f) => f.endsWith(".json"));
+      for (const file of files) {
+        const findId = file.replace(".json", "");
+        if (!this.findingsMemory.has(findId)) {
+          try {
+            const content = JSON.parse(
+              readFileSync(join(this.findingsDir, file), "utf-8")
+            ) as ResearchFinding;
+            this.findingsMemory.set(findId, content);
+          } catch {
+            // ignore
+          }
+        }
+      }
+    }
+
+    let items = Array.from(this.findingsMemory.values());
+    if (filters?.experimentId) {
+      items = items.filter((f) => f.experimentId === filters.experimentId);
+    }
+    if (filters?.claimType) {
+      items = items.filter((f) => f.claimType === filters.claimType);
+    }
+    if (filters?.runId) {
+      items = items.filter((f) => f.runId === filters.runId);
+    }
+
+    return items.sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }
+
+  /**
+   * Saves research finding lineage.
+   */
+  public saveFindingLineage(lineage: ResearchFindingLineage): void {
+    this.findingsLineageMemory.set(lineage.findingId, lineage);
+
+    if (!this.inMemoryOnly) {
+      this.ensureDirectories();
+      const filePath = join(this.findingsLineageDir, `${lineage.findingId}.json`);
+      writeFileSync(filePath, JSON.stringify(lineage, null, 2), "utf-8");
+    }
+  }
+
+  /**
+   * Retrieves research finding lineage by finding ID.
+   */
+  public getFindingLineage(findingId: string): ResearchFindingLineage | null {
+    if (this.findingsLineageMemory.has(findingId)) {
+      return this.findingsLineageMemory.get(findingId)!;
+    }
+
+    if (!this.inMemoryOnly) {
+      const filePath = join(this.findingsLineageDir, `${findingId}.json`);
+      if (existsSync(filePath)) {
+        try {
+          const content = JSON.parse(readFileSync(filePath, "utf-8")) as ResearchFindingLineage;
+          this.findingsLineageMemory.set(findingId, content);
+          return content;
+        } catch {
+          return null;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Saves an evidence bundle.
+   * INVARIANT: Existing bundles cannot be mutated with differing hashes.
+   */
+  public saveEvidenceBundle(bundle: EvidenceBundle): void {
+    const existing = this.getEvidenceBundle(bundle.evidenceBundleId);
+    if (existing && existing.deterministicHash !== bundle.deterministicHash) {
+      throw new Error(
+        `IMMUTABILITY_VIOLATION: Cannot mutate existing evidence bundle ${bundle.evidenceBundleId} with differing hash.`
+      );
+    }
+
+    this.evidenceMemory.set(bundle.evidenceBundleId, bundle);
+
+    if (!this.inMemoryOnly) {
+      this.ensureDirectories();
+      const filePath = join(this.evidenceDir, `${bundle.evidenceBundleId}.json`);
+      writeFileSync(filePath, JSON.stringify(bundle, null, 2), "utf-8");
+    }
+  }
+
+  /**
+   * Retrieves an evidence bundle by bundle ID.
+   */
+  public getEvidenceBundle(evidenceBundleId: string): EvidenceBundle | null {
+    if (this.evidenceMemory.has(evidenceBundleId)) {
+      return this.evidenceMemory.get(evidenceBundleId)!;
+    }
+
+    if (!this.inMemoryOnly) {
+      const filePath = join(this.evidenceDir, `${evidenceBundleId}.json`);
+      if (existsSync(filePath)) {
+        try {
+          const content = JSON.parse(readFileSync(filePath, "utf-8")) as EvidenceBundle;
+          this.evidenceMemory.set(evidenceBundleId, content);
+          return content;
+        } catch {
+          return null;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Retrieves an evidence bundle by finding ID.
+   */
+  public getEvidenceBundleByFindingId(findingId: string): EvidenceBundle | null {
+    const all = this.listEvidenceBundles();
+    return all.find((b) => b.findingId === findingId) || null;
+  }
+
+  /**
+   * Lists evidence bundles.
+   */
+  public listEvidenceBundles(): EvidenceBundle[] {
+    if (!this.inMemoryOnly && existsSync(this.evidenceDir)) {
+      const files = readdirSync(this.evidenceDir).filter((f) => f.endsWith(".json"));
+      for (const file of files) {
+        const bundleId = file.replace(".json", "");
+        if (!this.evidenceMemory.has(bundleId)) {
+          try {
+            const content = JSON.parse(
+              readFileSync(join(this.evidenceDir, file), "utf-8")
+            ) as EvidenceBundle;
+            this.evidenceMemory.set(bundleId, content);
+          } catch {
+            // ignore
+          }
+        }
+      }
+    }
+
+    return Array.from(this.evidenceMemory.values());
+  }
+
+  /**
+   * Saves a publication report.
+   * INVARIANT: Existing reports cannot be mutated with differing hashes.
+   */
+  public saveReport(report: PublicationReport): void {
+    const existing = this.getReport(report.reportId);
+    if (existing && existing.deterministicHash !== report.deterministicHash) {
+      throw new Error(
+        `IMMUTABILITY_VIOLATION: Cannot mutate existing publication report ${report.reportId} with differing hash.`
+      );
+    }
+
+    this.reportsMemory.set(report.reportId, report);
+
+    if (!this.inMemoryOnly) {
+      this.ensureDirectories();
+      const filePath = join(this.reportsDir, `${report.reportId}.json`);
+      writeFileSync(filePath, JSON.stringify(report, null, 2), "utf-8");
+      // Also optionally save markdown content alongside
+      const mdPath = join(this.reportsDir, `${report.reportId}.md`);
+      writeFileSync(mdPath, report.markdownContent, "utf-8");
+    }
+  }
+
+  /**
+   * Retrieves a publication report by report ID.
+   */
+  public getReport(reportId: string): PublicationReport | null {
+    if (this.reportsMemory.has(reportId)) {
+      return this.reportsMemory.get(reportId)!;
+    }
+
+    if (!this.inMemoryOnly) {
+      const filePath = join(this.reportsDir, `${reportId}.json`);
+      if (existsSync(filePath)) {
+        try {
+          const content = JSON.parse(readFileSync(filePath, "utf-8")) as PublicationReport;
+          this.reportsMemory.set(reportId, content);
+          return content;
+        } catch {
+          return null;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Retrieves a publication report by finding ID.
+   */
+  public getReportByFindingId(findingId: string): PublicationReport | null {
+    const all = this.listReports();
+    return all.find((r) => r.findingId === findingId) || null;
+  }
+
+  /**
+   * Lists publication reports.
+   */
+  public listReports(): PublicationReport[] {
+    if (!this.inMemoryOnly && existsSync(this.reportsDir)) {
+      const files = readdirSync(this.reportsDir).filter((f) => f.endsWith(".json"));
+      for (const file of files) {
+        const reportId = file.replace(".json", "");
+        if (!this.reportsMemory.has(reportId)) {
+          try {
+            const content = JSON.parse(
+              readFileSync(join(this.reportsDir, file), "utf-8")
+            ) as PublicationReport;
+            this.reportsMemory.set(reportId, content);
+          } catch {
+            // ignore
+          }
+        }
+      }
+    }
+
+    return Array.from(this.reportsMemory.values()).sort(
+      (a, b) => new Date(b.generatedAt).getTime() - new Date(a.generatedAt).getTime()
     );
   }
 }

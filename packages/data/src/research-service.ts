@@ -43,7 +43,11 @@ import {
   type ExperimentRun,
   type ResultArtifact,
   type ExperimentLineage,
-  type StatisticalValidationArtifact
+  type StatisticalValidationArtifact,
+  type ResearchFinding,
+  type EvidenceBundle,
+  type ResearchFindingLineage,
+  type PublicationReport
 } from "@kerala-lottery/experiments";
 
 // ============================================================================
@@ -1753,6 +1757,119 @@ export class ResearchDataService {
       );
     }
     return validation;
+  }
+
+  // ==========================================================================
+  // Milestone 9D Research Provenance & Publication-Grade Evidence Endpoints
+  // ==========================================================================
+
+  /**
+   * 24. GET /api/v1/findings
+   */
+  public async getFindings(
+    params?: PaginationParams & {
+      experimentId?: string;
+      claimType?: string;
+      runId?: string;
+    }
+  ): Promise<PaginatedResponse<ResearchFinding>> {
+    const { page, pageSize } = parsePaginationParams(params || {});
+    let findings = defaultExperimentRepository.listFindings();
+    if (params?.experimentId) {
+      findings = findings.filter((f) => f.experimentId === params.experimentId);
+    }
+    if (params?.claimType) {
+      findings = findings.filter((f) => f.claimType === params.claimType);
+    }
+    if (params?.runId) {
+      findings = findings.filter((f) => f.runId === params.runId);
+    }
+    return paginateArray(findings, page, pageSize);
+  }
+
+  /**
+   * 25. GET /api/v1/findings/:id
+   */
+  public async getFindingById(findingId: string): Promise<ResearchFinding> {
+    const finding = defaultExperimentRepository.getFinding(findingId);
+    if (!finding) {
+      throw new ResearchApiError(
+        404,
+        "NOT_FOUND",
+        `Research finding '${findingId}' not found.`
+      );
+    }
+    return finding;
+  }
+
+  /**
+   * 26. GET /api/v1/findings/:id/evidence
+   */
+  public async getFindingEvidence(findingId: string): Promise<EvidenceBundle> {
+    const finding = await this.getFindingById(findingId);
+    const evidence = defaultExperimentRepository.getEvidenceBundleByFindingId(finding.findingId);
+    if (!evidence) {
+      throw new ResearchApiError(
+        404,
+        "NOT_FOUND",
+        `Evidence bundle for research finding '${findingId}' not found.`
+      );
+    }
+    return evidence;
+  }
+
+  /**
+   * 27. GET /api/v1/findings/:id/lineage
+   */
+  public async getFindingLineage(findingId: string): Promise<ResearchFindingLineage> {
+    const finding = await this.getFindingById(findingId);
+    const lineage = defaultExperimentRepository.getFindingLineage(finding.findingId);
+    if (!lineage) {
+      throw new ResearchApiError(
+        404,
+        "NOT_FOUND",
+        `Lineage for research finding '${findingId}' not found.`
+      );
+    }
+    return lineage;
+  }
+
+  /**
+   * 28. GET /api/v1/findings/:id/report
+   */
+  public async getFindingReport(findingId: string): Promise<PublicationReport> {
+    const finding = await this.getFindingById(findingId);
+    const report = defaultExperimentRepository.getReportByFindingId(finding.findingId);
+    if (!report) {
+      throw new ResearchApiError(
+        404,
+        "NOT_FOUND",
+        `Publication report for research finding '${findingId}' not found.`
+      );
+    }
+    return report;
+  }
+
+  /**
+   * 29. GET /api/v1/evidence-bundles
+   */
+  public async getEvidenceBundles(
+    params?: PaginationParams
+  ): Promise<PaginatedResponse<EvidenceBundle>> {
+    const { page, pageSize } = parsePaginationParams(params || {});
+    const bundles = defaultExperimentRepository.listEvidenceBundles();
+    return paginateArray(bundles, page, pageSize);
+  }
+
+  /**
+   * 30. GET /api/v1/reports
+   */
+  public async getReports(
+    params?: PaginationParams
+  ): Promise<PaginatedResponse<PublicationReport>> {
+    const { page, pageSize } = parsePaginationParams(params || {});
+    const reports = defaultExperimentRepository.listReports();
+    return paginateArray(reports, page, pageSize);
   }
 }
 

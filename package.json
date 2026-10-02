@@ -23,6 +23,7 @@
     "verify:9a": "npx tsx services/ingestion/scripts/verify-prod-research-surface-9a.ts",
     "verify:9b": "npx tsx services/ingestion/scripts/verify-continuous-research-9b.ts",
     "verify:9c": "npx tsx services/ingestion/scripts/verify-scientific-validation-9c.ts",
+    "verify:9d": "npx tsx services/ingestion/scripts/verify-research-provenance-9d.ts",
     "verify:catchup": "npx tsx services/ingestion/scripts/verify-catchup-103.ts",
     "verify:prod-activation": "npx tsx services/ingestion/scripts/verify-prod-activation.ts",
     "experiments:list": "npx tsx services/ingestion/scripts/experiments-cli.ts list",
@@ -32,7 +33,11 @@
     "experiments:inspect": "npx tsx services/ingestion/scripts/experiments-cli.ts inspect",
     "experiments:validate": "npx tsx services/ingestion/scripts/experiments-cli.ts validate",
     "experiments:validate-all": "npx tsx services/ingestion/scripts/experiments-cli.ts validate-all",
-    "experiments:inspect-validation": "npx tsx services/ingestion/scripts/experiments-cli.ts inspect-validation"
+    "experiments:inspect-validation": "npx tsx services/ingestion/scripts/experiments-cli.ts inspect-validation",
+    "findings:generate": "npx tsx services/ingestion/scripts/experiments-cli.ts generate-findings",
+    "findings:list": "npx tsx services/ingestion/scripts/experiments-cli.ts list-findings",
+    "findings:inspect": "npx tsx services/ingestion/scripts/experiments-cli.ts inspect-finding",
+    "findings:report": "npx tsx services/ingestion/scripts/experiments-cli.ts export-report"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.2",

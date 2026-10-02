@@ -110,3 +110,8 @@ export * from "./null-models";
 export * from "./multiple-testing";
 export * from "./walk-forward";
 export * from "./validation-engine";
+
+// 9D Research Provenance & Publication Evidence Exports
+export * from "./findings-types";
+export * from "./findings-engine";
+export * from "./report-generator";

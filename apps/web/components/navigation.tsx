@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { href: "/schemes", label: "Prize Schemes" },
   { href: "/statistics", label: "Statistics" },
   { href: "/experiments", label: "Experiments" },
+  { href: "/findings", label: "Findings & Evidence" },
   { href: "/ingestion", label: "Ingestion" }
 ];
 

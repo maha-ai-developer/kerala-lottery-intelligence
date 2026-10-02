@@ -23,7 +23,13 @@ import {
   loadCanonicalResearchCorpus,
   buildResearchModelingDataset,
   validateExperimentRun,
-  type StatisticalValidationArtifact
+  generateResearchFinding,
+  buildEvidenceBundle,
+  buildResearchFindingLineage,
+  verifyEvidenceBundleIntegrity,
+  generatePublicationReport,
+  type StatisticalValidationArtifact,
+  type ResearchFinding
 } from "@kerala-lottery/experiments";
 
 async function main() {
@@ -312,8 +318,185 @@ async function main() {
       break;
     }
 
+    case "generate-findings": {
+      console.log(`\nLoading canonical research corpus (103 draws)...`);
+      const corpus = loadCanonicalResearchCorpus();
+      const { dataset } = buildResearchModelingDataset(corpus);
+      const experiments = getRegisteredExperiments();
+
+      console.log(`Generating publication-grade Research Findings & Evidence Bundles for ${experiments.length} baselines...\n`);
+      const generatedFindings: ResearchFinding[] = [];
+
+      for (const exp of experiments) {
+        const runs = defaultExperimentRepository.listRuns({
+          experimentId: exp.experimentId,
+          status: "SUCCEEDED"
+        });
+        if (runs.length === 0) {
+          console.warn(`Warning: No completed runs found for ${exp.experimentId}. Run 'run-all' first.`);
+          continue;
+        }
+        const run = runs[0]!;
+        const artifact = defaultExperimentRepository.getArtifactByRunId(run.runId);
+        if (!artifact) {
+          console.warn(`Warning: Artifact for run '${run.runId}' missing.`);
+          continue;
+        }
+        const validation = defaultExperimentRepository.getValidationByRunId(run.runId);
+        if (!validation) {
+          console.warn(`Warning: Validation for run '${run.runId}' missing. Run 'validate-all' first.`);
+          continue;
+        }
+
+        // 1. Generate Finding
+        const finding = generateResearchFinding({
+          run,
+          artifact,
+          validation,
+          dataset,
+          corpus,
+          definition: exp,
+          claimType: "STATISTICAL_RESULT"
+        });
+        defaultExperimentRepository.saveFinding(finding);
+
+        // 2. Build Evidence Bundle
+        const evidenceBundle = buildEvidenceBundle({
+          finding,
+          validation,
+          run,
+          artifact,
+          dataset,
+          corpus,
+          definition: exp
+        });
+        defaultExperimentRepository.saveEvidenceBundle(evidenceBundle);
+
+        // 3. Verify Evidence Bundle Integrity ("no silent repair")
+        const integrityCheck = verifyEvidenceBundleIntegrity(evidenceBundle, {
+          corpusHash: corpus.corpusHash,
+          datasetHash: dataset.deterministicHash,
+          experimentHash: exp.deterministicHash,
+          runHash: run.reproducibilityMetadata.inputFingerprint,
+          resultArtifactHash: artifact.deterministicHash,
+          validationHash: validation.deterministicHash,
+          findingHash: finding.deterministicHash
+        });
+
+        if (!integrityCheck.valid) {
+          console.error(`FATAL INTEGRITY ERROR on ${exp.experimentId}:`, integrityCheck.errors);
+          process.exit(1);
+        }
+
+        // 4. Build 10-Stage Complete Lineage
+        const lineage = buildResearchFindingLineage({
+          finding,
+          validation,
+          run,
+          artifact,
+          dataset,
+          corpus,
+          definition: exp
+        });
+        defaultExperimentRepository.saveFindingLineage(lineage);
+
+        // 5. Generate Publication Report
+        const report = generatePublicationReport({
+          finding,
+          evidenceBundle,
+          lineage,
+          validation
+        });
+        defaultExperimentRepository.saveReport(report);
+
+        generatedFindings.push(finding);
+
+        console.log(`✓ [${exp.experimentId}] Finding: ${finding.findingId}`);
+        console.log(`  Statement:       ${finding.statement}`);
+        console.log(`  Claim Type:      ${finding.claimType}`);
+        console.log(`  Evidence Bundle: ${evidenceBundle.evidenceBundleId} (${evidenceBundle.sourceDocumentCount} docs, ${evidenceBundle.drawCount} draws)`);
+        console.log(`  Integrity:       VERIFIED (0 errors, 7 artifact hashes verified)`);
+        console.log(`  Report:          ${report.reportId} (Markdown + Structured JSON)\n`);
+      }
+
+      console.log(`Successfully generated and persisted ${generatedFindings.length} research findings with complete cryptographic provenance.`);
+      break;
+    }
+
+    case "list-findings": {
+      const findings = defaultExperimentRepository.listFindings();
+      console.log(`\nRegistered Research Findings (${findings.length}):\n`);
+      for (const f of findings) {
+        console.log(`• [${f.findingId}] ${f.experimentId} (${f.claimType})`);
+        console.log(`  Statement:     ${f.statement}`);
+        console.log(`  Acc / Null:    ${(f.evidence.observedAccuracy * 100).toFixed(2)}% vs ${(f.evidence.nullDistributionMean * 100).toFixed(2)}%`);
+        console.log(`  P-Adj:         ${f.evidence.adjustedPValue.toFixed(4)} (Significant: ${f.evidence.isSignificant})`);
+        console.log(`  Wilson 95% CI: [${(f.uncertainty.wilsonScore95CI[0] * 100).toFixed(2)}%, ${(f.uncertainty.wilsonScore95CI[1] * 100).toFixed(2)}%]`);
+        console.log(`  Hash:          ${f.deterministicHash}\n`);
+      }
+      break;
+    }
+
+    case "inspect-finding": {
+      const findingId = args[1];
+      if (!findingId) {
+        console.error("Error: Missing finding ID. Usage: inspect-finding <findingId>");
+        process.exit(1);
+      }
+      const finding = defaultExperimentRepository.getFinding(findingId);
+      if (!finding) {
+        console.error(`Error: Finding '${findingId}' not found.`);
+        process.exit(1);
+      }
+      const evidence = defaultExperimentRepository.getEvidenceBundleByFindingId(finding.findingId);
+      const lineage = defaultExperimentRepository.getFindingLineage(finding.findingId);
+
+      console.log(`\n============================================================`);
+      console.log(` Research Finding: ${finding.findingId}`);
+      console.log(`============================================================`);
+      console.log(`Statement:       ${finding.statement}`);
+      console.log(`Claim Type:      ${finding.claimType}`);
+      console.log(`Experiment:      ${finding.experimentId} (v${finding.experimentVersion})`);
+      console.log(`Run ID:          ${finding.runId}`);
+      console.log(`Validation ID:   ${finding.validationId}`);
+      console.log(`Corpus:          ${finding.corpusVersion}`);
+      console.log(`Dataset:         ${finding.datasetVersion}`);
+      console.log(`Hash:            ${finding.deterministicHash}`);
+
+      if (evidence) {
+        console.log(`\nEvidence Bundle: ${evidence.evidenceBundleId}`);
+        console.log(`  Source Docs:   ${evidence.sourceDocumentCount} PDFs verified`);
+        console.log(`  Draws:         ${evidence.drawCount} verified`);
+        console.log(`  Integrity:     ${evidence.isIntegrityVerified ? "VALID" : "INVALID"}`);
+        console.log(`  Hashes:        ${Object.keys(evidence.artifactHashes).length} artifact hashes`);
+      }
+
+      if (lineage) {
+        console.log(`\nLineage Chain (${lineage.chain.length} stages, Complete: ${lineage.isComplete}):`);
+        for (const step of lineage.chain) {
+          console.log(`  ${step.stageNumber}. [${step.step}] ${step.identity}`);
+        }
+      }
+      break;
+    }
+
+    case "export-report": {
+      const findingId = args[1];
+      if (!findingId) {
+        console.error("Error: Missing finding ID. Usage: export-report <findingId>");
+        process.exit(1);
+      }
+      const report = defaultExperimentRepository.getReportByFindingId(findingId);
+      if (!report) {
+        console.error(`Error: Report for finding '${findingId}' not found.`);
+        process.exit(1);
+      }
+      console.log(report.markdownContent);
+      break;
+    }
+
     default: {
-      console.log("Usage: experiments-cli [list | run <id> | run-all | refresh | inspect <runId> | validate <runId> | validate-all | inspect-validation <id>]");
+      console.log("Usage: experiments-cli [list | run <id> | run-all | refresh | inspect <runId> | validate <runId> | validate-all | inspect-validation <id> | generate-findings | list-findings | inspect-finding <id> | export-report <id>]");
       break;
     }
   }

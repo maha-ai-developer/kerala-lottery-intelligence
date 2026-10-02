@@ -46,8 +46,12 @@ export function canonicalJsonStringify(obj: unknown): string {
   return `{${pairs.join(",")}}`;
 }
 
+export function computeSha256(data: string): string {
+  return createHash("sha256").update(data).digest("hex");
+}
+
 export function computeSha256Short(data: string, length = 16): string {
-  return createHash("sha256").update(data).digest("hex").slice(0, length);
+  return computeSha256(data).slice(0, length);
 }
 
 /**
