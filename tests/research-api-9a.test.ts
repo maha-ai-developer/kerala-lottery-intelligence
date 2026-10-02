@@ -28,18 +28,23 @@ describe("Directive 9A: Production Research API & Read-Only Surface Invariants",
     expect(codes).toContain("BR"); // Thiruvonam Bumper
   });
 
-  it("Invariant 2: Exposes exactly 100 verified historical draws with deterministic pagination", async () => {
+  it("Invariant 2: Exposes exactly 103 verified historical draws with deterministic pagination", async () => {
     // Default page 1, pageSize 20
     const resPage1 = await researchService.getDraws({ page: 1, pageSize: 20 });
     expect(resPage1.data.length).toBe(20);
-    expect(resPage1.pagination.totalCount).toBe(100);
+    expect(resPage1.pagination.totalCount).toBe(103);
     expect(resPage1.pagination.page).toBe(1);
     expect(resPage1.pagination.hasMore).toBe(true);
 
-    // PageSize 100 returns all draws
-    const resAll = await researchService.getDraws({ page: 1, pageSize: 100 });
-    expect(resAll.data.length).toBe(100);
-    expect(resAll.pagination.hasMore).toBe(false);
+    // PageSize 100 returns 100 draws with hasMore: true
+    const resPage100 = await researchService.getDraws({ page: 1, pageSize: 100 });
+    expect(resPage100.data.length).toBe(100);
+    expect(resPage100.pagination.hasMore).toBe(true);
+
+    // Page 2 returns the remaining 3 draws
+    const resPage2 = await researchService.getDraws({ page: 2, pageSize: 100 });
+    expect(resPage2.data.length).toBe(3);
+    expect(resPage2.pagination.hasMore).toBe(false);
 
     // Maximum pageSize guard (requesting 500 clamps to 100)
     const resClamped = await researchService.getDraws({ page: 1, pageSize: 500 });
@@ -143,12 +148,12 @@ describe("Directive 9A: Production Research API & Read-Only Surface Invariants",
     expect(source?.status).toBe("VALID");
   });
 
-  it("Invariant 7: Statistics evaluate 38,416 winning results with non-predictive notice", async () => {
+  it("Invariant 7: Statistics evaluate 39,550 winning results across 103 draws with non-predictive notice", async () => {
     const stats = await researchService.getStatistics();
-    expect(stats.population.totalDraws).toBe(100);
-    expect(stats.population.totalResults).toBe(38416);
-    expect(stats.population.fullTicketCount).toBe(1462);
-    expect(stats.population.suffixCount).toBe(36954);
+    expect(stats.population.totalDraws).toBe(103);
+    expect(stats.population.totalResults).toBe(39550);
+    expect(stats.population.fullTicketCount).toBe(1504);
+    expect(stats.population.suffixCount).toBe(38046);
     expect(Object.keys(stats.lastDigitDistribution).length).toBe(10);
     expect(Object.keys(stats.firstDigitDistribution).length).toBe(10);
 
@@ -293,5 +298,84 @@ describe("Directive 9A: Production Research API & Read-Only Surface Invariants",
     const diskSha = computeSha256(new Uint8Array(diskBytes));
     expect(diskSha).toBe(sha);
     expect(diskSha).toBe("cddb3d4d05c102b98f38050ac1ff297ad15bc442b12087c0505927f7bb1cf3dc");
+  });
+
+  it("Invariant 16: Catch-Up Historical Draws (29/09, 30/09, 01/10/2026) adhere to separated filename model", async () => {
+    const catchupConfigs = [
+      {
+        drawId: "draw_SS-539",
+        drawNumber: "SS-539th",
+        drawDate: "29/09/2026",
+        lotteryName: "STHREE-SAKTHI",
+        sha256: "351176188dbb5264f22715eef8cab489e584d67455125c36e8778edc6aff431e",
+        canonicalFilename: "272-2351-29-09-2026.pdf",
+        sourceResponseFilename: "SS-539.pdf",
+        sourceUrl: "http://result.keralalotteries.com/viewlotisresult.php?drawserial=75394",
+        totalResults: 380,
+        fullTicketCount: 14,
+        suffixCount: 366
+      },
+      {
+        drawId: "draw_DL-71",
+        drawNumber: "DL-71st",
+        drawDate: "30/09/2026",
+        lotteryName: "DHANALEKSHMI",
+        sha256: "8670c8a0cdb9174d81c57a21b38e279c969088b4dc5020a16ef3f5a59e787174",
+        canonicalFilename: "273-2356-30-09-2026.pdf",
+        sourceResponseFilename: "DL-71.pdf",
+        sourceUrl: "http://result.keralalotteries.com/viewlotisresult.php?drawserial=75395",
+        totalResults: 374,
+        fullTicketCount: 14,
+        suffixCount: 360
+      },
+      {
+        drawId: "draw_KN-643",
+        drawNumber: "KN-643rd",
+        drawDate: "01/10/2026",
+        lotteryName: "KARUNYA PLUS",
+        sha256: "37e35a7760e98eecc7062e10c9512070f8809d759e72963d5857374ea28a09fc",
+        canonicalFilename: "274-2361-01-10-2026.pdf",
+        sourceResponseFilename: "KN-643.pdf",
+        sourceUrl: "http://result.keralalotteries.com/viewlotisresult.php?drawserial=75396",
+        totalResults: 380,
+        fullTicketCount: 14,
+        suffixCount: 366
+      }
+    ];
+
+    const sourceDocsDir = join(process.cwd(), "data/source-documents/lottery-results");
+
+    for (const config of catchupConfigs) {
+      // 1. Verify draw resolution
+      const draw = await researchService.getDrawById(config.drawId);
+      expect(draw).toBeDefined();
+      expect(draw?.drawNumber).toBe(config.drawNumber);
+      expect(draw?.drawDate).toBe(config.drawDate);
+      expect(draw?.lotteryName).toBe(config.lotteryName);
+      expect(draw?.sourceDocumentSha256).toBe(config.sha256);
+      expect(draw?.totalResults).toBe(config.totalResults);
+      expect(draw?.fullTicketCount).toBe(config.fullTicketCount);
+      expect(draw?.suffixCount).toBe(config.suffixCount);
+      expect(draw?.validationStatus).toBe("VALID");
+
+      // 2. Verify source document resolution & separated filename model
+      const source = await researchService.getSourceBySha256(config.sha256);
+      expect(source).toBeDefined();
+      expect(source?.canonicalFilename).toBe(config.canonicalFilename);
+      expect(source?.sourceResponseFilename).toBe(config.sourceResponseFilename);
+      expect(source?.sourceUrl).toBe(config.sourceUrl);
+      expect(source?.sha256).toBe(config.sha256);
+
+      // 3. Physical file on disk exists under canonicalFilename with matching SHA
+      const diskPath = join(sourceDocsDir, config.canonicalFilename);
+      expect(existsSync(diskPath)).toBe(true);
+      const diskBytes = readFileSync(diskPath);
+      const diskSha = computeSha256(new Uint8Array(diskBytes));
+      expect(diskSha).toBe(config.sha256);
+
+      // 4. Forbidden response filenames must NOT exist in the repository source directory
+      const forbiddenPath = join(sourceDocsDir, config.sourceResponseFilename);
+      expect(existsSync(forbiddenPath)).toBe(false);
+    }
   });
 });

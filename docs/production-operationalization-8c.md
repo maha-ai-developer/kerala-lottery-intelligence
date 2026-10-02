@@ -375,8 +375,18 @@ This section documents the live verification executed on **29/09/2026** against 
 | :--- | :--- | :--- | :--- |
 | **8C Operationalization Gates** | `npm run verify:8c` | **PASS (18/18)** | All 18 production operationalization gates passed |
 | **TypeScript Typecheck** | `npm run typecheck` | **PASS** | 0 type errors across monorepo (`tsconfig.base.json`) |
-| **Unit & Integration Tests** | `npm test` | **PASS (437/437)** | 28 test suites, 437 passed, 19 skipped |
+| **Unit & Integration Tests** | `npm test` | **PASS (458/458)** | 30 test suites, 458 passed, 19 skipped |
 | **Firestore Security Rules** | `npm run test:rules` | **PASS (19/19)** | Security rules emulator verification passed |
 | **Production Build** | `npm run build` | **PASS** | Next.js 15.5.25 optimized production build succeeded |
 | **Live PROD Activation** | `verify-prod-activation.ts` | **PASS** | Live GCP identity, storage, firestore, audit verified |
+
+---
+
+### 7. Pre-9B Authoritative Corpus Expansion
+Following the completion of 8C, the historical corpus was updated with verified draws through 01/10/2026:
+- **Baseline Draws**: Expanded from **100** to **103** historical draws (`BT-73`, `SS-539`, `DL-71`, `KN-643`).
+- **Winning Numbers**: Expanded from **38,416** to **39,550** numbers (1,504 full-ticket, 38,046 suffix).
+- **Gate 15 Verification**: Downstream layers re-verified with `npm run verify:8c` (`[PASS] Downstream layers promoted: 103 draws, 39550 results`).
+- **Operational Safety**: Production Cloud Scheduler remains strictly in `PAUSED` / `DISABLED` state (`0 17 * * * Asia/Kolkata`).
+
 

@@ -300,3 +300,45 @@ npm run ingest:daily -- --verbose --since 2026-09-27
 - **Candidate Audit**: `[ALREADY_KNOWN] BT-73.pdf (SHA: cddb3d4d05c102b98f38050ac1ff297ad15bc442b12087c0505927f7bb1cf3dc)`
 - **Corpus State**: 100% idempotent; 0 duplicate entries created.
 
+---
+
+## 12. Pre-9B Historical Catch-Up Ingestion & Cache Producer Cleanup
+
+### 12.1 Objective & Context
+Prior to starting Milestone 9B, two critical real-world integrity tasks were completed:
+1. **Cache Producer Root-Cause Defect Fix**: `DocumentCacheManager` previously accepted unverified caller counts. It now computes `totalResults`, `fullTicketCount`, and `suffixCount` authoritatively by inspecting graph `WinningResult` nodes (`!isSuffix` -> FULL_TICKET, `isSuffix` -> SUFFIX), ensuring `full + suffix === total` with deterministic manifest regeneration.
+2. **Historical Ingestion Catch-Up (29/09/2026 – 01/10/2026)**: Ingesting the 3 completed draws following BT-73 (28/09/2026) through 01/10/2026 using official Directorate portals and the separated filename model.
+
+### 12.2 Acquisition & Separated Filename Model
+All three documents were discovered and fetched from official portals:
+- **SS-539 (29/09/2026)**:
+  - Source URL: `http://result.keralalotteries.com/viewlotisresult.php?drawserial=75394`
+  - HTTP Response Filename: `SS-539.pdf`
+  - Canonical Filename: `272-2351-29-09-2026.pdf`
+  - SHA-256: `351176188dbb5264f22715eef8cab489e584d67455125c36e8778edc6aff431e`
+  - Results: 380 (14 Full-Ticket, 366 Suffix)
+- **DL-71 (30/09/2026)**:
+  - Source URL: `http://result.keralalotteries.com/viewlotisresult.php?drawserial=75395`
+  - HTTP Response Filename: `DL-71.pdf`
+  - Canonical Filename: `273-2356-30-09-2026.pdf`
+  - SHA-256: `8670c8a0cdb9174d81c57a21b38e279c969088b4dc5020a16ef3f5a59e787174`
+  - Results: 374 (14 Full-Ticket, 360 Suffix)
+- **KN-643 (01/10/2026)**:
+  - Source URL: `http://result.keralalotteries.com/viewlotisresult.php?drawserial=75396`
+  - HTTP Response Filename: `KN-643.pdf`
+  - Canonical Filename: `274-2361-01-10-2026.pdf`
+  - SHA-256: `37e35a7760e98eecc7062e10c9512070f8809d759e72963d5857374ea28a09fc`
+  - Results: 380 (14 Full-Ticket, 366 Suffix)
+
+Crucially, response filenames (`SS-539.pdf`, `DL-71.pdf`, `KN-643.pdf`) were never stored as repository files. Only the canonical chronological filenames were persisted to `data/source-documents/lottery-results/`.
+
+### 12.3 Authoritative Corpus Transition
+| Metric | Pre-Catch-Up (BT-73) | Post-Catch-Up (KN-643) | Added |
+|---|---|---|---|
+| **Verified Draws** | 100 | **103** | +3 |
+| **Total Results** | 38,416 | **39,550** | +1,134 |
+| **Full-Ticket Results** | 1,462 | **1,504** | +42 |
+| **Suffix Results** | 36,954 | **38,046** | +1,092 |
+| **Reconciliation Invariant** | 1,462 + 36,954 = 38,416 | **1,504 + 38,046 = 39,550** | Exact Match |
+
+

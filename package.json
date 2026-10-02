@@ -21,6 +21,7 @@
     "bootstrap:prod": "npx tsx services/ingestion/scripts/prod-bootstrap.ts",
     "verify:8c": "npx tsx services/ingestion/scripts/verify-prod-operationalization-8c.ts",
     "verify:9a": "npx tsx services/ingestion/scripts/verify-prod-research-surface-9a.ts",
+    "verify:catchup": "npx tsx services/ingestion/scripts/verify-catchup-103.ts",
     "verify:prod-activation": "npx tsx services/ingestion/scripts/verify-prod-activation.ts"
   },
   "devDependencies": {

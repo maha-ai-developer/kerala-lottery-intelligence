@@ -11,13 +11,13 @@
 
 ## 1. Executive Summary & Architecture
 
-Milestone 9A delivers the official read-only research surface for the verified Kerala State Lottery Intelligence platform. It exposes the authoritative corpus of 100 historical gazetted draws and 38,416 cryptographically ground-truth winning results to human researchers and scientific consumers without permitting any data mutation.
+Milestone 9A delivers the official read-only research surface for the verified Kerala State Lottery Intelligence platform. It exposes the authoritative corpus of 103 historical gazetted draws and 39,550 cryptographically ground-truth winning results to human researchers and scientific consumers without permitting any data mutation.
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
 │                   PRODUCTION VERIFIED DATA (IMMUTABLE)                 │
-│  - 100 Gazetted PDF Source Documents (SHA-256 Verified)                │
-│  - 100 Historical Draws & 38,416 Winning Results                      │
+│  - 103 Gazetted PDF Source Documents (SHA-256 Verified)               │
+│  - 103 Historical Draws & 39,550 Winning Results                      │
 │  - 16 Authoritative Prize Schemes (15 Official, 1 Observed Archetype)  │
 │  - Empirical Statistical Distributions & Chronological Holdout Models  │
 └───────────────────────────────────┬────────────────────────────────────┘
@@ -52,11 +52,11 @@ The research platform exposes read access across 12 structured domains:
 
 | # | Domain | Primary Identifier | Population | Authority Level |
 |---|---|---|---|---|
-| 1 | **Source Documents** | SHA-256 Hash | 100 PDFs | Gazette SRO / Directorate |
+| 1 | **Source Documents** | SHA-256 Hash | 103 PDFs | Gazette SRO / Directorate |
 | 2 | **Lotteries** | Series Code (`BT`, `KR`, `SS`, etc.) | 9 Families | Directorate of Kerala State Lotteries |
-| 3 | **Draws** | `draw_{cleanDrawNum}` | 100 Draws | Official Gazetted Draws |
+| 3 | **Draws** | `draw_{cleanDrawNum}` | 103 Draws | Official Gazetted Draws |
 | 4 | **Prize Schemes** | Scheme Version ID | 16 Schemes | 15 Official, 1 Observed Archetype |
-| 5 | **Winning Results** | Result Node UUID | 38,416 Numbers | Gazette Verified |
+| 5 | **Winning Results** | Result Node UUID | 39,550 Numbers | Gazette Verified |
 | 6 | **Series** | 2-Letter Code (`WA`–`WM`) | 10–12 Series/Draw | Authorized Ticket Series |
 | 7 | **Historical Statistics** | Statistical Population | 38,416 Records | Empirical Descriptive |
 | 8 | **Statistical Experiments** | Experiment ID | Holdout / Rolling | Reproducible Benchmarks |
@@ -161,7 +161,7 @@ The platform explicitly differentiates statutory rules from observed draw patter
 
 ## 6. Empirical Statistics & Non-Predictive Boundary
 
-Empirical analysis over the complete 38,416-result corpus (1,462 full-ticket, 36,954 suffix):
+Empirical analysis over the complete 39,550-result corpus (1,504 full-ticket, 38,046 suffix):
 - **Shannon Entropy**: $H = 3.3219$ bits (near the theoretical discrete uniform maximum $\log_2(10) \approx 3.3219$ bits, $>99.99\%$ efficiency).
 - **Chi-Square Goodness-of-Fit Uniformity**: Computed across digits 0–9 with degrees of freedom $df = 9$.
 - **Hypothesis Result**: Consistent with uniform physical randomness.
@@ -195,8 +195,8 @@ The automated verifier `services/ingestion/scripts/verify-prod-research-surface-
 ```
 Gate 01 [PASS]: Read-Only Safety Invariant (405 Method Not Allowed rejected)
 Gate 02 [PASS]: 12 Data Domains Coverage (All domains active)
-Gate 03 [PASS]: 100 Verified Historical Draws (Deterministic descending order)
-Gate 04 [PASS]: 38,416 Total Results Invariant (1,462 full-ticket, 36,954 suffix)
+Gate 03 [PASS]: Verified Historical Draws Invariant (103 draws confirmed)
+Gate 04 [PASS]: 39,550 Total Results Invariant (1,504 full-ticket, 38,046 suffix)
 Gate 05 [PASS]: Real-World Anchor BT-73 (28/09/2026, 378 results verified)
 Gate 06 [PASS]: Canonical String Integrity (Leading zeros preserved)
 Gate 07 [PASS]: Prize Scheme Classification (15 Official, 1 Observed BR-111)
@@ -209,3 +209,17 @@ Gate 13 [PASS]: Statistical Uniformity & Entropy (H = 3.3219 bits, df = 9)
 Gate 14 [PASS]: Temporal Separation & Benchmarks (Holdout & Walk-forward, 3 formal models)
 Gate 15 [PASS]: Non-Predictive Scientific Boundary (Mandatory disclaimers)
 ```
+
+---
+
+## 9. Pre-9B Real-World Catch-Up & Cache Producer Integrity
+
+Ahead of Milestone 9B, the historical corpus was caught up through 01/10/2026:
+- **3 Added Draws**:
+  - `SS-539` (29/09/2026): Canonical `272-2351-29-09-2026.pdf` (SHA `351176188dbb...`, 380 results)
+  - `DL-71` (30/09/2026): Canonical `273-2356-30-09-2026.pdf` (SHA `8670c8a0cdb9...`, 374 results)
+  - `KN-643` (01/10/2026): Canonical `274-2361-01-10-2026.pdf` (SHA `37e35a7760e9...`, 380 results)
+- **Separated Filename Model**: Official HTTP download response names (`SS-539.pdf`, `DL-71.pdf`, `KN-643.pdf`, `BT-73.pdf`) are recorded in `sourceResponseFilename` while canonical repository filenames follow official chronological format.
+- **Cache Producer Defect Fix**: Manifest counts derived directly from graph `WinningResult` nodes (`!isSuffix` -> FULL_TICKET, `isSuffix` -> SUFFIX).
+- **Dedicated Catch-Up Verifier**: `npm run verify:catchup` (`services/ingestion/scripts/verify-catchup-103.ts`) validates all 6 invariants (103 draws, 39,550 results, cryptographic identity, BT-73 immutability, separated filenames, determinism, and idempotency).
+

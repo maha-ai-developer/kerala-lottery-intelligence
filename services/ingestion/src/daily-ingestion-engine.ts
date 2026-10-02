@@ -348,8 +348,23 @@ export class DailyIngestionEngine {
     const candidateMap = new Map<string, InjectedCandidate>();
 
     // 1. Injected candidates
+    const injectedCanonicalNames = new Set<string>();
     if (this.injectedCandidates && this.injectedCandidates.length > 0) {
       for (const cand of this.injectedCandidates) {
+        if (cand.fileBuffer && !cand.canonicalFilename) {
+          const sha = computeSha256(cand.fileBuffer);
+          const resolved = resolveCanonicalAndResponseFilename(
+            cand.fileName,
+            sha,
+            cand.canonicalFilename,
+            cand.sourceResponseFilename
+          );
+          cand.canonicalFilename = resolved.canonicalFilename;
+          cand.sourceResponseFilename = resolved.sourceResponseFilename;
+        }
+        if (cand.canonicalFilename) {
+          injectedCanonicalNames.add(cand.canonicalFilename);
+        }
         candidateMap.set(cand.fileName, cand);
       }
     }
@@ -427,6 +442,10 @@ export class DailyIngestionEngine {
 
       for (const fileName of localFiles) {
         const fullPath = join(this.sourceDir, fileName);
+        if (injectedCanonicalNames.has(fileName)) {
+          // Already represented by an injected candidate whose canonical name matches this file
+          continue;
+        }
         if (!candidateMap.has(fileName)) {
           candidateMap.set(fileName, {
             fileName,
