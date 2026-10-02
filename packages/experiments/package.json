@@ -6,6 +6,8 @@
   "types": "./src/index.ts",
   "dependencies": {
     "@kerala-lottery/domain": "*",
+    "@kerala-lottery/knowledge": "*",
+    "@kerala-lottery/statistics": "*",
     "@kerala-lottery/validation": "*"
   },
   "scripts": {

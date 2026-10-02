@@ -1,14 +1,15 @@
 /**
  * Kerala State Lottery Intelligence & Experiment Platform
- * Experiment Engine & Walk-Forward Backtesting Framework
+ * Milestone 9B: Continuous Research & Experimentation Engine
  * 
  * CORE PRINCIPLE:
  * Strict scientific temporal validity.
  * Zero future leakage across predictionCutoff.
  * Every predictive experiment must compare against a random baseline.
+ * Purely descriptive and retrospective empirical analysis.
  */
 
-
+// Legacy types & utilities
 export type StrategyName =
   | "uniformRandom"
   | "frequency"
@@ -94,3 +95,10 @@ export function generateUniformRandomCandidate(
   const val = Math.floor(rng() * max);
   return val.toString().padStart(digitLength, "0");
 }
+
+// 9B Continuous Research Exports
+export * from "./types";
+export * from "./registry";
+export * from "./runner";
+export * from "./repository";
+export * from "./orchestrator";
