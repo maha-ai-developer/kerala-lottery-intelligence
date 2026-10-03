@@ -55,7 +55,10 @@ import {
   type DistrictSummaryRecord,
   type GeographicAnalysis,
   type TicketDistributionExposure,
-  type GeographicFindingLineage
+  type GeographicFindingLineage,
+  ResearchSandboxEngine,
+  type CandidateTicketInput,
+  type ResearchSandboxAnalysis
 } from "@kerala-lottery/experiments";
 
 // ============================================================================
@@ -1985,6 +1988,28 @@ export class ResearchDataService {
       throw new ResearchApiError(404, "NOT_FOUND", `Geographic lineage for '${findingId}' not found.`);
     }
     return lineage;
+  }
+
+  // ==========================================================================
+  // Milestone V1.0: Research Sandbox Service Surface
+  // ==========================================================================
+
+  private sandboxEngine: ResearchSandboxEngine | null = null;
+
+  /**
+   * 38. GET /api/v1/research-sandbox
+   * Evaluates candidate ticket input against authoritative prize scheme rules,
+   * extracts mathematical feature profile, retrospective historical comparison,
+   * statistical baselines, and geographic provenance without predictive claims.
+   */
+  public async analyzeSandboxTicket(input: CandidateTicketInput): Promise<ResearchSandboxAnalysis> {
+    if (!this.sandboxEngine) {
+      this.sandboxEngine = new ResearchSandboxEngine({
+        baseDir: process.cwd(),
+        schemeRegistry: this.schemeRegistry
+      });
+    }
+    return this.sandboxEngine.analyzeTicket(input);
   }
 }
 

@@ -123,3 +123,7 @@ export * from "./geographic-extraction-engine";
 export * from "./geographic-analysis-engine";
 export * from "./geographic-repository";
 
+// V1.0 Research Platform: Research Sandbox Exports
+export * from "./research-sandbox-types";
+export * from "./research-sandbox-engine";
+
