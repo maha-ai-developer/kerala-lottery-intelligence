@@ -25,6 +25,7 @@
     "verify:9c": "npx tsx services/ingestion/scripts/verify-scientific-validation-9c.ts",
     "verify:9d": "npx tsx services/ingestion/scripts/verify-research-provenance-9d.ts",
     "verify:10a": "npx tsx services/ingestion/scripts/verify-ticket-distribution-geographic-10a.ts",
+    "audit:10a": "npx tsx services/ingestion/scripts/audit-geography-10a.ts",
     "verify:catchup": "npx tsx services/ingestion/scripts/verify-catchup-103.ts",
     "verify:prod-activation": "npx tsx services/ingestion/scripts/verify-prod-activation.ts",
     "geography:coverage": "npx tsx services/ingestion/scripts/geography-cli.ts coverage",

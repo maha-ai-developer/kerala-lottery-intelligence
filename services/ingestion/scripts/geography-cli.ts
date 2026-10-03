@@ -104,6 +104,7 @@ async function main() {
         process.exit(1);
       }
       const analysis = analysisEngine.generateGeographicAnalysis({ observations: dataset.observations });
+      repo.saveGeographicAnalysis(analysis);
       console.log("============================================================");
       console.log(" Kerala Lottery Geographic Analysis");
       console.log("============================================================");

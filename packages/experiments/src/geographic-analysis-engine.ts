@@ -128,6 +128,7 @@ export class GeographicAnalysisEngine {
     let pValue: number | undefined;
 
     const limitations: string[] = [
+      "The 103-PDF corpus provides a descriptive historical distribution of published winner geography, but does not provide the denominator required to estimate exposure-adjusted district winning probability.",
       "Official Kerala Government Gazette result publications publish only the winning ticket numbers and issuing office locations for top-tier prizes.",
       "District-level ticket sales volume and returned unsold ticket counterfoils are NOT published in the public gazette result sheets.",
       "In the absence of authoritative ticket exposure denominators, raw winner counts represent retrospective descriptive observations and CANNOT be used to calculate district winning probabilities.",
