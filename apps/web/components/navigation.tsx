@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { href: "/experiments", label: "Experiments" },
   { href: "/findings", label: "Findings & Evidence" },
   { href: "/geography", label: "Geography & Exposure" },
+  { href: "/research-sandbox", label: "Research Sandbox" },
   { href: "/ingestion", label: "Ingestion" }
 ];
 
