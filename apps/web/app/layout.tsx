@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   description:
     "Production read-only research surface for lottery verification, rule provenance, statistical hypothesis testing, and temporal experiment backtesting.",
   icons: {
-    icon: "/favicon.ico"
+    icon: "/icon.svg"
   }
 };
 
