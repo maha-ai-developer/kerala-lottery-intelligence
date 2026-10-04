@@ -15,6 +15,8 @@ const nextConfig: NextConfig = {
     "@kerala-lottery/statistics"
   ],
 
+  serverExternalPackages: ["pdfjs-dist"],
+
   async rewrites() {
     return [
       {

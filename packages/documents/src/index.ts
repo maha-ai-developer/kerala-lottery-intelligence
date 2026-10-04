@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
+import "pdfjs-dist/legacy/build/pdf.worker.mjs";
 import type {
   DocumentType,
   SourceDocument,
@@ -638,6 +639,9 @@ export class PdfPageExtractorService {
 
     let doc: any;
     try {
+      if (pdfjsLib.GlobalWorkerOptions) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = "";
+      }
       const loadingTask = pdfjsLib.getDocument({
         data: new Uint8Array(pdfBuffer),
         useSystemFonts: true,

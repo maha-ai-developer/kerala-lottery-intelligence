@@ -976,7 +976,9 @@ export class DailyIngestionEngine {
 
     // Step 2: Load all valid graphs (cached + any in-memory for dry-run)
     const validGraphs = this.cacheManager.getAllValidGraphs();
-    const combinedValidGraphs = dryRun ? [...validGraphs, ...inMemoryValidGraphs] : validGraphs;
+    const combinedValidGraphs = dryRun
+      ? [...validGraphs, ...inMemoryValidGraphs]
+      : (validGraphs.length > 0 ? validGraphs : inMemoryValidGraphs);
 
     if (combinedValidGraphs.length === 0) {
       const summaryText = this.formatSummary({

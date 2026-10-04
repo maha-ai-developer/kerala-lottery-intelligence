@@ -182,6 +182,7 @@ export async function POST(req: NextRequest) {
         drawNumber: "SK-72",
         drawDate: "02/10/2026",
         title: "SUVARNA KERALAM (SK-72) dated 02-10-2026",
+        state: "PENDING" as const,
         details: "Official draw postponed for Gandhi Jayanti national holiday."
       },
       {
@@ -189,7 +190,9 @@ export async function POST(req: NextRequest) {
         drawNumber: "KR-770",
         drawDate: "03/10/2026",
         title: "KARUNYA (KR-770) dated 03-10-2026",
-        details: "Draw scheduled/held; official gazette PDF upload pending publication."
+        sourceUrl: "https://result.keralalotteries.com/viewlotisresult.php?drawserial=75397",
+        state: "NEW" as const,
+        details: "Official draw held 03-10-2026. Published on official results portal."
       }
     ];
 
@@ -202,11 +205,13 @@ export async function POST(req: NextRequest) {
         seenCandidates.add(dedupeKey);
         candidates.push({
           fileName: `${p.drawNumber}.pdf`,
+          sourceResponseFilename: `${p.drawNumber}.pdf`,
+          sourceUrl: (p as any).sourceUrl,
           title: p.title,
           drawDate: p.drawDate,
           drawNumber: p.drawNumber,
           lotteryCode: p.lotteryCode,
-          state: "PENDING",
+          state: p.state,
           details: p.details
         });
       }
