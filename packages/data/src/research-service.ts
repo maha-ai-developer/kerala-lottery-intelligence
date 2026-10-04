@@ -58,7 +58,10 @@ import {
   type GeographicFindingLineage,
   ResearchSandboxEngine,
   type CandidateTicketInput,
-  type ResearchSandboxAnalysis
+  type ResearchSandboxAnalysis,
+  CandidateLabEngine,
+  type CandidateLabRequest,
+  type CandidateLabAnalysis
 } from "@kerala-lottery/experiments";
 
 // ============================================================================
@@ -2010,6 +2013,30 @@ export class ResearchDataService {
       });
     }
     return this.sandboxEngine.analyzeTicket(input);
+  }
+
+  private candidateLabEngine: CandidateLabEngine | null = null;
+
+  /**
+   * 39. GET /api/v1/candidate-lab
+   * Multi-candidate comparative research lab:
+   * Validates multiple candidates, detects duplicates, calculates features,
+   * compares against same historical corpus, runs walk-forward backtest checkpoints,
+   * performs series comparison, and presents descriptive trade-offs.
+   */
+  public async analyzeCandidateLab(request: CandidateLabRequest): Promise<CandidateLabAnalysis> {
+    if (!this.candidateLabEngine) {
+      if (!this.sandboxEngine) {
+        this.sandboxEngine = new ResearchSandboxEngine({
+          baseDir: process.cwd(),
+          schemeRegistry: this.schemeRegistry
+        });
+      }
+      this.candidateLabEngine = new CandidateLabEngine({
+        sandboxEngine: this.sandboxEngine
+      });
+    }
+    return this.candidateLabEngine.analyzeCandidateSet(request);
   }
 }
 

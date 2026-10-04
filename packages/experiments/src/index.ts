@@ -127,3 +127,8 @@ export * from "./geographic-repository";
 export * from "./research-sandbox-types";
 export * from "./research-sandbox-engine";
 
+// V1.0 Research Platform: Multi-Candidate Comparison & Backtesting Lab Exports
+export * from "./candidate-lab-types";
+export * from "./candidate-lab-engine";
+
+

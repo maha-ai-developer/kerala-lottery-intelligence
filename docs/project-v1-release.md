@@ -45,6 +45,7 @@ With this final release, all planned research foundations (Milestones 3A through
 | **Validation Layer** | **Milestone 9C Validation Engine** | N/A | Wilson Score CI, Percentile Bootstrap, Permutation tests, Cohen's h |
 | **Provenance Layer** | **Milestone 9D Lineage Engine** | N/A | Unbroken 11-stage lineage DAG grounding all terminal findings |
 | **Research Sandbox** | **V1.0 User Research Sandbox Active** | Read-Only | `/research-sandbox` UI and `GET /api/v1/research-sandbox` API |
+| **Candidate Lab** | **Multi-Candidate Comparison & Backtesting Lab** | Read-Only | `/candidate-lab` UI and `GET /api/v1/candidate-lab` API |
 | **API State** | Read-Only (GET); 405 Method Not Allowed | Read-Only | All write verbs (POST, PUT, DELETE, PATCH) reject with `Allow: GET` |
 | **Scheduler State** | **PAUSED / DISABLED** | **PAUSED / DISABLED** | Zero automated ingestion polling; zero background mutation |
 
@@ -98,9 +99,9 @@ The system strictly enforces:
 
 ---
 
-## 5. Final Feature: The Research Sandbox
+## 5. Single-Ticket Investigation: The Research Sandbox
 
-The primary user-facing capability introduced for V1.0 completion is the **Research Sandbox**, available via UI at `/research-sandbox` and API at `GET /api/v1/research-sandbox`.
+The user-facing single-ticket exploration capability is the **Research Sandbox**, available via UI at `/research-sandbox` and API at `GET /api/v1/research-sandbox`.
 
 ### 5.1 Architecture & Workflow
 The sandbox accepts candidate or historical ticket parameters:
@@ -124,34 +125,64 @@ Every sandbox analysis produces an immutable, deterministic analysis payload (`s
 
 ---
 
-## 6. End-to-End User Verification & Presets
+## 6. Final Feature: Multi-Candidate Comparison & Historical Backtesting Lab
 
-The Research Sandbox UI provides six pre-configured research test scenarios verifying all operational pathways:
-1. **Historical Winner (BT-73 First Prize `BB 814615`):** Demonstrates exact historical match detection, published location retrieval (`KOLLAM`), and full 11-stage provenance trace.
-2. **Standard Hypothetical Candidate (`WA 458921`):** Demonstrates syntactically valid analysis with no historical matches, balanced digit parity, and typical empirical feature distribution.
-3. **Boundary Leading-Zero Candidate (`AA 004521`):** Verifies preservation of leading zeros throughout string normalization and mathematical profiling.
-4. **Uniform Repeated-Digit Ticket (`SS 777777`):** Illustrates extreme digit repetition feature profiling and its position in the tail of empirical digit distributions.
-5. **Historical Replay with Temporal Cutoff (`2026-09-01`):** Demonstrates historical replay protection; draws occurring after the cutoff date are excluded from retrospective baseline metrics.
-6. **Structurally Invalid Series (`ZZ 123456`):** Demonstrates fail-closed input validation with explicit descriptive diagnostic feedback.
+The final user-facing capability completing the V1.0 platform is the **Multi-Candidate Comparison & Historical Backtesting Lab**, accessible via UI at `/candidate-lab` and REST API at `GET /api/v1/candidate-lab`.
+
+### 6.1 Purpose & Scientific Framing
+When users consider multiple candidate tickets, they want to know:
+> **"How do my candidate choices compare with the historical evidence?"**
+
+The system answers this through multi-dimensional empirical feature extraction, historical corpus comparison, series occurrence analysis, and strict chronological walk-forward backtesting. Crucially, the system **never** answers *"Which one will win?"*, selects an automated preferred ticket, or computes opaque scores (e.g., "AI Score", "Winning Score", or "Probability Score").
+
+### 6.2 Key Capabilities & Architectural Guarantees
+1. **Multi-Candidate Validation & Bounded Limits:**
+   - Evaluates between 2 and 10 candidate tickets simultaneously.
+   - Detects duplicate candidates within the set and flags them clearly.
+   - Validates each candidate independently against authoritative lottery scheme rules with leading-zero preservation.
+2. **Side-by-Side Mathematical Feature Profiling:**
+   - Extracts digit sums, parity balance, unique digit counts, repeating sequences, and suffix structures side-by-side.
+3. **Historical Corpus Comparison:**
+   - Compares all candidates against the identical 103-draw / 39,550-result research corpus.
+   - Discloses exact historical occurrences (e.g., detecting BT-73 1st Prize winner), 4-digit suffix frequencies, and positional percentiles.
+4. **Series Comparison View & Critical Denominator Disclaimer:**
+   - Compares historical occurrences by candidate series (e.g., `BB` vs `BC` vs `BD`).
+   - Enforces the mandatory critical denominator disclaimer:
+     > *"Observed winner counts by series are not exposure-adjusted."*
+   - Strictly prohibits converting observed series winner counts into future winning probability.
+5. **Leakage-Safe Walk-Forward Historical Backtesting:**
+   - Evaluates candidates across multiple sequential chronological horizons (2 to 6 windows).
+   - Cryptographically asserts zero future draw leakage (`assertNoTemporalLeakage`): draws occurring after window cutoffs are provably excluded.
+   - Classifies empirical temporal stability: `HISTORICALLY STABLE`, `HISTORICALLY VARIABLE`, or `NOVEL`.
+6. **Descriptive Trade-Off Matrix & User Agency:**
+   - Summarizes observed occurrences, percentile ranks, stability classifications, and trade-off notes.
+   - Default sort preserves verbatim user input order (no preferred candidate pre-selection).
+   - Allows user-directed descriptive sorting (by digit sum, unique digits, or percentile).
+7. **Deterministic Analysis & Provenance:**
+   - Generates deterministic SHA-256 analysis fingerprints (`candidate_lab_<sha256>`).
+   - Lineage traces directly to `corpusVersion`, `featureVersion`, and `candidateSetVersion`.
+8. **Server-Side REST API Guardrails:**
+   - GET-only read endpoint (`GET /api/v1/candidate-lab`).
+   - Mutation attempts (POST, PUT, DELETE, PATCH) return `HTTP 405 Method Not Allowed` with `Allow: GET`.
 
 ---
 
 ## 7. Verification Gates & Release Audit
 
-All required quality gates have been executed and passed on `develop`:
+All required quality gates have been executed and passed on branch `develop`:
 
 ```bash
 # 1. TypeScript Static Typecheck
-npm run typecheck              # PASSED (0 errors across all packages and apps)
+npm run typecheck              # PASSED (0 errors across monorepo)
 
 # 2. Comprehensive Test Suite
-npm test                       # PASSED (36 test suites, 551 tests passed)
+npm test                       # PASSED (38 test suites, 576 tests passed)
 
 # 3. Firestore Security Rules Test Suite
 npm run test:rules             # PASSED (20/20 tests passed in Firebase emulator)
 
 # 4. Production Web Application Build
-npm run build                  # PASSED (All 14 static and dynamic routes compiled)
+npm run build                  # PASSED (All 15 static and dynamic routes compiled)
 
 # 5. Milestone Verification Scripts
 npm run verify:8c              # PASSED (18/18 Production Isolation Gates)
@@ -160,8 +191,23 @@ npm run verify:9b              # PASSED (12/12 Continuous Research Gates)
 npm run verify:9c              # PASSED (12/12 Scientific Validation Gates)
 npm run verify:9d              # PASSED (12/12 Research Provenance Gates)
 npm run verify:10a             # PASSED (20/20 Geographic Provenance Gates)
-npm run verify:v1              # PASSED (20/20 V1.0 Final Release Gates)
+npm run verify:v1              # PASSED (28/28 V1.0 Final Release Gates)
 ```
+
+### The 28 Final V1.0 Quality Gates
+- **Gates 01–04:** Research Corpus Integrity (103 draws, 39,550 winning results), 100-Draw PROD Baseline & Paused Scheduler, 9A Research Surface Integrity.
+- **Gates 05–07:** 9B Continuous Experiment Engine (EXP-001/002/003 baselines), 9C Scientific Validation Engine (null models, Holm-Bonferroni FWER), 9D Lineage DAG & Evidence Bundles.
+- **Gates 08–10:** 10A Geographic Foundation (380 major-prize observations, 14 revenue districts, `EXPOSURE_UNAVAILABLE` denominator guard).
+- **Gates 11–16:** Single-Ticket Research Sandbox (syntax validation, historical matching, deterministic fingerprinting, GET-only 405 guards, non-predictive guardrails).
+- **Gates 17–20:** Cryptographic Source Provenance, Artifact Immutability, DEV/PROD Isolation, Git Branch / Main Protection (`728ebc5`).
+- **Gate 21:** Multi-Candidate Validation & Duplicate Detection (2–10 candidate limits, duplicate warning).
+- **Gate 22:** Multi-Candidate Feature Extraction & Historical Comparison (side-by-side mathematical features, exact corpus match recognition).
+- **Gate 23:** Series Comparison & Critical Exposure Disclaimer (`"Observed winner counts by series are not exposure-adjusted"`).
+- **Gate 24:** Walk-Forward Backtesting & Leakage Protection (zero temporal leakage across chronological horizons, stability classification).
+- **Gate 25:** Deterministic Candidate Lab Analysis & Lineage Provenance (`candidate_lab_<sha256>`).
+- **Gate 26:** Candidate Lab API Read-Only & 405 Guards (`GET /api/v1/candidate-lab` server-side validation, 405 for POST/PUT/DELETE/PATCH).
+- **Gate 27:** Candidate Lab UI Route & Navigation Integrity (`/candidate-lab` page, navigation links, sandbox cross-links).
+- **Gate 28:** Multi-Candidate Non-Predictive Guardrails (preserves input order, zero opaque AI/winning scores, mandatory scientific notice).
 
 ### Git Repository Audit
 - **Current Branch:** `develop`

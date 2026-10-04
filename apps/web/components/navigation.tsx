@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { href: "/findings", label: "Findings & Evidence" },
   { href: "/geography", label: "Geography & Exposure" },
   { href: "/research-sandbox", label: "Research Sandbox" },
+  { href: "/candidate-lab", label: "Candidate Lab" },
   { href: "/ingestion", label: "Ingestion" }
 ];
 

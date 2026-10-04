@@ -162,10 +162,19 @@ export default function ResearchSandboxPage() {
           <span className="badge badge-emerald">V1.0 Scientific Platform</span>
           <span className="badge badge-blue">Directive 11</span>
         </div>
-        <p style={{ color: "var(--text-secondary)", fontSize: "0.95rem", margin: 0 }}>
+        <p style={{ color: "var(--text-secondary)", fontSize: "0.95rem", margin: 0, marginBottom: "0.75rem" }}>
           Enter a candidate ticket or historical draw input to evaluate its structural validity against official prize
           schemes, extract mathematical features, and inspect its empirical position in the historical research corpus.
         </p>
+        <div>
+          <Link
+            href="/candidate-lab"
+            className="btn btn-outline"
+            style={{ fontSize: "0.85rem", padding: "0.4rem 0.8rem", borderColor: "var(--accent-primary)", color: "var(--accent-primary)" }}
+          >
+            Switch to Multi-Candidate Comparison &amp; Backtesting Lab →
+          </Link>
+        </div>
       </div>
 
       {/* Preset Quick Selectors */}

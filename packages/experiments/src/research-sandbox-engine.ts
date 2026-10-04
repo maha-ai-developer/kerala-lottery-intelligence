@@ -46,7 +46,7 @@ export interface ResearchSandboxEngineOptions {
   schemeRegistry?: IPrizeSchemeRepository;
 }
 
-interface CorpusIndexedRecord {
+export interface CorpusIndexedRecord {
   drawId: string;
   drawNumber: string;
   drawDate: string; // DD/MM/YYYY
@@ -158,7 +158,11 @@ export class ResearchSandboxEngine {
     return records;
   }
 
-  private toIsoDate(dateStr: string): string {
+  public getCorpusRecords(): CorpusIndexedRecord[] {
+    return this.loadCorpusRecords();
+  }
+
+  public toIsoDate(dateStr: string): string {
     if (!dateStr) return "";
     const trimmed = dateStr.trim();
     if (trimmed.includes("/")) {

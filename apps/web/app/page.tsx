@@ -198,13 +198,22 @@ export default function OverviewPage() {
               statistical baseline benchmarks without prediction scores or betting bias.
             </p>
           </div>
-          <Link
-            href="/research-sandbox"
-            className="btn btn-primary"
-            style={{ padding: "0.6rem 1.25rem", fontSize: "0.95rem", fontWeight: 600 }}
-          >
-            Launch Research Sandbox &rarr;
-          </Link>
+          <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", alignItems: "center" }}>
+            <Link
+              href="/research-sandbox"
+              className="btn btn-primary"
+              style={{ padding: "0.6rem 1.25rem", fontSize: "0.95rem", fontWeight: 600 }}
+            >
+              Launch Research Sandbox &rarr;
+            </Link>
+            <Link
+              href="/candidate-lab"
+              className="btn btn-outline"
+              style={{ padding: "0.6rem 1.25rem", fontSize: "0.95rem", fontWeight: 600, borderColor: "var(--accent-primary)", color: "var(--accent-primary)" }}
+            >
+              Candidate Comparison Lab &rarr;
+            </Link>
+          </div>
         </div>
       </div>
 
