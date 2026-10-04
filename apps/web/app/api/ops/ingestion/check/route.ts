@@ -99,9 +99,12 @@ export async function POST(req: NextRequest) {
       const identityKey = `${cleanNum}_${docDateIso}`;
       const existingDoc = drawIdentityMap.get(identityKey);
 
-      let fileName = doc.drawNumber
-        ? `${doc.drawNumber}.pdf`
-        : doc.documentUrl.split("/").pop() || `draw-${docDateIso}.pdf`;
+      const urlBasename = doc.documentUrl ? doc.documentUrl.split("/").pop()?.split("?")[0] : undefined;
+      const isUrlCanonical = urlBasename && /^[0-9]+-[0-9]+-[0-9]{2}-[0-9]{2}-[0-9]{4}\.pdf$/i.test(urlBasename);
+
+      const canonicalFromUrl = isUrlCanonical ? urlBasename : undefined;
+      const sourceResponseName = doc.drawNumber ? `${doc.drawNumber}.pdf` : urlBasename;
+      let fileName = canonicalFromUrl || sourceResponseName || `draw-${docDateIso}.pdf`;
       if (!fileName.toLowerCase().endsWith(".pdf")) {
         fileName = `${fileName.split("?")[0]}.pdf`;
       }
@@ -114,7 +117,7 @@ export async function POST(req: NextRequest) {
         candidates.push({
           fileName: existingDoc.fileName || fileName,
           canonicalFilename: existingDoc.fileName,
-          sourceResponseFilename: fileName !== existingDoc.fileName ? fileName : undefined,
+          sourceResponseFilename: sourceResponseName !== existingDoc.fileName ? sourceResponseName : undefined,
           sourceUrl: doc.documentUrl,
           title: doc.title,
           drawDate: existingDoc.drawDate || doc.drawDate,
@@ -128,6 +131,8 @@ export async function POST(req: NextRequest) {
       } else {
         candidates.push({
           fileName,
+          canonicalFilename: canonicalFromUrl,
+          sourceResponseFilename: sourceResponseName,
           sourceUrl: doc.documentUrl,
           title: doc.title,
           drawDate: doc.drawDate,

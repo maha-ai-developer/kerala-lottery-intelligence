@@ -25,8 +25,6 @@ import {
 } from "@kerala-lottery/documents";
 import {
   FirestoreDocumentRepository,
-  InMemoryDocumentRepository,
-  InMemoryStorageService,
   FirebaseStorageService
 } from "@kerala-lottery/data";
 import {
@@ -136,15 +134,17 @@ export async function POST(req: NextRequest) {
 
     // 6. Single-Flight Concurrency Lease Guard
     const lockResult = await withOpsSingleFlightLock(runId, environment, async () => {
-      // Set up authoritative cloud persistence dependencies
-      let docRepo = isFirebaseConfigured
-        ? new FirestoreDocumentRepository(db)
-        : new InMemoryDocumentRepository();
+      // Fail-closed Firebase check: operational ingestion requires durable cloud persistence
+      if (!isFirebaseConfigured) {
+        throw new Error(
+          "FIREBASE_NOT_CONFIGURED: Authoritative Firebase backend is not configured. Operational ingestion requires durable cloud persistence and cannot proceed in-memory."
+        );
+      }
 
+      // Set up authoritative cloud persistence dependencies - fail closed
+      const docRepo = new FirestoreDocumentRepository(db);
       const storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "kerala-lottery-intel-dev.firebasestorage.app";
-      let storageService = isFirebaseConfigured
-        ? new FirebaseStorageService({ bucketName: storageBucket })
-        : new InMemoryStorageService();
+      const storageService = new FirebaseStorageService({ bucketName: storageBucket });
 
       const sourceIngestionService = new SourceIngestionService({
         documentRepository: docRepo,
@@ -238,11 +238,41 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(lockResult.data);
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
+    const rawMsg = err instanceof Error ? err.message : String(err);
+    const sanitizedMsg = rawMsg
+      .replace(/AIza[0-9A-Za-z-_]{35}/g, "[REDACTED_API_KEY]")
+      .replace(/Bearer\s+[A-Za-z0-9._-]+/gi, "[REDACTED_TOKEN]");
+
+    if (sanitizedMsg.includes("FIREBASE_NOT_CONFIGURED")) {
+      return NextResponse.json(
+        {
+          error: "FIREBASE_NOT_CONFIGURED",
+          message: "Authoritative Firebase backend is not configured. Operational ingestion requires durable cloud persistence and cannot proceed in-memory.",
+          statusCode: 503
+        },
+        { status: 503 }
+      );
+    }
+
+    if (
+      sanitizedMsg.includes("PDF") ||
+      sanitizedMsg.includes("INVALID_PDF") ||
+      sanitizedMsg.includes("Magic header")
+    ) {
+      return NextResponse.json(
+        {
+          error: "INVALID_PDF",
+          message: `PDF format validation failed: ${sanitizedMsg}`,
+          statusCode: 400
+        },
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json(
       {
         error: "UPLOAD_INGESTION_FAILED",
-        message: `Upload ingestion failed: ${message}`,
+        message: `Upload ingestion failed: ${sanitizedMsg}`,
         statusCode: 500
       },
       { status: 500 }

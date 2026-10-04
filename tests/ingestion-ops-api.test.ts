@@ -32,6 +32,7 @@ import {
   PATCH as v1RunsPatch
 } from "../apps/web/app/api/v1/ingestion/runs/route";
 import { getOpsLockManager } from "../apps/web/lib/ops-guard";
+import { isFirebaseConfigured } from "../apps/web/lib/firebase";
 import { computeSha256 } from "@kerala-lottery/documents";
 
 describe("Operational Ingestion Console: API & Security Boundary Tests", () => {
@@ -216,7 +217,7 @@ describe("Operational Ingestion Console: API & Security Boundary Tests", () => {
       expect(json.message).toContain("PDF Validation Failed");
     });
 
-    it("accepts valid PDF in DEV and handles idempotent deduplication", async () => {
+    it("accepts valid PDF in DEV and enforces fail-closed cloud persistence", async () => {
       const req = new NextRequest("http://localhost:3000/api/ops/ingestion/upload", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -228,15 +229,22 @@ describe("Operational Ingestion Console: API & Security Boundary Tests", () => {
       });
 
       const res = await uploadPost(req);
-      expect(res.status).toBe(200);
-      const json = await res.json();
-
-      expect(json.success).toBe(true);
-      expect(json.environment).toBe("DEV");
-      expect(json.sha256).toBe(sampleSha);
-      expect(json.cloudStoragePath).toBe(`source-documents/${sampleSha}.pdf`);
-      expect(json.firestoreDocumentId).toBe(sampleSha);
-      expect(json.alreadyKnown).toBeGreaterThanOrEqual(1);
+      if (!isFirebaseConfigured) {
+        // Phase 2: strictly fail-closed when Firebase is unconfigured, zero in-memory persistence
+        expect(res.status).toBe(503);
+        const json = await res.json();
+        expect(json.error).toBe("FIREBASE_NOT_CONFIGURED");
+        expect(json.message).toContain("Authoritative Firebase backend is not configured");
+      } else {
+        expect(res.status).toBe(200);
+        const json = await res.json();
+        expect(json.success).toBe(true);
+        expect(json.environment).toBe("DEV");
+        expect(json.sha256).toBe(sampleSha);
+        expect(json.cloudStoragePath).toBe(`source-documents/${sampleSha}.pdf`);
+        expect(json.firestoreDocumentId).toBe(sampleSha);
+        expect(json.alreadyKnown).toBeGreaterThanOrEqual(1);
+      }
     });
 
     it("rejects GET on /api/ops/ingestion/upload with 405 Method Not Allowed", async () => {

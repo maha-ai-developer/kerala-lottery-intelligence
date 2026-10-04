@@ -18,6 +18,7 @@ import {
   GeographicWinnerDataset,
   TicketDistributionExposure
 } from "./geographic-types";
+import { GeographicAnalysisEngine } from "./geographic-analysis-engine";
 
 export class GeographicRepository {
   private readonly baseDir: string;
@@ -28,7 +29,16 @@ export class GeographicRepository {
 
   constructor(options?: { baseDir?: string }) {
     const cwd = process.cwd();
-    this.baseDir = options?.baseDir || join(cwd, "data/processed-cache/experiments/geography");
+    const candidateDirs = [
+      options?.baseDir,
+      join(cwd, "data/processed-cache/experiments/geography"),
+      join(cwd, "apps/web/data/processed-cache/experiments/geography"),
+      join(cwd, "../../data/processed-cache/experiments/geography"),
+      join(cwd, "../../../data/processed-cache/experiments/geography"),
+      join(cwd, "../data/processed-cache/experiments/geography")
+    ].filter((dir): dir is string => typeof dir === "string" && existsSync(join(dir, "geowin_canonical.json")));
+
+    this.baseDir = candidateDirs[0] || options?.baseDir || join(cwd, "data/processed-cache/experiments/geography");
     this.geoDatasetPath = join(this.baseDir, "geowin_canonical.json");
     this.geoAnalysisPath = join(this.baseDir, "geoanalysis_canonical.json");
     this.exposureDir = join(this.baseDir, "exposure");
@@ -110,12 +120,19 @@ export class GeographicRepository {
   }
 
   public getGeographicAnalysis(): GeographicAnalysis | null {
-    if (!existsSync(this.geoAnalysisPath)) return null;
-    try {
-      return JSON.parse(readFileSync(this.geoAnalysisPath, "utf-8")) as GeographicAnalysis;
-    } catch {
-      return null;
+    if (existsSync(this.geoAnalysisPath)) {
+      try {
+        return JSON.parse(readFileSync(this.geoAnalysisPath, "utf-8")) as GeographicAnalysis;
+      } catch {
+        // Fall through to on-demand generation
+      }
     }
+    const dataset = this.getGeographicDataset();
+    if (dataset) {
+      const engine = new GeographicAnalysisEngine();
+      return engine.generateGeographicAnalysis({ observations: dataset.observations });
+    }
+    return null;
   }
 
   // ==========================================================================

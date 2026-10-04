@@ -180,9 +180,20 @@ export class ExperimentRepository {
 
   constructor(options: ExperimentRepositoryOptions = {}) {
     this.inMemoryOnly = options.inMemoryOnly ?? false;
+    const cwd = process.cwd();
+    const candidateDirs = [
+      options.baseDir,
+      join(cwd, "data/processed-cache/experiments"),
+      join(cwd, "apps/web/data/processed-cache/experiments"),
+      join(cwd, "..", "data/processed-cache/experiments"),
+      join(cwd, "../..", "data/processed-cache/experiments"),
+      join(cwd, "../../..", "data/processed-cache/experiments")
+    ].filter((dir): dir is string => typeof dir === "string" && existsSync(join(dir, "runs")));
+
     this.baseDir =
-      options.baseDir ??
-      join(process.cwd(), "data/processed-cache/experiments");
+      candidateDirs[0] ||
+      options.baseDir ||
+      join(cwd, "data/processed-cache/experiments");
     this.runsDir = join(this.baseDir, "runs");
     this.artifactsDir = join(this.baseDir, "artifacts");
     this.lineageDir = join(this.baseDir, "lineage");

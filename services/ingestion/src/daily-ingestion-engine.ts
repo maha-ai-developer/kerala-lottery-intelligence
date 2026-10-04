@@ -70,26 +70,106 @@ export const KNOWN_CANONICAL_SOURCE_MAPPINGS: Record<
   }
 };
 
+export const CANONICAL_GOVERNMENT_FILENAME_REGEX =
+  /^[0-9]+-[0-9]+-[0-9]{2}-[0-9]{2}-[0-9]{4}\.pdf$/i;
+
+function extractBasenameFromUrl(urlStr?: string): string | undefined {
+  if (!urlStr) return undefined;
+  try {
+    const parsed = new URL(urlStr);
+    const base = parsed.pathname.split("/").pop();
+    if (base && base.toLowerCase().endsWith(".pdf")) {
+      return decodeURIComponent(base);
+    }
+  } catch {
+    const base = urlStr.split("/").pop()?.split("?")[0];
+    if (base && base.toLowerCase().endsWith(".pdf")) {
+      return base;
+    }
+  }
+  return undefined;
+}
+
+export interface ResolveFilenameOptions {
+  candidateDrawNumber?: string;
+  verifiedDrawNumber?: string;
+  existingDrawNumber?: string;
+}
+
+export interface ResolvedFilenames {
+  canonicalFilename?: string;
+  sourceResponseFilename: string;
+  isCanonicalResolved: boolean;
+  conflict?: string;
+}
+
 export function resolveCanonicalAndResponseFilename(
   candidateFileName: string,
-  sha256: string,
+  sha256?: string,
   candidateCanonical?: string,
-  candidateResponse?: string
-): { canonicalFilename: string; sourceResponseFilename?: string } {
-  const known = KNOWN_CANONICAL_SOURCE_MAPPINGS[sha256];
-  if (known) {
+  candidateResponse?: string,
+  verifiedSourceUrl?: string,
+  options?: ResolveFilenameOptions
+): ResolvedFilenames {
+  // Check conflicting draw identity
+  const candidateDraw = options?.candidateDrawNumber?.trim().toUpperCase();
+  const verifiedDraw = (options?.verifiedDrawNumber || options?.existingDrawNumber)?.trim().toUpperCase();
+  let conflict: string | undefined;
+
+  if (candidateDraw && verifiedDraw && candidateDraw !== verifiedDraw) {
+    conflict = `Draw identity mismatch: Candidate draw '${candidateDraw}' differs from verified/existing draw '${verifiedDraw}'`;
+  }
+
+  // 1. Check known SHA mapping
+  if (sha256 && KNOWN_CANONICAL_SOURCE_MAPPINGS[sha256]) {
+    const known = KNOWN_CANONICAL_SOURCE_MAPPINGS[sha256];
     return {
-      canonicalFilename: candidateCanonical || known.canonicalFilename,
-      sourceResponseFilename: candidateResponse || known.sourceResponseFilename
+      canonicalFilename: known.canonicalFilename,
+      sourceResponseFilename: candidateResponse || candidateFileName || known.sourceResponseFilename,
+      isCanonicalResolved: true,
+      conflict
     };
   }
 
-  const isCanonicalFormat = /^[0-9]+-[0-9]+-[0-9]{2}-[0-9]{2}-[0-9]{4}\.pdf$/.test(candidateFileName);
-  const canonicalFilename = candidateCanonical || (isCanonicalFormat ? candidateFileName : candidateFileName);
-  const sourceResponseFilename =
-    candidateResponse || (candidateFileName !== canonicalFilename ? candidateFileName : undefined);
+  // 2. Verified URL basename (official government PDF basename)
+  const urlBasename = extractBasenameFromUrl(verifiedSourceUrl);
+  if (urlBasename && CANONICAL_GOVERNMENT_FILENAME_REGEX.test(urlBasename)) {
+    return {
+      canonicalFilename: urlBasename,
+      sourceResponseFilename: candidateResponse || candidateFileName,
+      isCanonicalResolved: true,
+      conflict
+    };
+  }
 
-  return { canonicalFilename, sourceResponseFilename };
+  // 3. Explicit candidateCanonical matching official format
+  if (candidateCanonical && CANONICAL_GOVERNMENT_FILENAME_REGEX.test(candidateCanonical)) {
+    return {
+      canonicalFilename: candidateCanonical,
+      sourceResponseFilename: candidateResponse || candidateFileName,
+      isCanonicalResolved: true,
+      conflict
+    };
+  }
+
+  // 4. Candidate filename itself is already in canonical format
+  if (CANONICAL_GOVERNMENT_FILENAME_REGEX.test(candidateFileName)) {
+    return {
+      canonicalFilename: candidateFileName,
+      sourceResponseFilename: candidateResponse || candidateFileName,
+      isCanonicalResolved: true,
+      conflict
+    };
+  }
+
+  // 5. Unresolved: Do NOT fabricate or guess a canonical government filename!
+  // Leave canonicalFilename unresolved (undefined) and preserve candidateFileName as sourceResponseFilename
+  return {
+    canonicalFilename: undefined,
+    sourceResponseFilename: candidateResponse || candidateFileName,
+    isCanonicalResolved: false,
+    conflict
+  };
 }
 import {
   createAuthoritativePrizeSchemeRegistry,
@@ -357,7 +437,9 @@ export class DailyIngestionEngine {
             cand.fileName,
             sha,
             cand.canonicalFilename,
-            cand.sourceResponseFilename
+            cand.sourceResponseFilename,
+            cand.sourceUrl,
+            { candidateDrawNumber: cand.drawNumber }
           );
           cand.canonicalFilename = resolved.canonicalFilename;
           cand.sourceResponseFilename = resolved.sourceResponseFilename;
@@ -601,11 +683,16 @@ export class DailyIngestionEngine {
             if (candidate.drawNumber && record && candidate.drawNumber !== record.drawNumber) {
               metadataWarning = `Metadata mismatch: Candidate draw '${candidate.drawNumber}' differs from cached '${record.drawNumber}' for same SHA`;
             }
-            const { canonicalFilename, sourceResponseFilename } = resolveCanonicalAndResponseFilename(
+            const { canonicalFilename, sourceResponseFilename, conflict } = resolveCanonicalAndResponseFilename(
               candidate.fileName,
               sha256,
               record?.canonicalFilename || candidate.canonicalFilename,
-              record?.sourceResponseFilename || candidate.sourceResponseFilename
+              record?.sourceResponseFilename || candidate.sourceResponseFilename,
+              candidate.sourceUrl || record?.sourceUrl,
+              {
+                candidateDrawNumber: candidate.drawNumber,
+                existingDrawNumber: record?.drawNumber
+              }
             );
             auditRecords.push({
               sourceUrl: candidate.sourceUrl || record?.sourceUrl,
@@ -620,7 +707,7 @@ export class DailyIngestionEngine {
               validationStatus: "ALREADY_KNOWN",
               actionTaken: "ALREADY_KNOWN",
               isDuplicate: false,
-              errorDetails: metadataWarning
+              errorDetails: metadataWarning || conflict
             });
           }
           continue;
@@ -777,7 +864,11 @@ export class DailyIngestionEngine {
           candidate.fileName,
           sha256,
           candidate.canonicalFilename,
-          candidate.sourceResponseFilename
+          candidate.sourceResponseFilename,
+          candidate.sourceUrl,
+          {
+            candidateDrawNumber: candidate.drawNumber
+          }
         );
 
         if (dryRun) {
@@ -800,7 +891,8 @@ export class DailyIngestionEngine {
           });
         } else {
           // Normal mode: persist to local sourceDir if acquired remotely and file not present
-          const destFile = join(this.sourceDir, canonicalFilename);
+          const effectiveFileName = canonicalFilename || sourceResponseFilename || candidate.fileName;
+          const destFile = join(this.sourceDir, effectiveFileName);
           if (!existsSync(destFile) && existsSync(this.sourceDir)) {
             try {
               writeFileSync(destFile, uint8);
@@ -814,7 +906,7 @@ export class DailyIngestionEngine {
             try {
               await this.sourceIngestionService.ingest({
                 fileBuffer: uint8,
-                fileName: canonicalFilename,
+                fileName: effectiveFileName,
                 sourceUrl: candidate.sourceUrl,
                 title: candidate.title
               });
@@ -825,7 +917,7 @@ export class DailyIngestionEngine {
 
           // Save validated graph to cache & update manifest
           this.cacheManager.saveValidGraph(graph, {
-            fileName: canonicalFilename,
+            fileName: effectiveFileName,
             canonicalFilename,
             sourceResponseFilename,
             sourceUrl: candidate.sourceUrl,
@@ -845,7 +937,7 @@ export class DailyIngestionEngine {
             lottery: lotteryName,
             draw: drawNumber,
             date: drawDate,
-            fileName: canonicalFilename
+            fileName: effectiveFileName
           });
 
           auditRecords.push({

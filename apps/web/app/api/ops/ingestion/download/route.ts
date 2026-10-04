@@ -26,8 +26,6 @@ import {
 } from "@kerala-lottery/documents";
 import {
   FirestoreDocumentRepository,
-  InMemoryDocumentRepository,
-  InMemoryStorageService,
   FirebaseStorageService
 } from "@kerala-lottery/data";
 import {
@@ -51,7 +49,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { candidate, environment: envRequested = "DEV" } = body;
 
-    // 2. Strict Environment Safety Guard (Mutating action)
+    // 2. Strict Environment Safety Guard (Mutating action - strictly rejects PROD with 403)
     const envCheck = validateOpsEnvironment(envRequested, true);
     if (!envCheck.allowed) {
       return envCheck.errorResponse!;
@@ -69,11 +67,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (!candidate.fileBase64 && !candidate.fileBuffer && !candidate.sourceUrl) {
+      return NextResponse.json(
+        {
+          error: "MISSING_SOURCE_PAYLOAD",
+          message: "Candidate requires valid 'sourceUrl', 'fileBase64', or 'fileBuffer' for acquisition.",
+          statusCode: 400
+        },
+        { status: 400 }
+      );
+    }
+
     const runId = `run_ops_download_${new Date().toISOString().replace(/[:.]/g, "-")}_${Math.random().toString(36).substring(2, 8)}`;
     const acquisitionService = new DocumentAcquisitionService();
     const discoveryService = new OfficialSourceDiscoveryService();
 
-    // 3. Single-Flight Concurrency Lease Guard
+    // 4. Single-Flight Concurrency Lease Guard
     const lockResult = await withOpsSingleFlightLock(runId, environment, async () => {
       // Resolve candidate file bytes
       let fileBuffer: Uint8Array | undefined;
@@ -85,16 +94,21 @@ export async function POST(req: NextRequest) {
         fileBuffer = new Uint8Array(candidate.fileBuffer);
       } else if (candidate.sourceUrl) {
         // Acquire directly from official source URL
-        const acq = await acquisitionService.acquire({
-          url: candidate.sourceUrl,
-          officialSource: KERALA_STATE_LOTTERY_PORTAL,
-          title: candidate.title
-        });
-        fileBuffer = acq.fileBuffer;
+        try {
+          const acq = await acquisitionService.acquire({
+            url: candidate.sourceUrl,
+            officialSource: KERALA_STATE_LOTTERY_PORTAL,
+            title: candidate.title
+          });
+          fileBuffer = acq.fileBuffer;
+        } catch (acqErr: unknown) {
+          const acqMsg = acqErr instanceof Error ? acqErr.message : String(acqErr);
+          throw new Error(`ACQUISITION_FAILED: ${acqMsg}`);
+        }
       }
 
-      if (!fileBuffer) {
-        throw new Error("Unable to acquire candidate PDF bytes from sourceUrl or provided payload.");
+      if (!fileBuffer || fileBuffer.byteLength === 0) {
+        throw new Error("MISSING_SOURCE_PAYLOAD: Acquired file buffer is empty or unavailable.");
       }
 
       // Validate narrow PDF format
@@ -105,7 +119,11 @@ export async function POST(req: NextRequest) {
         candidate.fileName,
         sha256,
         candidate.canonicalFilename,
-        candidate.sourceResponseFilename
+        candidate.sourceResponseFilename,
+        candidate.sourceUrl,
+        {
+          candidateDrawNumber: candidate.drawNumber
+        }
       );
 
       const injectedCandidate: InjectedCandidate = {
@@ -120,15 +138,17 @@ export async function POST(req: NextRequest) {
         lotteryCode: candidate.lotteryCode
       };
 
-      // Set up authoritative cloud persistence dependencies
-      let docRepo = isFirebaseConfigured
-        ? new FirestoreDocumentRepository(db)
-        : new InMemoryDocumentRepository();
+      // Fail-closed Firebase check: operational ingestion requires durable cloud persistence
+      if (!isFirebaseConfigured) {
+        throw new Error(
+          "FIREBASE_NOT_CONFIGURED: Authoritative Firebase backend is not configured. Operational ingestion requires durable cloud persistence and cannot proceed in-memory."
+        );
+      }
 
+      // Set up authoritative cloud persistence dependencies - fail closed
+      const docRepo = new FirestoreDocumentRepository(db);
       const storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "kerala-lottery-intel-dev.firebasestorage.app";
-      let storageService = isFirebaseConfigured
-        ? new FirebaseStorageService({ bucketName: storageBucket })
-        : new InMemoryStorageService();
+      const storageService = new FirebaseStorageService({ bucketName: storageBucket });
 
       const sourceIngestionService = new SourceIngestionService({
         documentRepository: docRepo,
@@ -224,11 +244,69 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(lockResult.data);
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
+    const rawMsg = err instanceof Error ? err.message : String(err);
+    // Sanitize any potential credential or private info
+    const sanitizedMsg = rawMsg
+      .replace(/AIza[0-9A-Za-z-_]{35}/g, "[REDACTED_API_KEY]")
+      .replace(/Bearer\s+[A-Za-z0-9._-]+/gi, "[REDACTED_TOKEN]");
+
+    if (sanitizedMsg.includes("FIREBASE_NOT_CONFIGURED")) {
+      return NextResponse.json(
+        {
+          error: "FIREBASE_NOT_CONFIGURED",
+          message: "Authoritative Firebase backend is not configured. Operational ingestion requires durable cloud persistence and cannot proceed in-memory.",
+          statusCode: 503
+        },
+        { status: 503 }
+      );
+    }
+
+    if (
+      sanitizedMsg.includes("ACQUISITION_FAILED") ||
+      sanitizedMsg.includes("fetch failed") ||
+      sanitizedMsg.includes("ECONNREFUSED") ||
+      sanitizedMsg.includes("ETIMEDOUT")
+    ) {
+      return NextResponse.json(
+        {
+          error: "UPSTREAM_ACQUISITION_FAILED",
+          message: `Official portal acquisition failed: ${sanitizedMsg}`,
+          statusCode: 502
+        },
+        { status: 502 }
+      );
+    }
+
+    if (
+      sanitizedMsg.includes("PDF") ||
+      sanitizedMsg.includes("INVALID_PDF") ||
+      sanitizedMsg.includes("Magic header")
+    ) {
+      return NextResponse.json(
+        {
+          error: "INVALID_PDF",
+          message: `PDF format validation failed: ${sanitizedMsg}`,
+          statusCode: 400
+        },
+        { status: 400 }
+      );
+    }
+
+    if (sanitizedMsg.includes("MISSING_SOURCE_PAYLOAD") || sanitizedMsg.includes("Unable to acquire")) {
+      return NextResponse.json(
+        {
+          error: "BAD_REQUEST",
+          message: sanitizedMsg,
+          statusCode: 400
+        },
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json(
       {
         error: "DOWNLOAD_INGESTION_FAILED",
-        message: `Download and ingestion failed: ${message}`,
+        message: `Download and ingestion failed: ${sanitizedMsg}`,
         statusCode: 500
       },
       { status: 500 }

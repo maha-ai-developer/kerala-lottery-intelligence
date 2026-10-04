@@ -5,6 +5,10 @@ const nextConfig: NextConfig = {
 
   output: "standalone",
 
+  outputFileTracingIncludes: {
+    "/api/**/*": ["./data/**/*"]
+  },
+
   transpilePackages: [
     "@kerala-lottery/domain",
     "@kerala-lottery/validation",

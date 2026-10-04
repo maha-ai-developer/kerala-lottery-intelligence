@@ -206,24 +206,42 @@ export default function ExperimentsPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [filterExperiment, setFilterExperiment] = useState<string>("ALL");
 
+  const [apiError, setApiError] = useState<string | null>(null);
+
   useEffect(() => {
     async function loadData() {
       try {
         const [regRes, runsRes] = await Promise.all([
-          fetch("/api/v1/registered-experiments"),
-          fetch("/api/v1/experiment-runs?pageSize=50")
+          fetch("/api/v1/experiments?pageSize=100").catch(err => ({ ok: false, status: 500, json: async () => ({ error: true, message: String(err) }) })),
+          fetch("/api/v1/experiment-runs?pageSize=50").catch(err => ({ ok: false, status: 500, json: async () => ({ error: true, message: String(err) }) }))
         ]);
 
         if (regRes.ok) {
           const regJson = await regRes.json();
-          setRegistry(regJson.data || []);
+          if (Array.isArray(regJson?.data)) {
+            setRegistry(regJson.data);
+          } else {
+            setRegistry([]);
+            setApiError("Canonical experiments API returned an unexpected non-array format.");
+          }
+        } else {
+          setRegistry([]);
+          setApiError(`Failed to load experiments registry (HTTP ${regRes.status}).`);
         }
+
         if (runsRes.ok) {
           const runsJson = await runsRes.json();
-          setRuns(runsJson.data || []);
+          if (Array.isArray(runsJson?.data)) {
+            setRuns(runsJson.data);
+          } else {
+            setRuns([]);
+          }
+        } else {
+          setRuns([]);
         }
       } catch (err) {
         console.error("Failed to load continuous research data:", err);
+        setApiError(err instanceof Error ? err.message : String(err));
       } finally {
         setLoading(false);
       }
@@ -271,9 +289,11 @@ export default function ExperimentsPage() {
     }
   }
 
+  const safeRuns = Array.isArray(runs) ? runs : [];
+  const safeRegistry = Array.isArray(registry) ? registry : [];
   const filteredRuns = filterExperiment === "ALL"
-    ? runs
-    : runs.filter((r) => r.experimentId === filterExperiment);
+    ? safeRuns
+    : safeRuns.filter((r) => r && r.experimentId === filterExperiment);
 
   return (
     <div className="container" style={{ padding: "2rem 1.5rem" }}>
@@ -286,6 +306,12 @@ export default function ExperimentsPage() {
           All results are purely descriptive historical benchmarks. ZERO prediction claims, gambling recommendations, or future probability guarantees.
         </p>
       </div>
+
+      {apiError && (
+        <div style={{ padding: "1rem 1.25rem", borderRadius: "0.5rem", background: "rgba(239, 68, 68, 0.15)", border: "1px solid rgba(239, 68, 68, 0.3)", color: "#fca5a5", marginBottom: "1.5rem", fontSize: "0.9rem" }}>
+          <strong>Notice:</strong> {apiError}
+        </div>
+      )}
 
       {/* Header */}
       <div style={{ marginBottom: "2rem" }}>
@@ -313,12 +339,12 @@ export default function ExperimentsPage() {
                 1. Formal Experiment Registry (9B.2)
               </h2>
               <span className="mono" style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>
-                {registry.length} Registered Baselines
+                {safeRegistry.length} Registered Baselines
               </span>
             </div>
 
             <div className="grid-3" style={{ gap: "1.25rem" }}>
-              {registry.map((exp) => (
+              {safeRegistry.map((exp) => (
                 <div
                   key={exp.experimentId}
                   style={{
@@ -405,8 +431,8 @@ export default function ExperimentsPage() {
                     fontSize: "0.85rem"
                   }}
                 >
-                  <option value="ALL">All Experiments ({runs.length})</option>
-                  {registry.map((e) => (
+                  <option value="ALL">All Experiments ({safeRuns.length})</option>
+                  {safeRegistry.map((e) => (
                     <option key={e.experimentId} value={e.experimentId}>
                       {e.experimentId}
                     </option>
@@ -576,7 +602,7 @@ export default function ExperimentsPage() {
                   </div>
 
                   {/* Lineage DAG Flow */}
-                  {selectedLineage && (
+                  {selectedLineage && Array.isArray(selectedLineage.chain) && (
                     <div style={{ marginBottom: "1.5rem" }}>
                       <h4 style={{ fontSize: "0.95rem", fontWeight: 700, marginBottom: "0.75rem", color: "var(--accent-cyan)" }}>
                         Traceable Lineage DAG ({selectedLineage.chain.length} Invariant Stages — Complete: {selectedLineage.isComplete ? "✓ YES" : "✗ NO"})
@@ -734,7 +760,7 @@ export default function ExperimentsPage() {
                       </div>
 
                       {/* Walk-Forward Folds Table */}
-                      {selectedValidation.temporalRobustness.windowResults && selectedValidation.temporalRobustness.windowResults.length > 0 && (
+                      {selectedValidation.temporalRobustness.windowResults && Array.isArray(selectedValidation.temporalRobustness.windowResults) && selectedValidation.temporalRobustness.windowResults.length > 0 && (
                         <div style={{ marginBottom: "1rem" }}>
                           <div style={{ fontSize: "0.82rem", fontWeight: 700, marginBottom: "0.4rem", color: "var(--text-secondary)" }}>
                             Walk-Forward Evaluation Windows (Chronological Expanding Folds)
@@ -775,7 +801,7 @@ export default function ExperimentsPage() {
                   )}
 
                   {/* Predictions Sample from Result Artifact */}
-                  {selectedArtifact && selectedArtifact.predictionsSample && selectedArtifact.predictionsSample.length > 0 && (
+                  {selectedArtifact && selectedArtifact.predictionsSample && Array.isArray(selectedArtifact.predictionsSample) && selectedArtifact.predictionsSample.length > 0 && (
                     <div>
                       <h4 style={{ fontSize: "0.95rem", fontWeight: 700, marginBottom: "0.5rem", color: "var(--text-primary)" }}>
                         Result Artifact Verification Sample ({selectedArtifact.predictionsSample.length} Test Observations)

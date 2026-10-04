@@ -1,6 +1,6 @@
 # ==============================================================================
 # Kerala State Lottery Intelligence & Experiment Platform
-# Firebase App Hosting Configuration (Authoritative)
+# Firebase App Hosting Configuration (Authoritative DEV)
 # Location: apps/web/apphosting.yaml
 # App Root: apps/web
 # Documentation: https://firebase.google.com/docs/app-hosting/configure
@@ -14,12 +14,45 @@ runConfig:
   maxInstances: 10
   concurrency: 80
 
-# Environment-Independent Application Metadata
-# Target-specific Firebase Web configurations (NEXT_PUBLIC_APP_ENV, NEXT_PUBLIC_FIREBASE_*)
-# are provided via App Hosting Backend Environment Variables in the Firebase Console.
+# Environment Configuration for DEV Web App
 env:
   - variable: NEXT_PUBLIC_APP_VERSION
     value: "0.1.0"
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_APP_ENV
+    value: "development"
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    value: "kerala-lottery-intel-dev"
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_API_KEY
+    value: "AIzaSyCctKlDbVa76Yofy6OTebPO2_2Bqa6R2D4"
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+    value: "kerala-lottery-intel-dev.firebaseapp.com"
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    value: "kerala-lottery-intel-dev.firebasestorage.app"
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+    value: "608186999779"
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_APP_ID
+    value: "1:608186999779:web:316c03af9f7604c0eb36d6"
     availability:
       - BUILD
       - RUNTIME

@@ -485,7 +485,15 @@ export class ResearchDataService {
 
   constructor(options?: { baseDir?: string }) {
     const cwd = process.cwd();
-    const base = options?.baseDir ?? cwd;
+    const candidateBases = [
+      options?.baseDir,
+      cwd,
+      join(cwd, "apps/web"),
+      join(cwd, ".."),
+      join(cwd, "../.."),
+      join(cwd, "../../..")
+    ].filter((dir): dir is string => typeof dir === "string" && existsSync(join(dir, "data/processed-cache/manifest.json")));
+    const base = candidateBases[0] || options?.baseDir || cwd;
     this.manifestPath = join(base, "data/processed-cache/manifest.json");
     this.graphsDir = join(base, "data/processed-cache/graphs");
   }

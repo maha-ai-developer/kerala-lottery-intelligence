@@ -49,18 +49,30 @@ export default function GeographyPage() {
       try {
         setLoading(true);
         const [dsRes, distRes, anRes] = await Promise.all([
-          fetch("/api/v1/geography").then(r => r.json()),
-          fetch("/api/v1/geography/districts").then(r => r.json()),
-          fetch("/api/v1/geography/analysis").then(r => r.json())
+          fetch("/api/v1/geography").then(r => r.json()).catch(err => ({ error: true, message: String(err) })),
+          fetch("/api/v1/geography/districts").then(r => r.json()).catch(err => ({ error: true, message: String(err) })),
+          fetch("/api/v1/geography/analysis").then(r => r.json()).catch(err => ({ error: true, message: String(err) }))
         ]);
 
-        if (dsRes.error) throw new Error(dsRes.message || "Failed to load dataset");
-        if (distRes.error) throw new Error(distRes.message || "Failed to load district summaries");
-        if (anRes.error) throw new Error(anRes.message || "Failed to load analysis");
+        if (dsRes?.error && !dsRes?.data) {
+          setError(dsRes.message || "Failed to load geographic dataset");
+        }
 
-        setDataset(dsRes);
-        setDistricts(distRes.districts || []);
-        setAnalysis(anRes);
+        const resolvedDataset = dsRes?.data ?? dsRes ?? null;
+        const resolvedDistricts = Array.isArray(distRes?.data)
+          ? distRes.data
+          : (Array.isArray(distRes?.districts)
+            ? distRes.districts
+            : (Array.isArray(distRes) ? distRes : []));
+        const resolvedAnalysis = anRes?.data ?? anRes ?? null;
+
+        if (resolvedDataset && typeof resolvedDataset === "object") {
+          setDataset(resolvedDataset);
+        }
+        setDistricts(resolvedDistricts);
+        if (resolvedAnalysis && typeof resolvedAnalysis === "object") {
+          setAnalysis(resolvedAnalysis);
+        }
       } catch (err: any) {
         setError(err.message || String(err));
       } finally {
@@ -70,8 +82,8 @@ export default function GeographyPage() {
     loadData();
   }, []);
 
-  // Filter observations
-  const allObservations = dataset?.observations || [];
+  // Filter observations defensively
+  const allObservations = Array.isArray(dataset?.observations) ? dataset.observations : [];
   const filteredObservations = allObservations.filter(obs => {
     if (selectedDistrict !== "ALL" && obs.normalizedDistrict !== selectedDistrict) return false;
     if (selectedTier !== "ALL" && !obs.prizeTier.toLowerCase().includes(selectedTier.toLowerCase())) return false;
@@ -261,9 +273,9 @@ export default function GeographyPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {districts
+                  {(Array.isArray(districts) ? districts : [])
                     .slice()
-                    .sort((a, b) => b.totalObservedWinners - a.totalObservedWinners)
+                    .sort((a, b) => (b.totalObservedWinners || 0) - (a.totalObservedWinners || 0))
                     .map((d, idx) => (
                       <tr
                         key={d.district}
