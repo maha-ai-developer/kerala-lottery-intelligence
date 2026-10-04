@@ -5,21 +5,25 @@ import { useEffect, useState } from "react";
 interface RegisteredExperiment {
   experimentId: string;
   name: string;
-  version: string;
-  description: string;
-  methodology: string;
-  targetId: string;
-  targetName: string;
-  populationScope: string;
-  modelType: string;
-  parameters: Record<string, unknown>;
-  metrics: string[];
-  temporalPolicy: {
-    strategy: string;
+  version?: string;
+  description?: string;
+  methodology?: string;
+  targetId?: string;
+  targetName?: string;
+  populationScope?: string;
+  modelType?: string;
+  parameters?: Record<string, unknown>;
+  metrics?: string[];
+  temporalPolicy?: {
+    strategy?: string;
     testRatio?: number;
   };
-  deterministicHash: string;
-  researchBoundary: string;
+  strategy?: string;
+  target?: string;
+  datasetId?: string;
+  evaluationMethod?: string;
+  deterministicHash?: string;
+  researchBoundary?: string;
 }
 
 interface ExperimentRun {
@@ -359,9 +363,9 @@ export default function ExperimentsPage() {
                 >
                   <div>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.5rem" }}>
-                      <span className="badge badge-purple">{exp.modelType} BASELINE</span>
+                      <span className="badge badge-purple">{exp.modelType || exp.strategy || "BASELINE"}</span>
                       <span className="mono" style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
-                        v{exp.version}
+                        {exp.version ? `v${exp.version}` : (exp.experimentId || "")}
                       </span>
                     </div>
 
@@ -370,25 +374,26 @@ export default function ExperimentsPage() {
                     </h3>
 
                     <p style={{ fontSize: "0.82rem", color: "var(--text-secondary)", marginBottom: "0.75rem", lineHeight: 1.4 }}>
-                      {exp.description}
+                      {exp.description || exp.evaluationMethod || "Registered Baseline Experiment Model"}
                     </p>
 
                     <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", display: "flex", flexDirection: "column", gap: "0.3rem" }}>
                       <div>
-                        Target: <strong className="mono">{exp.targetName}</strong> ({exp.targetId})
+                        Target: <strong className="mono">{exp.targetName || exp.target || "observedLastDigit"}</strong> {exp.targetId ? `(${exp.targetId})` : ""}
                       </div>
                       <div>
-                        Policy: <span className="mono">{exp.temporalPolicy.strategy}</span> ({(exp.temporalPolicy.testRatio ?? 0.2) * 100}% Test)
+                        Policy: <span className="mono">{exp.temporalPolicy?.strategy || exp.strategy || exp.evaluationMethod || "Chronological Holdout"}</span>
+                        {exp.temporalPolicy?.testRatio != null ? ` (${exp.temporalPolicy.testRatio * 100}% Test)` : ""}
                       </div>
                       <div>
-                        Scope: <span className="mono">{exp.populationScope}</span>
+                        Scope: <span className="mono">{exp.populationScope || exp.datasetId || "CANONICAL-CORPUS"}</span>
                       </div>
                     </div>
                   </div>
 
                   <div style={{ borderTop: "1px solid var(--border-subtle)", marginTop: "1rem", paddingTop: "0.75rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <span className="mono" style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
-                      Hash: {exp.deterministicHash}
+                      Hash: {exp.deterministicHash || exp.experimentId || "deterministic"}
                     </span>
                     <button
                       onClick={() => setFilterExperiment(filterExperiment === exp.experimentId ? "ALL" : exp.experimentId)}
