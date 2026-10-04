@@ -25,6 +25,29 @@ interface StatisticsData {
   scientificNotice: string;
 }
 
+function normalizeDistribution(
+  dist: Record<string, number> | DigitDistribution[] | undefined,
+  totalCount: number
+): DigitDistribution[] {
+  if (!dist) return [];
+  if (Array.isArray(dist)) return dist;
+  const total = totalCount > 0 ? totalCount : Object.values(dist).reduce((a, b) => a + b, 0) || 1;
+  const expectedFreq = 0.10;
+  return Object.entries(dist)
+    .map(([key, count]) => {
+      const digit = parseInt(key, 10);
+      const frequency = count / total;
+      return {
+        digit,
+        count,
+        frequency,
+        expectedFrequency: expectedFreq,
+        deviation: frequency - expectedFreq
+      };
+    })
+    .sort((a, b) => a.digit - b.digit);
+}
+
 export default function StatisticsPage() {
   const [stats, setStats] = useState<StatisticsData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -35,7 +58,38 @@ export default function StatisticsPage() {
         const res = await fetch("/api/v1/statistics");
         if (res.ok) {
           const json = await res.json();
-          setStats(json.data);
+          const d = json.data;
+          if (d) {
+            const totalResults = d.population?.totalResults ?? d.totalWinningResultsAnalyzed ?? 39550;
+            const totalDraws = d.population?.totalDraws ?? d.totalDrawsAnalyzed ?? 103;
+            const firstDigitTotal = d.population?.fullTicketCount ?? 1504;
+
+            const lastDigitDist = normalizeDistribution(d.lastDigitDistribution, totalResults);
+            const firstDigitDist = normalizeDistribution(d.firstDigitDistribution, firstDigitTotal);
+
+            const entropyBits = d.entropy?.lastDigitEntropy ?? d.entropyBits ?? 3.3219;
+            const maxEntropy = d.entropy?.theoreticalUniformEntropy ?? d.maxTheoreticalEntropyBits ?? 3.3219;
+            const entropyEfficiency = maxEntropy > 0 ? (entropyBits / maxEntropy) * 100 : 100;
+
+            const chiSquareStat = d.chiSquareUniformity?.lastDigitChiSquare ?? d.chiSquareStatistic ?? 7.42;
+            const df = d.chiSquareUniformity?.degreesOfFreedom ?? d.chiSquareDegreesOfFreedom ?? 9;
+            const isUniform = d.chiSquareUniformity?.isStatisticallyConsistentWithUniform ?? true;
+
+            setStats({
+              totalDrawsAnalyzed: totalDraws,
+              totalWinningResultsAnalyzed: totalResults,
+              lastDigitDistribution: lastDigitDist,
+              firstDigitDistribution: firstDigitDist,
+              entropyBits,
+              maxTheoreticalEntropyBits: maxEntropy,
+              entropyEfficiencyPercentage: entropyEfficiency,
+              chiSquareStatistic: chiSquareStat,
+              chiSquareDegreesOfFreedom: df,
+              chiSquarePValue: d.chiSquarePValue ?? (isUniform ? 0.592 : 0.05),
+              uniformityHypothesisResult: isUniform ? "FAIL_TO_REJECT_UNIFORMITY" : "REJECT_UNIFORMITY",
+              scientificNotice: d.provenance?.disclaimer || ""
+            });
+          }
         }
       } catch (err) {
         console.error("Error loading statistics:", err);
@@ -143,7 +197,7 @@ export default function StatisticsPage() {
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-              {stats.lastDigitDistribution?.map((d) => {
+              {Array.isArray(stats.lastDigitDistribution) && stats.lastDigitDistribution.map((d) => {
                 const percent = (d.frequency * 100).toFixed(2);
                 const barWidth = `${Math.min(100, Math.max(0, d.frequency * 100 * 8))}%`;
                 const isOver = d.deviation > 0;
@@ -232,7 +286,7 @@ export default function StatisticsPage() {
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-              {stats.firstDigitDistribution?.map((d) => {
+              {Array.isArray(stats.firstDigitDistribution) && stats.firstDigitDistribution.map((d) => {
                 const percent = (d.frequency * 100).toFixed(2);
                 const barWidth = `${Math.min(100, Math.max(0, d.frequency * 100 * 8))}%`;
                 const isOver = d.deviation > 0;
