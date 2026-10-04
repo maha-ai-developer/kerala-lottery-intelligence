@@ -25,6 +25,15 @@ import {
   DocumentAlreadyExistsError
 } from "@kerala-lottery/data";
 
+export {
+  computeSha256,
+  validatePdfBuffer,
+  DocumentValidationError,
+  KERALA_STATE_LOTTERY_PORTAL,
+  getSourceStoragePath,
+  validateSourceDocument
+} from "@kerala-lottery/documents";
+
 export * from "./errors";
 export * from "./acquisition";
 export * from "./discovery";

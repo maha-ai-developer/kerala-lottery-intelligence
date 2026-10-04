@@ -484,6 +484,13 @@ export class DailyIngestionEngine {
   }
 
   /**
+   * Executes the full daily ingestion workflow (alias for execute).
+   */
+  public async run(runtimeOptions?: Partial<DailyIngestionOptions>): Promise<DailyIngestionResult> {
+    return this.execute(runtimeOptions);
+  }
+
+  /**
    * Executes the full daily ingestion workflow.
    */
   public async execute(runtimeOptions?: Partial<DailyIngestionOptions>): Promise<DailyIngestionResult> {
