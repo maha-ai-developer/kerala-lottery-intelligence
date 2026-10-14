@@ -30,10 +30,10 @@ interface DrawItem {
 
 export default function OverviewPage() {
   const [stats, setStats] = useState<StatsSummary>({
-    researchDraws: 104,
-    researchWinningResults: 39926,
-    researchFullTickets: 1518,
-    researchSuffixes: 38408,
+    researchDraws: 114,
+    researchWinningResults: 43712,
+    researchFullTickets: 1658,
+    researchSuffixes: 42054,
     geoObservations: 380,
     districtsCount: 14,
     prodDraws: 100,
@@ -60,10 +60,10 @@ export default function OverviewPage() {
           const pop = statsJson.data?.population || {};
           setStats((prev) => ({
             ...prev,
-            researchDraws: pop.totalDraws || 104,
-            researchWinningResults: pop.totalResults || 39926,
-            researchFullTickets: pop.fullTicketCount || 1518,
-            researchSuffixes: pop.suffixCount || 38408
+            researchDraws: pop.totalDraws || 114,
+            researchWinningResults: pop.totalResults || 43712,
+            researchFullTickets: pop.fullTicketCount || 1658,
+            researchSuffixes: pop.suffixCount || 42054
           }));
         }
 
@@ -126,7 +126,7 @@ export default function OverviewPage() {
         </div>
         <p style={{ color: "var(--text-secondary)", fontSize: "0.95rem", margin: 0 }}>
           Deterministic knowledge graph, descriptive statistical engine, formal experiment baselines, geographic evidence,
-          and interactive research sandbox covering 104 canonical draws and 39,926 winning results.
+          and interactive research sandbox covering 114 canonical draws and 43,712 winning results.
         </p>
       </div>
 
@@ -194,7 +194,7 @@ export default function OverviewPage() {
             </h2>
             <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem", marginTop: "0.35rem", marginBottom: 0, maxWidth: "780px" }}>
               Enter any candidate lottery ticket (Lottery, Scheme, Series, Number) to run deterministic structural validation,
-              extract mathematical features, compute empirical frequencies against the 104-draw research corpus, and inspect
+              extract mathematical features, compute empirical frequencies against the 114-draw research corpus, and inspect
               statistical baseline benchmarks without prediction scores or betting bias.
             </p>
           </div>

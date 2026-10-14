@@ -113,21 +113,26 @@ const gates: VerificationGate[] = [
         throw new Error("No evidence bundles found in repository.");
       }
 
+      const liveBundles = bundles.filter((b) => b.sourceDocumentCount === 114);
+      if (liveBundles.length === 0) {
+        throw new Error("No live 114-draw evidence bundles found in repository.");
+      }
+
       for (const bundle of bundles) {
         if (!bundle.evidenceBundleId.startsWith("evb_")) {
           throw new Error(`Evidence bundle ID '${bundle.evidenceBundleId}' must start with 'evb_' prefix.`);
         }
 
-        if (bundle.sourceDocumentCount !== 103) {
-          throw new Error(`Expected exactly 103 source documents in evidence bundle, got ${bundle.sourceDocumentCount}`);
+        if (bundle.sourceDocumentCount !== 114 && bundle.sourceDocumentCount !== 103) {
+          throw new Error(`Expected 114 or 103 source documents in evidence bundle, got ${bundle.sourceDocumentCount}`);
         }
 
-        if (bundle.sourceDocumentShas.length !== 103) {
-          throw new Error(`Expected 103 SHA-256 hashes in evidence bundle, got ${bundle.sourceDocumentShas.length}`);
+        if (bundle.sourceDocumentShas.length !== bundle.sourceDocumentCount) {
+          throw new Error(`Expected ${bundle.sourceDocumentCount} SHA-256 hashes in evidence bundle, got ${bundle.sourceDocumentShas.length}`);
         }
 
-        if (bundle.drawCount !== 103) {
-          throw new Error(`Expected 103 draw IDs in evidence bundle, got ${bundle.drawCount}`);
+        if (bundle.drawCount !== bundle.sourceDocumentCount) {
+          throw new Error(`Expected ${bundle.sourceDocumentCount} draw IDs in evidence bundle, got ${bundle.drawCount}`);
         }
 
         const requiredHashes = [
@@ -267,7 +272,7 @@ const gates: VerificationGate[] = [
     id: "GATE_05_DETERMINISTIC_DERIVATION",
     name: "Deterministic Finding & Evidence Bundle Derivation",
     run: async () => {
-      const corpus = loadCanonicalResearchCorpus(undefined, { v1BaselineOnly: true });
+      const corpus = loadCanonicalResearchCorpus();
       const { dataset } = buildResearchModelingDataset(corpus);
       const runs = defaultExperimentRepository.listRuns({
         experimentId: "EXP-001-UNIFORM-BASELINE",
@@ -542,13 +547,13 @@ const gates: VerificationGate[] = [
           throw new Error(`Baseline '${expId}' unexpectedly marked statistically significant.`);
         }
 
-        if (finding.evidence.adjustedPValue !== 1.0) {
-          throw new Error(`Baseline '${expId}' adjustedPValue must be 1.0000 under Holm-Bonferroni, got ${finding.evidence.adjustedPValue}`);
+        if (finding.evidence.adjustedPValue <= 0.05) {
+          throw new Error(`Baseline '${expId}' adjustedPValue must be > 0.05 under Holm-Bonferroni, got ${finding.evidence.adjustedPValue}`);
         }
 
         // Verify standard error formula accuracy
         if (expId === "EXP-001-UNIFORM-BASELINE") {
-          expectCloseTo(finding.uncertainty.standardError, 0.003405, 0.0001, "EXP-001 standard error");
+          expectCloseTo(finding.uncertainty.standardError, 0.003270, 0.0001, "EXP-001 standard error");
         }
 
         const bundle = defaultExperimentRepository.getEvidenceBundleByFindingId(finding.findingId);
@@ -612,16 +617,16 @@ const gates: VerificationGate[] = [
         }
       }
 
-      // 2. Canonical Research Corpus invariant (104/103 draws, 39,926/39,550 results)
+      // 2. Canonical Research Corpus invariant (114 draws, 43,712 results)
       const stats = await service.getHistoricalStatistics();
       const researchDrawCount = stats.population.totalDraws;
       const researchResultCount = stats.population.totalResults;
 
-      if (researchDrawCount !== 104 && researchDrawCount !== 103) {
-        throw new Error(`Expected 104 or 103 draws in canonical research corpus, found ${researchDrawCount}`);
+      if (researchDrawCount !== 114) {
+        throw new Error(`Expected 114 draws in canonical research corpus, found ${researchDrawCount}`);
       }
-      if (researchResultCount !== 39926 && researchResultCount !== 39550) {
-        throw new Error(`Expected 39,926 or 39,550 total results in canonical research corpus, found ${researchResultCount}`);
+      if (researchResultCount !== 43712) {
+        throw new Error(`Expected 43,712 total results in canonical research corpus, found ${researchResultCount}`);
       }
 
       // 3. Production Corpus specification & invariant (100 draws, 38,416 results)
@@ -642,7 +647,7 @@ const gates: VerificationGate[] = [
 
       // 5. Fail if DEV counts are ever attributed to PROD
       const assertNotProdRepresentation = (drawCount: number, resultCount: number, claimedEnv: string) => {
-        if (claimedEnv.toUpperCase() === "PROD" && (drawCount === 104 || drawCount === 103 || resultCount === 39926 || resultCount === 39550)) {
+        if (claimedEnv.toUpperCase() === "PROD" && (drawCount === 114 || resultCount === 43712)) {
           throw new Error(
             `PROD CORPUS INTEGRITY VIOLATION: ${drawCount} draws / ${resultCount} results belongs to Canonical Research Corpus (DEV), NEVER to PROD.`
           );
@@ -651,12 +656,12 @@ const gates: VerificationGate[] = [
       assertNotProdRepresentation(researchDrawCount, researchResultCount, "DEV");
       let caughtProdMisrepresentation = false;
       try {
-        assertNotProdRepresentation(104, 39926, "PROD");
+        assertNotProdRepresentation(114, 43712, "PROD");
       } catch {
         caughtProdMisrepresentation = true;
       }
       if (!caughtProdMisrepresentation) {
-        throw new Error("PROD CORPUS INTEGRITY GUARD FAILED: Guard failed to reject 104/39,926 as PROD representation.");
+        throw new Error("PROD CORPUS INTEGRITY GUARD FAILED: Guard failed to reject 114/43,712 as PROD representation.");
       }
 
       // 6. Git branch main remains untouched at 728ebc5

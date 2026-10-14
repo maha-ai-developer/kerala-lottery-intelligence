@@ -69,7 +69,7 @@ export async function GET(req: NextRequest) {
     const localDocumentCount = localPdfs.length;
     const localGraphCount = localGraphs.length;
     const localManifestCount = manifestDocs.length;
-    const researchDrawCount = localManifestCount || 104;
+    const researchDrawCount = localManifestCount || 114;
     const prodDrawCount = 100;
     const schedulerState = "PAUSED";
     const mutationState = "PROD_LOCKED_DEV_ALLOWED";
@@ -84,7 +84,7 @@ export async function GET(req: NextRequest) {
       try {
         const { collection, getDocs } = await import("firebase/firestore");
         const docSnaps = await getDocs(collection(db, "documents"));
-        firestoreDocumentCount = docSnaps.size || 104;
+        firestoreDocumentCount = docSnaps.size || 114;
         cloudStorageDocumentCount = firestoreDocumentCount;
         cloudConnectionStatus = "CONNECTED";
       } catch {

@@ -443,11 +443,11 @@ async function runProdOperationalizationVerifier8C(): Promise<void> {
     if (!bootstrapDryRun.success) {
       throw new Error("Downstream bootstrap dry-run failed");
     }
-    if (bootstrapDryRun.validatedDrawsCount !== 100 && bootstrapDryRun.validatedDrawsCount !== 103 && bootstrapDryRun.validatedDrawsCount !== 104) {
-      throw new Error(`Expected 100, 103, or 104 historical draws in downstream corpus, got ${bootstrapDryRun.validatedDrawsCount}`);
+    if (bootstrapDryRun.validatedDrawsCount !== 100 && bootstrapDryRun.validatedDrawsCount !== 103 && bootstrapDryRun.validatedDrawsCount !== 104 && bootstrapDryRun.validatedDrawsCount !== 114) {
+      throw new Error(`Expected 100, 103, 104, or 114 historical draws in downstream corpus, got ${bootstrapDryRun.validatedDrawsCount}`);
     }
-    if (bootstrapDryRun.totalWinningResults !== 38416 && bootstrapDryRun.totalWinningResults !== 39550 && bootstrapDryRun.totalWinningResults !== 39926) {
-      throw new Error(`Expected 38,416, 39,550, or 39,926 winning results in downstream corpus, got ${bootstrapDryRun.totalWinningResults}`);
+    if (bootstrapDryRun.totalWinningResults !== 38416 && bootstrapDryRun.totalWinningResults !== 39550 && bootstrapDryRun.totalWinningResults !== 39926 && bootstrapDryRun.totalWinningResults !== 43712) {
+      throw new Error(`Expected 38,416, 39,550, 39,926, or 43,712 winning results in downstream corpus, got ${bootstrapDryRun.totalWinningResults}`);
     }
     if (!bootstrapDryRun.corpusId || !bootstrapDryRun.datasetId) {
       throw new Error("Missing corpusId or datasetId from downstream promotion");

@@ -581,8 +581,8 @@ async function runContinuousResearchVerifier9B(): Promise<void> {
   console.log("[GATE 11/12] Verifying Canonical 103-Draw Research Corpus Grounding...");
   try {
     const drawsRes = await service.getDraws({ pageSize: 150 });
-    if (drawsRes.pagination.totalCount !== 104 && drawsRes.pagination.totalCount !== 103) {
-      throw new Error(`Expected 104 or 103 draws in research corpus, found ${drawsRes.pagination.totalCount}`);
+    if (drawsRes.pagination.totalCount !== 114) {
+      throw new Error(`Expected 114 draws in research corpus, found ${drawsRes.pagination.totalCount}`);
     }
 
     const runs = repo.listRuns().filter(r => r.status === "SUCCEEDED");
@@ -596,13 +596,13 @@ async function runContinuousResearchVerifier9B(): Promise<void> {
     }
 
     const totalDrawsInRun = window.trainDrawCount + window.testDrawCount;
-    if (totalDrawsInRun !== 104 && totalDrawsInRun !== 103) {
-      throw new Error(`Expected 104 or 103 draws in evaluation window, got ${totalDrawsInRun}`);
+    if (totalDrawsInRun !== 114) {
+      throw new Error(`Expected exactly 114 draws in evaluation window, got ${totalDrawsInRun} (stale baseline rejected)`);
     }
 
     const totalRowsInRun = window.trainRowCount + window.testRowCount;
-    if (totalRowsInRun !== 39926 && totalRowsInRun !== 39550) {
-      throw new Error(`Expected 39,926 or 39,550 rows in evaluation window, got ${totalRowsInRun}`);
+    if (totalRowsInRun !== 43712) {
+      throw new Error(`Expected exactly 43,712 rows in evaluation window, got ${totalRowsInRun} (stale baseline rejected)`);
     }
 
     results.push({

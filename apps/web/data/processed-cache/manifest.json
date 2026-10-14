@@ -1,8 +1,8 @@
 {
   "version": "v1.0.0-ingestion-manifest",
   "updatedAt": "2026-10-02T12:00:00.000Z",
-  "totalDocuments": 104,
-  "validDocuments": 104,
+  "totalDocuments": 114,
+  "validDocuments": 114,
   "quarantinedDocuments": 0,
   "documents": {
     "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb": {
@@ -200,6 +200,22 @@
       "fullTicketCount": 14,
       "suffixCount": 362,
       "ingestedAt": "2026-09-27T03:30:56.106Z",
+      "status": "VALID"
+    },
+    "1b82c0acc76398fe72c759f2092b3fa653559c23b51de883ea99ed6c0620ccf4": {
+      "fileName": "BT-75.pdf",
+      "sourceResponseFilename": "BT-75.pdf",
+      "sourceUrl": "http://result.keralalotteries.com/viewlotisresult.php?drawserial=75406",
+      "fileSize": 87202,
+      "lotteryName": "BHAGYATHARA",
+      "lotteryCode": "BHAGYATHARA",
+      "drawNumber": "BT-75th",
+      "drawDate": "12/10/2026",
+      "totalResults": 378,
+      "fullTicketCount": 14,
+      "suffixCount": 364,
+      "ingestedAt": "2026-10-14T04:02:02.946Z",
+      "sha256": "1b82c0acc76398fe72c759f2092b3fa653559c23b51de883ea99ed6c0620ccf4",
       "status": "VALID"
     },
     "1e7bbfc75b087a7226ed6a1df817fed677385bab0e3a8da0bd865d5928e23627": {
@@ -404,6 +420,38 @@
       "ingestedAt": "2026-10-02T08:39:53.563Z",
       "status": "VALID"
     },
+    "3a0ea2c300e39acaa4205374988c46d54b5050446fd0082071495715cecb68b8": {
+      "fileName": "SM-75.pdf",
+      "sourceResponseFilename": "SM-75.pdf",
+      "sourceUrl": "http://result.keralalotteries.com/viewlotisresult.php?drawserial=75398",
+      "fileSize": 87253,
+      "lotteryName": "SAMRUDHI",
+      "lotteryCode": "SAMRUDHI",
+      "drawNumber": "SM-75th",
+      "drawDate": "04/10/2026",
+      "totalResults": 382,
+      "fullTicketCount": 14,
+      "suffixCount": 368,
+      "ingestedAt": "2026-10-14T04:02:07.536Z",
+      "sha256": "3a0ea2c300e39acaa4205374988c46d54b5050446fd0082071495715cecb68b8",
+      "status": "VALID"
+    },
+    "3ee14f9f836bff7f6e7b67101f1fbd5c244d3409fbaa06208417cc2f3a533d8e": {
+      "fileName": "SK-72.pdf",
+      "sourceResponseFilename": "SK-72.pdf",
+      "sourceUrl": "http://result.keralalotteries.com/viewlotisresult.php?drawserial=75403",
+      "fileSize": 87206,
+      "lotteryName": "SUVARNA KERALAM",
+      "lotteryCode": "SUVARNA KERALAM",
+      "drawNumber": "SK-72nd",
+      "drawDate": "09/10/2026",
+      "totalResults": 376,
+      "fullTicketCount": 14,
+      "suffixCount": 362,
+      "ingestedAt": "2026-10-14T04:02:04.675Z",
+      "sha256": "3ee14f9f836bff7f6e7b67101f1fbd5c244d3409fbaa06208417cc2f3a533d8e",
+      "status": "VALID"
+    },
     "3f66f9acb0a96490bde7e420397954982d261b30959fd6a0b6135470a2ef42d5": {
       "sha256": "3f66f9acb0a96490bde7e420397954982d261b30959fd6a0b6135470a2ef42d5",
       "fileName": "271-2288-24-08-2026.pdf",
@@ -502,6 +550,22 @@
       "ingestedAt": "2026-09-27T03:30:30.104Z",
       "status": "VALID"
     },
+    "4ef34cc25df8fa54ad3c815ff26625b34d63ae2d17833232017dcb9afe16ae1d": {
+      "fileName": "SS-541.pdf",
+      "sourceResponseFilename": "SS-541.pdf",
+      "sourceUrl": "http://result.keralalotteries.com/viewlotisresult.php?drawserial=75407",
+      "fileSize": 87240,
+      "lotteryName": "STHREE-SAKTHI",
+      "lotteryCode": "STHREE-SAKTHI",
+      "drawNumber": "SS-541st",
+      "drawDate": "13/10/2026",
+      "totalResults": 380,
+      "fullTicketCount": 14,
+      "suffixCount": 366,
+      "ingestedAt": "2026-10-14T04:02:02.352Z",
+      "sha256": "4ef34cc25df8fa54ad3c815ff26625b34d63ae2d17833232017dcb9afe16ae1d",
+      "status": "VALID"
+    },
     "523df3d477cbc24a132d6b2d9e25ed228b90b3f4a45f3a87108a0d6fbdaa4370": {
       "sha256": "523df3d477cbc24a132d6b2d9e25ed228b90b3f4a45f3a87108a0d6fbdaa4370",
       "fileName": "277-2252-26-07-2026.pdf",
@@ -542,6 +606,22 @@
       "fullTicketCount": 14,
       "suffixCount": 362,
       "ingestedAt": "2026-09-27T03:30:48.156Z",
+      "status": "VALID"
+    },
+    "57b10c944bbbe2bd4374193e8c6886b18dc8d124d705d5518f1c62db2507fe19": {
+      "fileName": "DL-72.pdf",
+      "sourceResponseFilename": "DL-72.pdf",
+      "sourceUrl": "http://result.keralalotteries.com/viewlotisresult.php?drawserial=75401",
+      "fileSize": 87153,
+      "lotteryName": "DHANALEKSHMI",
+      "lotteryCode": "DHANALEKSHMI",
+      "drawNumber": "DL-72nd",
+      "drawDate": "07/10/2026",
+      "totalResults": 374,
+      "fullTicketCount": 14,
+      "suffixCount": 360,
+      "ingestedAt": "2026-10-14T04:02:05.779Z",
+      "sha256": "57b10c944bbbe2bd4374193e8c6886b18dc8d124d705d5518f1c62db2507fe19",
       "status": "VALID"
     },
     "5b247e8d594f20f76378f8eb7e17dc69a6c69f71a9715a01638a81aba05d3a3c": {
@@ -656,6 +736,22 @@
       "ingestedAt": "2026-09-27T03:30:14.598Z",
       "status": "VALID"
     },
+    "6ba7fbb6b607ef47e1b517f378075f632ceffb1cf5e54c54b67a869d21dc3c28": {
+      "fileName": "KN-644.pdf",
+      "sourceResponseFilename": "KN-644.pdf",
+      "sourceUrl": "http://result.keralalotteries.com/viewlotisresult.php?drawserial=75402",
+      "fileSize": 87214,
+      "lotteryName": "KARUNYA PLUS",
+      "lotteryCode": "KARUNYA PLUS",
+      "drawNumber": "KN-644th",
+      "drawDate": "08/10/2026",
+      "totalResults": 380,
+      "fullTicketCount": 14,
+      "suffixCount": 366,
+      "ingestedAt": "2026-10-14T04:02:05.222Z",
+      "sha256": "6ba7fbb6b607ef47e1b517f378075f632ceffb1cf5e54c54b67a869d21dc3c28",
+      "status": "VALID"
+    },
     "6dec53f17869776bd70f1d8262b3d654bda41a02fe405cd7c3956cf422586c78": {
       "sha256": "6dec53f17869776bd70f1d8262b3d654bda41a02fe405cd7c3956cf422586c78",
       "fileName": "272-2293-25-08-2026.pdf",
@@ -682,6 +778,22 @@
       "fullTicketCount": 14,
       "suffixCount": 366,
       "ingestedAt": "2026-09-27T03:30:43.404Z",
+      "status": "VALID"
+    },
+    "74dadb9c67dd3f7ee3f67ef8184155308535681f7c320a2733187c3dc9066c93": {
+      "fileName": "SS-540.pdf",
+      "sourceResponseFilename": "SS-540.pdf",
+      "sourceUrl": "http://result.keralalotteries.com/viewlotisresult.php?drawserial=75400",
+      "fileSize": 87253,
+      "lotteryName": "STHREE-SAKTHI",
+      "lotteryCode": "STHREE-SAKTHI",
+      "drawNumber": "SS-540th",
+      "drawDate": "06/10/2026",
+      "totalResults": 380,
+      "fullTicketCount": 14,
+      "suffixCount": 366,
+      "ingestedAt": "2026-10-14T04:02:06.339Z",
+      "sha256": "74dadb9c67dd3f7ee3f67ef8184155308535681f7c320a2733187c3dc9066c93",
       "status": "VALID"
     },
     "76fb8fb7291d002df4644b0331fee1fa7bd8d1bf9c00c92426ac4cb946bb8eb7": {
@@ -780,6 +892,22 @@
       "fullTicketCount": 14,
       "suffixCount": 362,
       "ingestedAt": "2026-09-27T03:30:47.042Z",
+      "status": "VALID"
+    },
+    "8547c750a04f79272fa16dbadd6ac4eaca0b0795cc609259701f2cfccf1fb0e4": {
+      "fileName": "KR-771.pdf",
+      "sourceResponseFilename": "KR-771.pdf",
+      "sourceUrl": "http://result.keralalotteries.com/viewlotisresult.php?drawserial=75404",
+      "fileSize": 87164,
+      "lotteryName": "KARUNYA",
+      "lotteryCode": "KARUNYA",
+      "drawNumber": "KR-771st",
+      "drawDate": "10/10/2026",
+      "totalResults": 376,
+      "fullTicketCount": 14,
+      "suffixCount": 362,
+      "ingestedAt": "2026-10-14T04:02:04.116Z",
+      "sha256": "8547c750a04f79272fa16dbadd6ac4eaca0b0795cc609259701f2cfccf1fb0e4",
       "status": "VALID"
     },
     "8670c8a0cdb9174d81c57a21b38e279c969088b4dc5020a16ef3f5a59e787174": {
@@ -1065,6 +1193,22 @@
       "ingestedAt": "2026-09-27T03:30:40.399Z",
       "status": "VALID"
     },
+    "bda05e8318125fd83cf518f2daf89a4a3550a561912efdd5b6b52afd955bbe7b": {
+      "fileName": "SM-76.pdf",
+      "sourceResponseFilename": "SM-76.pdf",
+      "sourceUrl": "http://result.keralalotteries.com/viewlotisresult.php?drawserial=75405",
+      "fileSize": 87220,
+      "lotteryName": "SAMRUDHI",
+      "lotteryCode": "SAMRUDHI",
+      "drawNumber": "SM-76th",
+      "drawDate": "11/10/2026",
+      "totalResults": 382,
+      "fullTicketCount": 14,
+      "suffixCount": 368,
+      "ingestedAt": "2026-10-14T04:02:03.508Z",
+      "sha256": "bda05e8318125fd83cf518f2daf89a4a3550a561912efdd5b6b52afd955bbe7b",
+      "status": "VALID"
+    },
     "bfb1ce9f7f0f3228065cb8b215c167d833f1783fd6982743ce8a162345cf202c": {
       "sha256": "bfb1ce9f7f0f3228065cb8b215c167d833f1783fd6982743ce8a162345cf202c",
       "fileName": "273-2265-29-07-2026.pdf",
@@ -1318,6 +1462,22 @@
       "fullTicketCount": 14,
       "suffixCount": 368,
       "ingestedAt": "2026-09-27T03:31:06.228Z",
+      "status": "VALID"
+    },
+    "e3cd85ae7393ec339532fa0d17bce0aeeaf3cb76532d83dbac261f16d56a2fd0": {
+      "fileName": "BT-74.pdf",
+      "sourceResponseFilename": "BT-74.pdf",
+      "sourceUrl": "http://result.keralalotteries.com/viewlotisresult.php?drawserial=75399",
+      "fileSize": 87202,
+      "lotteryName": "BHAGYATHARA",
+      "lotteryCode": "BHAGYATHARA",
+      "drawNumber": "BT-74th",
+      "drawDate": "05/10/2026",
+      "totalResults": 378,
+      "fullTicketCount": 14,
+      "suffixCount": 364,
+      "ingestedAt": "2026-10-14T04:02:06.969Z",
+      "sha256": "e3cd85ae7393ec339532fa0d17bce0aeeaf3cb76532d83dbac261f16d56a2fd0",
       "status": "VALID"
     },
     "e7022266908fe49437d7f62e84b81a157257b0f106afce7ee76b192664c6a577": {
