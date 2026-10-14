@@ -54,8 +54,8 @@ describe("Milestone V1.0: Research Sandbox Engine", () => {
     expect(res.featureProfile).toBeDefined();
     expect(res.featureProfile?.canonicalNumber).toBe("123456");
     expect(res.historicalComparison).toBeDefined();
-    expect(res.historicalComparison?.sampleSizeResults).toBe(39550);
-    expect(res.historicalComparison?.sampleSizeDraws).toBe(103);
+    expect(res.historicalComparison?.sampleSizeResults).toBe(39926);
+    expect(res.historicalComparison?.sampleSizeDraws).toBe(104);
     expect(res.researchInterpretation.classifications).toContain("STRUCTURALLY_VALID");
   });
 
@@ -288,7 +288,7 @@ describe("Milestone V1.0: Research Sandbox Engine", () => {
     expect(resWithCutoff.historicalComparison?.temporalCutoffApplied).toBe(true);
     expect(resWithCutoff.historicalComparison?.cutoffDate).toBe("2026-09-20");
     expect(resWithCutoff.historicalComparison?.exactTicketMatch.observedInCorpus).toBe(false);
-    expect(resWithCutoff.historicalComparison?.sampleSizeDraws).toBeLessThan(103);
+    expect(resWithCutoff.historicalComparison?.sampleSizeDraws).toBeLessThan(104);
   });
 
   // 13. Lineage and provenance tracing
@@ -301,7 +301,7 @@ describe("Milestone V1.0: Research Sandbox Engine", () => {
 
     const res = engine.analyzeTicket(input);
 
-    expect(res.provenance.corpusVersion).toBe("v1.0-research-103draws");
+    expect(res.provenance.corpusVersion).toBe("v1.0-research-104draws");
     expect(res.provenance.featureVersion).toBe("feat_v1");
     expect(res.provenance.datasetVersion).toBe("dataset_7c_canonical");
     expect(res.provenance.experimentVersion).toBe("exp_v1");

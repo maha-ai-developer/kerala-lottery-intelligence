@@ -148,7 +148,7 @@ export default function ResearchSandboxPage() {
         <strong>SCIENTIFIC & RETROSPECTIVE RESEARCH SANDBOX ONLY</strong>
         <p style={{ margin: "0.25rem 0 0 0", fontSize: "0.825rem", color: "var(--text-secondary)" }}>
           This sandbox provides empirical structural validation, feature extraction, and retrospective comparison against
-          the verified 103-draw research corpus. Lottery draws are independent stochastic physical trials.
+          the verified 104-draw research corpus. Lottery draws are independent stochastic physical trials.
           Historical feature frequencies provide zero predictive utility, winning probability, or betting recommendations.
         </p>
       </div>
@@ -420,7 +420,7 @@ export default function ResearchSandboxPage() {
                 <div className="mono" style={{ fontSize: "0.9rem", color: "var(--text-secondary)", marginTop: "0.35rem" }}>
                   {analysis.historicalComparison?.temporalCutoffApplied
                     ? analysis.historicalComparison.cutoffDate
-                    : "None (Full 103 Draws)"}
+                    : `None (Full ${analysis.historicalComparison?.sampleSizeDraws ?? 104} Draws)`}
                 </div>
                 <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
                   {analysis.historicalComparison?.temporalCutoffApplied ? "Zero Future Leakage" : "Full Corpus Evaluation"}

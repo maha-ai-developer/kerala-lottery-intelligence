@@ -136,7 +136,7 @@ export default function GeographyPage() {
           Winning Geography & Ticket Distribution Exposure
         </h1>
         <p style={{ color: "#94a3b8", fontSize: "0.95rem", margin: 0, maxWidth: "900px", lineHeight: 1.5 }}>
-          Ground truth retrospective extraction of published ticket issuing offices from all 103 canonical Kerala Government Gazette result PDFs. Rigorous separation between observed winner occurrences and ticket exposure denominators.
+          Ground truth retrospective extraction of published ticket issuing offices from canonical Kerala Government Gazette result PDFs (103-draw V1 baseline snapshot). Rigorous separation between observed winner occurrences and ticket exposure denominators.
         </p>
       </div>
 
@@ -175,11 +175,11 @@ export default function GeographyPage() {
         marginBottom: "1.5rem"
       }}>
         <div style={{ background: "rgba(30, 41, 59, 0.5)", border: "1px solid rgba(148, 163, 184, 0.15)", borderRadius: "0.5rem", padding: "1rem" }}>
-          <div style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: 600 }}>Canonical Corpus</div>
+          <div style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: 600 }}>V1 Baseline Geography</div>
           <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#f8fafc", marginTop: "0.25rem" }}>
-            103 <span style={{ fontSize: "0.9rem", fontWeight: 400, color: "#94a3b8" }}>Draws (100% PDFs)</span>
+            {dataset?.drawCount ?? 103} <span style={{ fontSize: "0.9rem", fontWeight: 400, color: "#94a3b8" }}>Draws (V1 Snapshot)</span>
           </div>
-          <div style={{ fontSize: "0.75rem", color: "#38bdf8", marginTop: "0.25rem" }}>39,550 Published Results</div>
+          <div style={{ fontSize: "0.75rem", color: "#38bdf8", marginTop: "0.25rem" }}>{(dataset?.resultCount ?? 39550).toLocaleString()} Published Results</div>
         </div>
 
         <div style={{ background: "rgba(30, 41, 59, 0.5)", border: "1px solid rgba(148, 163, 184, 0.15)", borderRadius: "0.5rem", padding: "1rem" }}>

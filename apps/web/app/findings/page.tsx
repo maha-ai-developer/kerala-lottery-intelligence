@@ -331,16 +331,16 @@ export default function FindingsPage() {
               103 PDFs
             </div>
             <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
-              SHA-256 Verified Gazettes
+              V1 Baseline Gazettes (Immutable)
             </div>
           </div>
           <div style={{ padding: "1rem", borderRadius: "0.5rem", background: "var(--card-bg)", border: "1px solid var(--border-color)" }}>
-            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase" }}>Canonical Corpus</div>
+            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase" }}>V1 Baseline Corpus</div>
             <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#e2e8f0", marginTop: "0.25rem" }}>
               39,550
             </div>
             <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
-              Winning Results (103 Draws)
+              Winning Results (103 Draws Baseline)
             </div>
           </div>
         </div>

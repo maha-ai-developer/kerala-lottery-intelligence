@@ -1,10 +1,25 @@
 {
   "version": "v1.0.0-ingestion-manifest",
   "updatedAt": "2026-10-02T12:00:00.000Z",
-  "totalDocuments": 105,
-  "validDocuments": 105,
+  "totalDocuments": 104,
+  "validDocuments": 104,
   "quarantinedDocuments": 0,
   "documents": {
+    "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb": {
+      "fileName": "KR-770.pdf",
+      "sourceResponseFilename": "KR-770.pdf",
+      "fileSize": 263525,
+      "lotteryName": "KARUNYA",
+      "lotteryCode": "KARUNYA",
+      "drawNumber": "KR-770th",
+      "drawDate": "03/10/2026",
+      "totalResults": 376,
+      "fullTicketCount": 14,
+      "suffixCount": 362,
+      "ingestedAt": "2026-10-14T02:13:43.397Z",
+      "sha256": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb",
+      "status": "VALID"
+    },
     "047ddf6dacd28c5995197ce8327cd3b61dd190122387c625e3bf92ff30311998": {
       "sha256": "047ddf6dacd28c5995197ce8327cd3b61dd190122387c625e3bf92ff30311998",
       "fileName": "275-2302-14-08-2026.pdf",

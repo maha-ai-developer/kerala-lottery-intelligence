@@ -676,8 +676,9 @@ export class ResearchSandboxEngine {
       if (cn.length >= 2 && cn.split("").every((d, i, arr) => i === 0 || Number(d) === Number(arr[i - 1]) - 1)) descCount++;
     }
 
+    const totalDraws = sampleSizeDraws || 104;
     return {
-      corpusVersion: "v1.0-research-103draws",
+      corpusVersion: `v1.0-research-${totalDraws}draws`,
       sampleSizeResults,
       sampleSizeDraws,
       fullTicketSampleSize,
@@ -939,7 +940,7 @@ export class ResearchSandboxEngine {
           ]
         },
         provenance: {
-          corpusVersion: "v1.0-research-103draws",
+          corpusVersion: `v1.0-research-${new Set(this.corpusRecords?.map((r) => r.drawId) || []).size || 104}draws`,
           featureVersion: "feat_v1",
           datasetVersion: "dataset_7c_canonical",
           experimentVersion: "exp_v1",
@@ -978,7 +979,7 @@ export class ResearchSandboxEngine {
     if (historicalComparison.exactTicketMatch.observedInCorpus) {
       summaryText = `Ticket ${input.series} ${featureProfile.canonicalNumber} was historically observed in ${historicalComparison.exactTicketMatch.matchCount} draw(s) in the research corpus.`;
     } else {
-      summaryText = `Ticket ${input.series} ${featureProfile.canonicalNumber} is a novel candidate ticket unobserved in the 103-draw historical corpus.`;
+      summaryText = `Ticket ${input.series} ${featureProfile.canonicalNumber} is a novel candidate ticket unobserved in the ${historicalComparison.sampleSizeDraws}-draw historical corpus.`;
     }
 
     const explanationText =
@@ -1005,13 +1006,13 @@ export class ResearchSandboxEngine {
         exposureLimitation:
           "District-level ticket exposure is not available in the current evidence base; historical district counts are descriptive and cannot be interpreted as future winning probability.",
         statisticalCaveats: [
-          "Empirical marginal frequencies in a finite corpus (103 draws) exhibit minor sample-variance fluctuations that fall within standard binomial confidence bounds.",
+          `Empirical marginal frequencies in a finite corpus (${historicalComparison.sampleSizeDraws} draws) exhibit minor sample-variance fluctuations that fall within standard binomial confidence bounds.`,
           "Absence of historical observation does not indicate impossibility; the total combinatoric state space (1,000,000 numbers per series) greatly exceeds the observed sample size.",
           "Zero predictive scoring or gambling optimization is provided."
         ]
       },
       provenance: {
-        corpusVersion: "v1.0-research-103draws",
+        corpusVersion: `v1.0-research-${historicalComparison.sampleSizeDraws}draws`,
         featureVersion: "feat_v1",
         datasetVersion: "dataset_7c_canonical",
         experimentVersion: "exp_v1",

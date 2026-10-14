@@ -69,14 +69,18 @@ export interface RefreshResearchResult {
  * Loads knowledge graphs from the local processed-cache directory.
  */
 export function loadGraphsFromCache(
-  cacheDir: string = join(process.cwd(), "data/processed-cache")
+  cacheDir: string = join(process.cwd(), "data/processed-cache"),
+  options?: { v1BaselineOnly?: boolean }
 ): LotteryKnowledgeGraph[] {
   const graphsDir = join(cacheDir, "graphs");
   if (!existsSync(graphsDir)) {
     throw new Error(`Graphs directory not found at: ${graphsDir}`);
   }
 
-  const files = readdirSync(graphsDir).filter((f) => f.endsWith(".json"));
+  let files = readdirSync(graphsDir).filter((f) => f.endsWith(".json"));
+  if (options?.v1BaselineOnly) {
+    files = files.filter((f) => !f.startsWith("0377f83e"));
+  }
   const graphs: LotteryKnowledgeGraph[] = [];
 
   for (const file of files) {
@@ -103,9 +107,10 @@ export function loadGraphsFromCache(
  * Loads and constructs the canonical research corpus from knowledge graphs in cache.
  */
 export function loadCanonicalResearchCorpus(
-  cacheDir: string = join(process.cwd(), "data/processed-cache")
+  cacheDir: string = join(process.cwd(), "data/processed-cache"),
+  options?: { v1BaselineOnly?: boolean }
 ): MultiDrawLotteryCorpus {
-  const graphs = loadGraphsFromCache(cacheDir);
+  const graphs = loadGraphsFromCache(cacheDir, options);
   return buildMultiDrawCorpus(graphs);
 }
 

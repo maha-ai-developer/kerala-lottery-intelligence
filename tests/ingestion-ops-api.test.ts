@@ -308,10 +308,10 @@ describe("Operational Ingestion Console: API & Security Boundary Tests", () => {
 
       expect(json.success).toBe(true);
       expect(json.counts).toBeDefined();
-      expect(json.counts.localDocumentCount).toBe(103);
-      expect(json.counts.localGraphCount).toBe(103);
-      expect(json.counts.localManifestCount).toBe(103);
-      expect(json.counts.researchDrawCount).toBe(103);
+      expect(json.counts.localDocumentCount).toBe(104);
+      expect(json.counts.localGraphCount).toBe(104);
+      expect(json.counts.localManifestCount).toBe(104);
+      expect(json.counts.researchDrawCount).toBe(104);
       expect(json.counts.prodDrawCount).toBe(100);
       expect(json.operationalGuards.schedulerState).toBe("PAUSED");
       expect(json.operationalGuards.mutationState).toBe("PROD_LOCKED_DEV_ALLOWED");
@@ -325,7 +325,7 @@ describe("Operational Ingestion Console: API & Security Boundary Tests", () => {
 
       expect(json.verification).toBeDefined();
       expect(json.verification.integrityStatus).toBe("VERIFIED");
-      expect(json.verification.matchedCount).toBe(103);
+      expect(json.verification.matchedCount).toBe(104);
       expect(json.verification.mismatchCount).toBe(0);
       expect(json.verification.items.length).toBeGreaterThan(0);
       expect(json.verification.reconciliationBasis).toContain("SHA-256");

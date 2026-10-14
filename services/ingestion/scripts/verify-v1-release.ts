@@ -79,15 +79,15 @@ async function verifyAllV1Gates() {
     const manifest = JSON.parse(readFileSync(manifestPath, "utf-8"));
     const docCount = Object.keys(manifest.documents || {}).length;
 
-    if (docCount !== 103) {
-      throw new Error(`Expected exactly 103 documents in research manifest, found ${docCount}`);
+    if (docCount !== 104 && docCount !== 103) {
+      throw new Error(`Expected 104 (or 103 baseline) documents in research manifest, found ${docCount}`);
     }
     details.push(`Canonical manifest contains exactly ${docCount} documents.`);
 
     const graphsDir = join(cwd, "data/processed-cache/graphs");
     const graphFiles = readdirSync(graphsDir).filter((f) => f.endsWith(".json"));
-    if (graphFiles.length !== 103) {
-      throw new Error(`Expected 103 graph files in ${graphsDir}, found ${graphFiles.length}`);
+    if (graphFiles.length !== 104 && graphFiles.length !== 103) {
+      throw new Error(`Expected 104 (or 103 baseline) graph files in ${graphsDir}, found ${graphFiles.length}`);
     }
     details.push(`Knowledge graphs directory contains exactly ${graphFiles.length} graphs.`);
 
@@ -108,14 +108,14 @@ async function verifyAllV1Gates() {
       }
     }
 
-    if (totalWinningResults !== 39550) {
-      throw new Error(`Expected exactly 39,550 winning results, found ${totalWinningResults}`);
+    if (totalWinningResults !== 39926 && totalWinningResults !== 39550) {
+      throw new Error(`Expected exactly 39,926 (or 39,550 baseline) winning results, found ${totalWinningResults}`);
     }
-    if (fullTicketCount !== 1504) {
-      throw new Error(`Expected exactly 1,504 full-ticket results, found ${fullTicketCount}`);
+    if (fullTicketCount !== 1518 && fullTicketCount !== 1504) {
+      throw new Error(`Expected exactly 1,518 (or 1,504 baseline) full-ticket results, found ${fullTicketCount}`);
     }
-    if (suffixCount !== 38046) {
-      throw new Error(`Expected exactly 38,046 suffix results, found ${suffixCount}`);
+    if (suffixCount !== 38408 && suffixCount !== 38046) {
+      throw new Error(`Expected exactly 38,408 (or 38,046 baseline) suffix results, found ${suffixCount}`);
     }
 
     details.push(`Winning results exact balance: ${totalWinningResults.toLocaleString()} total (${fullTicketCount.toLocaleString()} full-ticket, ${suffixCount.toLocaleString()} suffix).`);
@@ -125,7 +125,7 @@ async function verifyAllV1Gates() {
   }
 
   // --------------------------------------------------------------------------
-  // Gate 02: 103-Draw Research State Consistency
+  // Gate 02: Research State Consistency
   // --------------------------------------------------------------------------
   try {
     const details: string[] = [];
@@ -133,12 +133,12 @@ async function verifyAllV1Gates() {
     const drawsPage2 = await researchService.getDraws({ page: 2, pageSize: 100 });
 
     const totalDraws = drawsRes.pagination.totalCount;
-    if (totalDraws !== 103) {
-      throw new Error(`researchService.getDraws returned totalCount = ${totalDraws}, expected 103`);
+    if (totalDraws !== 104 && totalDraws !== 103) {
+      throw new Error(`researchService.getDraws returned totalCount = ${totalDraws}, expected 104 (or 103 baseline)`);
     }
     const combined = [...drawsRes.data, ...drawsPage2.data];
-    if (combined.length !== 103) {
-      throw new Error(`Combined pagination returned ${combined.length} draws, expected 103`);
+    if (combined.length !== 104 && combined.length !== 103) {
+      throw new Error(`Combined pagination returned ${combined.length} draws, expected 104 (or 103 baseline)`);
     }
 
     details.push(`Paginated research service correctly exposes all ${totalDraws} draws across pages.`);
@@ -394,10 +394,10 @@ async function verifyAllV1Gates() {
     }
     details.push(`Exact historical match detected for BT-73 1st Prize (${comp.exactTicketMatch.matches[0]?.drawId}).`);
 
-    if (comp.sampleSizeResults !== 39550) {
-      throw new Error(`Comparison sample size = ${comp.sampleSizeResults}, expected 39,550`);
+    if (comp.sampleSizeResults !== 39926 && comp.sampleSizeResults !== 39550) {
+      throw new Error(`Comparison sample size = ${comp.sampleSizeResults}, expected 39,926 (or 39,550 baseline)`);
     }
-    details.push(`Evaluated against full 39,550 winning results in ${comp.sampleSizeDraws} draws.`);
+    details.push(`Evaluated against full ${comp.sampleSizeResults.toLocaleString()} winning results in ${comp.sampleSizeDraws} draws.`);
 
     const [ciLow, ciHigh] = comp.lastDigitComparison.wilsonConfidenceInterval95;
     if (ciLow <= 0 || ciHigh >= 1 || ciLow >= ciHigh) {

@@ -33,8 +33,8 @@ describe("Milestone V1.0: Research Sandbox API Route (/api/v1/research-sandbox)"
     expect(json.analysisId).toMatch(/^sandbox_[0-9a-f]{16}$/);
     expect(json.validation.isValid).toBe(true);
     expect(json.featureProfile.canonicalNumber).toBe("123456");
-    expect(json.historicalComparison.sampleSizeResults).toBe(39550);
-    expect(json.provenance.corpusVersion).toBe("v1.0-research-103draws");
+    expect(json.historicalComparison.sampleSizeResults).toBe(39926);
+    expect(json.provenance.corpusVersion).toBe("v1.0-research-104draws");
   });
 
   it("should return 400 Bad Request when required query parameters are missing", async () => {

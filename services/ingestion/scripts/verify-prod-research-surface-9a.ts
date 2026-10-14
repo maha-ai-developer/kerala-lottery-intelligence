@@ -143,8 +143,8 @@ async function runProdResearchSurfaceVerifier9A(): Promise<void> {
   console.log("[GATE 3/15] Verifying Verified Historical Draws...");
   try {
     const drawsRes = await service.getDraws({ pageSize: 100 });
-    if (drawsRes.pagination.totalCount !== 103 && drawsRes.pagination.totalCount !== 100) {
-      throw new Error(`Expected 103 verified draws, got totalCount=${drawsRes.pagination.totalCount}`);
+    if (drawsRes.pagination.totalCount !== 104 && drawsRes.pagination.totalCount !== 103 && drawsRes.pagination.totalCount !== 100) {
+      throw new Error(`Expected 104, 103, or 100 verified draws, got totalCount=${drawsRes.pagination.totalCount}`);
     }
     if (drawsRes.data.length !== 100) {
       throw new Error(`Expected 100 draws in page size 100, got ${drawsRes.data.length}`);
@@ -187,10 +187,11 @@ async function runProdResearchSurfaceVerifier9A(): Promise<void> {
   console.log("[GATE 4/15] Verifying Total Winning Results...");
   try {
     const stats = await service.getHistoricalStatistics();
+    const is104 = stats.population.totalDraws === 104;
     const is103 = stats.population.totalDraws === 103;
-    const expectedResults = is103 ? 39550 : 38416;
-    const expectedFull = is103 ? 1504 : 1462;
-    const expectedSuffix = is103 ? 38046 : 36954;
+    const expectedResults = is104 ? 39926 : (is103 ? 39550 : 38416);
+    const expectedFull = is104 ? 1518 : (is103 ? 1504 : 1462);
+    const expectedSuffix = is104 ? 38408 : (is103 ? 38046 : 36954);
 
     if (stats.population.totalResults !== expectedResults) {
       throw new Error(`Expected ${expectedResults} total results, got ${stats.population.totalResults}`);

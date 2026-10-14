@@ -281,13 +281,13 @@ export class CandidateLabEngine {
         districtExposureDisclaimer:
           "District-level ticket exposure is not available in the current evidence base; historical district counts are descriptive and cannot be interpreted as future winning probability.",
         statisticalCaveats: [
-          "Absence of historical observation in a finite corpus (103 draws) does not indicate future impossibility; the combinatoric search space of full tickets (1,000,000 per series) exceeds observed sample counts.",
+          `Absence of historical observation in a finite corpus (${new Set(corpusRecords.map((r) => r.drawId)).size || 104} draws) does not indicate future impossibility; the combinatoric search space of full tickets (1,000,000 per series) exceeds observed sample counts.`,
           "Descriptive stability across historical walk-forward windows reflects empirical consistency of the digit/suffix distribution, not an edge or gambling advantage.",
           "Zero predictive scoring, AI weighting, or winning recommendation is provided. Candidate ranking is preserved in user input order by default."
         ]
       },
       provenance: {
-        corpusVersion: "v1.0-research-103draws",
+        corpusVersion: `v1.0-research-${new Set(corpusRecords.map((r) => r.drawId)).size || 104}draws`,
         featureVersion: "feat_v1",
         datasetVersion: "dataset_7c_canonical",
         experimentVersion: "exp_v1",
