@@ -94,6 +94,42 @@ export class ResearchSandboxEngine {
     }
 
     const records: CorpusIndexedRecord[] = [];
+
+    // 1. Fast precompiled winning results index (used in production & serverless cloud runtimes)
+    const compactIndexPath = join(this.baseDir, "data/processed-cache/winning-results-index.json");
+    if (existsSync(compactIndexPath)) {
+      try {
+        const raw = readFileSync(compactIndexPath, "utf-8");
+        const entries: [string, string, string, string, string, string, number, string, number, string][] = JSON.parse(raw);
+        for (const e of entries) {
+          const [drawId, drawNumber, drawDate, lotteryCode, series, canonicalNumber, isSuffixNum, prizeTierName, amount, sha256] = e;
+          const isoDate = this.toIsoDate(drawDate);
+          records.push({
+            drawId,
+            drawNumber,
+            drawDate,
+            drawIsoDate: isoDate,
+            lotteryCode,
+            lotteryName: lotteryCode,
+            prizeTierName,
+            rank: prizeTierName.includes("1st") ? 1 : (prizeTierName.includes("2nd") ? 2 : (prizeTierName.includes("3rd") ? 3 : 5)),
+            amount,
+            series: series || undefined,
+            canonicalNumber,
+            numberLength: canonicalNumber.length,
+            isSuffix: isSuffixNum === 1,
+            sourceDocumentSha256: sha256
+          });
+        }
+        if (records.length > 0) {
+          this.corpusRecords = records;
+          return records;
+        }
+      } catch (err) {
+        console.warn("[WARN] ResearchSandboxEngine could not read compact index:", err);
+      }
+    }
+
     const drawDates = new Set<string>();
 
     if (existsSync(this.manifestPath)) {
