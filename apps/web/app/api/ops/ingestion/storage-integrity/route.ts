@@ -166,9 +166,11 @@ export async function GET(req: NextRequest) {
         };
       });
 
-      const matchedCount = items.filter(
-        (i) => i.localPdfExists && i.localGraphExists && i.inManifest && i.identityVerified
-      ).length;
+      const isCloudRuntime = localGraphs.length === 0;
+      const matchedCount = items.filter((i) => {
+        const storageMatched = isCloudRuntime ? (i.inCloudStore && i.inFirestore) : (i.localPdfExists && i.localGraphExists);
+        return storageMatched && i.inManifest && i.identityVerified;
+      }).length;
       const mismatchCount = items.length - matchedCount;
 
       responseData.verification = {
