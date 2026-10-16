@@ -48,6 +48,7 @@
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.2",
     "@types/node": "^22.13.0",
+    "google-auth-library": "9.15.1",
     "turbo": "^2.11.2",
     "typescript": "^5.7.3",
     "vitest": "^2.1.8"
