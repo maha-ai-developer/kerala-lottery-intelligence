@@ -455,85 +455,82 @@ async function main() {
   const schedulerStateChanged = prodSchedulerPre.state !== prodSchedulerPost.state;
   const schedulerTimeChanged = prodSchedulerPre.userUpdateTime !== prodSchedulerPost.userUpdateTime;
 
-  // Assert each difference array is strictly empty
-  if (storageAdditions.length > 0) {
+  // Explicit fail-closed assertions for each difference category
+  if (storageAdditions.length !== 0) {
     throw new Error(`FAIL-CLOSED: Storage additions detected: ${JSON.stringify(storageAdditions)}`);
   }
-  if (storageDeletions.length > 0) {
+  if (storageDeletions.length !== 0) {
     throw new Error(`FAIL-CLOSED: Storage deletions detected: ${JSON.stringify(storageDeletions)}`);
   }
-  if (storageGenerationChanges.length > 0) {
+  if (storageGenerationChanges.length !== 0) {
     throw new Error(`FAIL-CLOSED: Storage generation changes detected: ${JSON.stringify(storageGenerationChanges)}`);
   }
-  if (storageSizeChanges.length > 0) {
+  if (storageSizeChanges.length !== 0) {
     throw new Error(`FAIL-CLOSED: Storage size changes detected: ${JSON.stringify(storageSizeChanges)}`);
   }
-  if (storageTimestampChanges.length > 0) {
+  if (storageTimestampChanges.length !== 0) {
     throw new Error(`FAIL-CLOSED: Storage timestamp changes detected: ${JSON.stringify(storageTimestampChanges)}`);
   }
-  if (firestoreAdditions.length > 0) {
+  if (firestoreAdditions.length !== 0) {
     throw new Error(`FAIL-CLOSED: Firestore additions detected: ${JSON.stringify(firestoreAdditions)}`);
   }
-  if (firestoreDeletions.length > 0) {
+  if (firestoreDeletions.length !== 0) {
     throw new Error(`FAIL-CLOSED: Firestore deletions detected: ${JSON.stringify(firestoreDeletions)}`);
   }
-  if (firestoreUpdateChanges.length > 0) {
-    throw new Error(`FAIL-CLOSED: Firestore updateTime changes detected: ${JSON.stringify(firestoreUpdateChanges)}`);
+  if (firestoreUpdateChanges.length !== 0) {
+    throw new Error(`FAIL-CLOSED: Firestore update timestamp changes detected: ${JSON.stringify(firestoreUpdateChanges)}`);
   }
   if (schedulerStateChanged) {
-    throw new Error(`FAIL-CLOSED: Scheduler state changed: ${prodSchedulerPre.state} -> ${prodSchedulerPost.state}`);
+    throw new Error(`FAIL-CLOSED: Scheduler state changed from ${prodSchedulerPre.state} to ${prodSchedulerPost.state}`);
   }
   if (schedulerTimeChanged) {
-    throw new Error(`FAIL-CLOSED: Scheduler userUpdateTime changed: ${prodSchedulerPre.userUpdateTime} -> ${prodSchedulerPost.userUpdateTime}`);
+    throw new Error(`FAIL-CLOSED: Scheduler updateTime changed from ${prodSchedulerPre.userUpdateTime} to ${prodSchedulerPost.userUpdateTime}`);
+  }
+  if (prodSchedulerPost.state !== "PAUSED") {
+    throw new Error(`FAIL-CLOSED: Scheduler is not PAUSED: ${prodSchedulerPost.state}`);
   }
 
   const comparisonResult = {
-    summaryStatement: "zero net state changes observed between the captured inventories",
+    verdict: "zero net state changes observed between the captured inventories",
     storage: {
       preCount: prodStoragePre.length,
       postCount: prodStoragePost.length,
-      additions: storageAdditions.length,
-      deletions: storageDeletions.length,
-      changedGenerations: storageGenerationChanges.length,
-      changedSizes: storageSizeChanges.length,
-      changedTimestamps: storageTimestampChanges.length,
+      additionsCount: storageAdditions.length,
+      deletionsCount: storageDeletions.length,
+      changedGenerationsCount: storageGenerationChanges.length,
+      changedSizesCount: storageSizeChanges.length,
+      changedTimestampsCount: storageTimestampChanges.length,
       additionsList: storageAdditions,
       deletionsList: storageDeletions,
       changedGenerationsList: storageGenerationChanges,
       changedSizesList: storageSizeChanges,
       changedTimestampsList: storageTimestampChanges,
-      isIdentical: storageAdditions.length === 0 &&
-        storageDeletions.length === 0 &&
-        storageGenerationChanges.length === 0 &&
-        storageSizeChanges.length === 0 &&
-        storageTimestampChanges.length === 0
+      isIdentical: true
     },
     firestore: {
       preCount: prodFirestorePre.length,
       postCount: prodFirestorePost.length,
-      additions: firestoreAdditions.length,
-      deletions: firestoreDeletions.length,
-      changedUpdateTimes: firestoreUpdateChanges.length,
+      additionsCount: firestoreAdditions.length,
+      deletionsCount: firestoreDeletions.length,
+      changedUpdateTimesCount: firestoreUpdateChanges.length,
       additionsList: firestoreAdditions,
       deletionsList: firestoreDeletions,
       changedUpdateTimesList: firestoreUpdateChanges,
-      isIdentical: firestoreAdditions.length === 0 &&
-        firestoreDeletions.length === 0 &&
-        firestoreUpdateChanges.length === 0
+      isIdentical: true
     },
     scheduler: {
       preState: prodSchedulerPre.state,
       postState: prodSchedulerPost.state,
       preUpdateTime: prodSchedulerPre.userUpdateTime,
       postUpdateTime: prodSchedulerPost.userUpdateTime,
-      stateChanged: schedulerStateChanged,
-      updateTimeChanged: schedulerTimeChanged,
-      isIdentical: !schedulerStateChanged && !schedulerTimeChanged && prodSchedulerPost.state === "PAUSED"
+      stateChanged: false,
+      updateTimeChanged: false,
+      isIdentical: true
     },
     overallProdZeroMutation: true
   };
 
-  console.log("✓ PROD Post-Audit Comparison: zero net state changes observed between the captured inventories (100 Storage objects, 100 Firestore documents identical; scheduler unchanged).");
+  console.log("✓ PROD Post-Audit Comparison: 100/100 Storage objects and 100/100 Firestore documents identical. Zero net state changes observed between the captured inventories. Scheduler unchanged.");
 
   // 5. Save Raw Machine-Readable Report
   const fullReport = {
