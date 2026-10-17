@@ -1,5 +1,47 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
-  <rect width="32" height="32" rx="6" fill="#0f172a"/>
-  <circle cx="16" cy="16" r="11" fill="none" stroke="#0ea5e9" stroke-width="2"/>
-  <path d="M11 16 L15 20 L21 12" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none" role="img" aria-label="Kerala Lottery Intelligence — Original Kerala-Inspired Scientific Mark">
+  <defs>
+    <linearGradient id="kli-bg" x1="12" y1="8" x2="116" y2="120" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#064e3b" />
+      <stop offset="55%" stop-color="#0f766e" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+    <linearGradient id="kli-gold" x1="28" y1="24" x2="100" y2="96" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#fde68a" />
+      <stop offset="50%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#d97706" />
+    </linearGradient>
+    <linearGradient id="kli-palm" x1="30" y1="28" x2="94" y2="86" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#34d399" />
+      <stop offset="100%" stop-color="#10b981" />
+    </linearGradient>
+    <linearGradient id="kli-wave" x1="20" y1="92" x2="108" y2="108" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#2dd4bf" />
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded Scientific Badge Base -->
+  <rect x="6" y="6" width="116" height="116" rx="28" fill="url(#kli-bg)" stroke="url(#kli-gold)" stroke-width="3.5" />
+  <rect x="13" y="13" width="102" height="102" rx="22" stroke="#34d399" stroke-opacity="0.22" stroke-width="1.2" />
+
+  <!-- Stylized Kerala Coconut Palm Frond Arcs (Left / Center / Right) -->
+  <path d="M64 88 C62 66 52 46 32 36 C46 35 58 43 64 58" stroke="url(#kli-palm)" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M64 88 C61 68 46 56 26 52 C40 49 54 55 62 68" stroke="url(#kli-palm)" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round" opacity="0.88" />
+  <path d="M64 88 C66 66 76 46 96 36 C82 35 70 43 64 58" stroke="url(#kli-palm)" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M64 88 C67 68 82 56 102 52 C88 49 74 55 66 68" stroke="url(#kli-palm)" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round" opacity="0.88" />
+  <path d="M64 90 L64 26" stroke="url(#kli-gold)" stroke-width="3.8" stroke-linecap="round" />
+
+  <!-- Knowledge-Graph Edges Connecting Analytical Nodes -->
+  <path d="M36 42 L64 26 L92 42 L64 62 Z" stroke="#fde68a" stroke-opacity="0.55" stroke-width="1.8" stroke-dasharray="3 2.5" />
+  <path d="M36 42 L92 42" stroke="#38bdf8" stroke-opacity="0.45" stroke-width="1.5" />
+
+  <!-- Backwater / Arabian Sea Dual Wave Horizon -->
+  <path d="M24 94 C38 87 50 101 64 94 C78 87 90 101 104 94" stroke="url(#kli-wave)" stroke-width="4" stroke-linecap="round" />
+  <path d="M30 104 C42 98 53 109 64 104 C75 98 86 109 98 104" stroke="#38bdf8" stroke-opacity="0.65" stroke-width="3" stroke-linecap="round" />
+
+  <!-- Cryptographic Provenance & Knowledge Graph Nodes -->
+  <circle cx="64" cy="26" r="6" fill="url(#kli-gold)" stroke="#064e3b" stroke-width="2" />
+  <circle cx="36" cy="42" r="5" fill="#34d399" stroke="#064e3b" stroke-width="2" />
+  <circle cx="92" cy="42" r="5" fill="#38bdf8" stroke="#064e3b" stroke-width="2" />
+  <circle cx="64" cy="62" r="5.5" fill="url(#kli-gold)" stroke="#064e3b" stroke-width="2" />
 </svg>

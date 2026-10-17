@@ -106,7 +106,7 @@ export default function GeographyPage() {
 
   if (loading) {
     return (
-      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "3rem 1.5rem", textAlign: "center", color: "#94a3b8" }}>
+      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "3rem 1.5rem", textAlign: "center", color: "var(--text-secondary)" }}>
         Loading canonical geographic research surface...
       </div>
     );
@@ -114,7 +114,7 @@ export default function GeographyPage() {
 
   if (error) {
     return (
-      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "3rem 1.5rem", textAlign: "center", color: "#ef4444" }}>
+      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "3rem 1.5rem", textAlign: "center", color: "var(--accent-rose)" }}>
         Failed to load geographic dataset: {error}
       </div>
     );
@@ -124,7 +124,7 @@ export default function GeographyPage() {
     <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "1.5rem" }}>
       {/* Header */}
       <div style={{ marginBottom: "1.5rem" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem", flexWrap: "wrap" }}>
           <span style={{ fontSize: "0.8rem", color: "var(--accent-cyan)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
             Milestone 10A • Continuous Research Surface
           </span>
@@ -132,17 +132,17 @@ export default function GeographyPage() {
             EXPOSURE UNAVAILABLE
           </span>
         </div>
-        <h1 style={{ fontSize: "1.85rem", fontWeight: 700, margin: "0 0 0.5rem 0", color: "#f8fafc" }}>
+        <h1 style={{ fontSize: "1.85rem", fontWeight: 700, margin: "0 0 0.5rem 0", color: "var(--text-primary)" }}>
           Winning Geography & Ticket Distribution Exposure
         </h1>
-        <p style={{ color: "#94a3b8", fontSize: "0.95rem", margin: 0, maxWidth: "900px", lineHeight: 1.5 }}>
+        <p style={{ color: "var(--text-secondary)", fontSize: "0.95rem", margin: 0, maxWidth: "900px", lineHeight: 1.5 }}>
           Ground truth retrospective extraction of published ticket issuing offices from canonical Kerala Government Gazette result PDFs (103-draw V1 baseline snapshot). Rigorous separation between observed winner occurrences and ticket exposure denominators.
         </p>
       </div>
 
       {/* Critical Denominator & Non-Predictive Warning Alert */}
       <div style={{
-        background: "rgba(15, 23, 42, 0.75)",
+        background: "var(--bg-surface-elevated)",
         border: "1px solid rgba(245, 158, 11, 0.35)",
         borderRadius: "0.5rem",
         padding: "1rem 1.25rem",
@@ -153,15 +153,15 @@ export default function GeographyPage() {
       }}>
         <div style={{ fontSize: "1.5rem", lineHeight: 1 }}>⚠️</div>
         <div>
-          <h4 style={{ margin: "0 0 0.35rem 0", color: "#f59e0b", fontSize: "0.95rem", fontWeight: 600 }}>
+          <h4 style={{ margin: "0 0 0.35rem 0", color: "var(--accent-amber)", fontSize: "0.95rem", fontWeight: 600 }}>
             Critical Denominator Rule & Non-Predictive Scientific Boundary
           </h4>
-          <p style={{ margin: 0, color: "#cbd5e1", fontSize: "0.85rem", lineHeight: 1.5 }}>
+          <p style={{ margin: 0, color: "var(--text-secondary)", fontSize: "0.85rem", lineHeight: 1.5 }}>
             Official Kerala Government Gazette result publications publish only the winning ticket numbers and issuing office locations for top-tier prizes. <strong>District-level ticket sales volume and returned unsold ticket counterfoils are NOT published in public gazette result sheets.</strong> In the absence of authoritative ticket exposure denominators, raw winner counts represent retrospective descriptive observations and <strong>CANNOT</strong> be used to calculate district winning probabilities. Any concept of &quot;lucky districts&quot;, &quot;hot districts&quot;, or betting scores is scientifically unfounded and strictly prohibited.
           </p>
           {analysis && (
-            <div style={{ marginTop: "0.5rem", fontSize: "0.8rem", color: "#94a3b8" }}>
-              Active Research Hypothesis: <code style={{ color: "#f59e0b" }}>{analysis.hypothesisStatement}</code>
+            <div style={{ marginTop: "0.5rem", fontSize: "0.8rem", color: "var(--text-secondary)" }}>
+              Active Research Hypothesis: <code style={{ color: "var(--accent-amber)" }}>{analysis.hypothesisStatement}</code>
             </div>
           )}
         </div>
@@ -174,43 +174,44 @@ export default function GeographyPage() {
         gap: "1rem",
         marginBottom: "1.5rem"
       }}>
-        <div style={{ background: "rgba(30, 41, 59, 0.5)", border: "1px solid rgba(148, 163, 184, 0.15)", borderRadius: "0.5rem", padding: "1rem" }}>
-          <div style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: 600 }}>V1 Baseline Geography</div>
-          <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#f8fafc", marginTop: "0.25rem" }}>
-            {dataset?.drawCount ?? 103} <span style={{ fontSize: "0.9rem", fontWeight: 400, color: "#94a3b8" }}>Draws (V1 Snapshot)</span>
+        <div style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)", borderRadius: "0.5rem", padding: "1rem" }}>
+          <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", textTransform: "uppercase", fontWeight: 600 }}>V1 Baseline Geography</div>
+          <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--text-primary)", marginTop: "0.25rem" }}>
+            {dataset?.drawCount ?? 103} <span style={{ fontSize: "0.9rem", fontWeight: 400, color: "var(--text-secondary)" }}>Draws (V1 Snapshot)</span>
           </div>
-          <div style={{ fontSize: "0.75rem", color: "#38bdf8", marginTop: "0.25rem" }}>{(dataset?.resultCount ?? 39550).toLocaleString()} Published Results</div>
+          <div style={{ fontSize: "0.75rem", color: "var(--accent-cyan)", marginTop: "0.25rem" }}>{(dataset?.resultCount ?? 39550).toLocaleString()} Published Results</div>
         </div>
 
-        <div style={{ background: "rgba(30, 41, 59, 0.5)", border: "1px solid rgba(148, 163, 184, 0.15)", borderRadius: "0.5rem", padding: "1rem" }}>
-          <div style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: 600 }}>Published Locations</div>
-          <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#38bdf8", marginTop: "0.25rem" }}>
-            380 <span style={{ fontSize: "0.9rem", fontWeight: 400, color: "#94a3b8" }}>Exact Tickets</span>
+        <div style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)", borderRadius: "0.5rem", padding: "1rem" }}>
+          <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", textTransform: "uppercase", fontWeight: 600 }}>Published Locations</div>
+          <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--accent-cyan)", marginTop: "0.25rem" }}>
+            380 <span style={{ fontSize: "0.9rem", fontWeight: 400, color: "var(--text-secondary)" }}>Exact Tickets</span>
           </div>
-          <div style={{ fontSize: "0.75rem", color: "#94a3b8", marginTop: "0.25rem" }}>196 Direct / 184 Derived</div>
+          <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>196 Direct / 184 Derived</div>
         </div>
 
-        <div style={{ background: "rgba(30, 41, 59, 0.5)", border: "1px solid rgba(148, 163, 184, 0.15)", borderRadius: "0.5rem", padding: "1rem" }}>
-          <div style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: 600 }}>Revenue Districts</div>
-          <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#10b981", marginTop: "0.25rem" }}>
-            14 / 14 <span style={{ fontSize: "0.9rem", fontWeight: 400, color: "#94a3b8" }}>Covered</span>
+        <div style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)", borderRadius: "0.5rem", padding: "1rem" }}>
+          <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", textTransform: "uppercase", fontWeight: 600 }}>Revenue Districts</div>
+          <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--accent-emerald)", marginTop: "0.25rem" }}>
+            14 / 14 <span style={{ fontSize: "0.9rem", fontWeight: 400, color: "var(--text-secondary)" }}>Covered</span>
           </div>
-          <div style={{ fontSize: "0.75rem", color: "#10b981", marginTop: "0.25rem" }}>35 DLO/SLO Offices Mapped</div>
+          <div style={{ fontSize: "0.75rem", color: "var(--accent-emerald)", marginTop: "0.25rem" }}>35 DLO/SLO Offices Mapped</div>
         </div>
 
-        <div style={{ background: "rgba(30, 41, 59, 0.5)", border: "1px solid rgba(148, 163, 184, 0.15)", borderRadius: "0.5rem", padding: "1rem" }}>
-          <div style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: 600 }}>Suffix & Consolation</div>
-          <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#94a3b8", marginTop: "0.25rem" }}>
-            39,170 <span style={{ fontSize: "0.9rem", fontWeight: 400, color: "#64748b" }}>Results</span>
+        <div style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)", borderRadius: "0.5rem", padding: "1rem" }}>
+          <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", textTransform: "uppercase", fontWeight: 600 }}>Suffix & Consolation</div>
+          <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--text-secondary)", marginTop: "0.25rem" }}>
+            39,170 <span style={{ fontSize: "0.9rem", fontWeight: 400, color: "var(--text-muted)" }}>Results</span>
           </div>
-          <div style={{ fontSize: "0.75rem", color: "#94a3b8", marginTop: "0.25rem" }}>Location Not in Source</div>
+          <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>Location Not in Source</div>
         </div>
       </div>
 
       {/* Tabs */}
       <div style={{
         display: "flex",
-        borderBottom: "1px solid rgba(148, 163, 184, 0.2)",
+        flexWrap: "wrap",
+        borderBottom: "1px solid var(--border-subtle)",
         marginBottom: "1.5rem",
         gap: "0.5rem"
       }}>
@@ -227,8 +228,8 @@ export default function GeographyPage() {
               padding: "0.6rem 1.2rem",
               background: "transparent",
               border: "none",
-              borderBottom: activeTab === tab.id ? "2px solid #38bdf8" : "2px solid transparent",
-              color: activeTab === tab.id ? "#38bdf8" : "#94a3b8",
+              borderBottom: activeTab === tab.id ? "2px solid var(--accent-cyan)" : "2px solid transparent",
+              color: activeTab === tab.id ? "var(--accent-cyan)" : "var(--text-secondary)",
               fontWeight: activeTab === tab.id ? 600 : 500,
               fontSize: "0.9rem",
               cursor: "pointer",
@@ -244,23 +245,23 @@ export default function GeographyPage() {
       {activeTab === "districts" && (
         <div>
           <div style={{
-            background: "rgba(30, 41, 59, 0.4)",
-            border: "1px solid rgba(148, 163, 184, 0.15)",
+            background: "var(--bg-surface)",
+            border: "1px solid var(--border-subtle)",
             borderRadius: "0.5rem",
             overflow: "hidden"
           }}>
-            <div style={{ padding: "1rem", borderBottom: "1px solid rgba(148, 163, 184, 0.15)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "#f8fafc" }}>
+            <div style={{ padding: "1rem", borderBottom: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
+              <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--text-primary)" }}>
                 Observed Major-Prize Winners by District (Retrospective Occurrences)
               </span>
-              <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>
+              <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
                 Total Major Winners: {allObservations.length}
               </span>
             </div>
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "0.85rem" }}>
                 <thead>
-                  <tr style={{ background: "rgba(15, 23, 42, 0.6)", color: "#94a3b8", borderBottom: "1px solid rgba(148, 163, 184, 0.15)" }}>
+                  <tr style={{ background: "var(--bg-surface-elevated)", color: "var(--text-secondary)", borderBottom: "1px solid var(--border-subtle)" }}>
                     <th style={{ padding: "0.75rem 1rem" }}>District</th>
                     <th style={{ padding: "0.75rem 1rem", textAlign: "right" }}>Total Winners</th>
                     <th style={{ padding: "0.75rem 1rem", textAlign: "right" }}>Direct Matches</th>
@@ -280,35 +281,35 @@ export default function GeographyPage() {
                       <tr
                         key={d.district}
                         style={{
-                          borderBottom: "1px solid rgba(148, 163, 184, 0.1)",
-                          background: idx % 2 === 0 ? "rgba(15, 23, 42, 0.2)" : "transparent"
+                          borderBottom: "1px solid var(--border-subtle)",
+                          background: idx % 2 === 0 ? "var(--bg-surface-elevated)" : "transparent"
                         }}
                       >
-                        <td style={{ padding: "0.75rem 1rem", fontWeight: 600, color: "#f8fafc" }}>
+                        <td style={{ padding: "0.75rem 1rem", fontWeight: 600, color: "var(--text-primary)" }}>
                           {d.district}
                         </td>
-                        <td style={{ padding: "0.75rem 1rem", textAlign: "right", fontWeight: 700, color: "#38bdf8" }}>
+                        <td style={{ padding: "0.75rem 1rem", textAlign: "right", fontWeight: 700, color: "var(--accent-cyan)" }}>
                           {d.totalObservedWinners}
                         </td>
-                        <td style={{ padding: "0.75rem 1rem", textAlign: "right", color: "#94a3b8" }}>
+                        <td style={{ padding: "0.75rem 1rem", textAlign: "right", color: "var(--text-secondary)" }}>
                           {d.explicitPdfObservations}
                         </td>
-                        <td style={{ padding: "0.75rem 1rem", textAlign: "right", color: "#94a3b8" }}>
+                        <td style={{ padding: "0.75rem 1rem", textAlign: "right", color: "var(--text-secondary)" }}>
                           {d.derivedObservations}
                         </td>
-                        <td style={{ padding: "0.75rem 1rem", textAlign: "center", color: "#f8fafc" }}>
+                        <td style={{ padding: "0.75rem 1rem", textAlign: "center", color: "var(--text-primary)" }}>
                           {d.byPrizeTier.firstPrize}
                         </td>
-                        <td style={{ padding: "0.75rem 1rem", textAlign: "center", color: "#cbd5e1" }}>
+                        <td style={{ padding: "0.75rem 1rem", textAlign: "center", color: "var(--text-secondary)" }}>
                           {d.byPrizeTier.secondPrize}
                         </td>
-                        <td style={{ padding: "0.75rem 1rem", textAlign: "center", color: "#cbd5e1" }}>
+                        <td style={{ padding: "0.75rem 1rem", textAlign: "center", color: "var(--text-secondary)" }}>
                           {d.byPrizeTier.thirdPrize}
                         </td>
-                        <td style={{ padding: "0.75rem 1rem", textAlign: "center", color: "#cbd5e1" }}>
+                        <td style={{ padding: "0.75rem 1rem", textAlign: "center", color: "var(--text-secondary)" }}>
                           {d.byPrizeTier.fourthPrize + d.byPrizeTier.fifthPrize}
                         </td>
-                        <td style={{ padding: "0.75rem 1rem", fontSize: "0.75rem", color: "#64748b" }}>
+                        <td style={{ padding: "0.75rem 1rem", fontSize: "0.75rem", color: "var(--text-muted)" }}>
                           {d.earliestDrawDate} → {d.latestDrawDate}
                         </td>
                       </tr>
@@ -340,10 +341,10 @@ export default function GeographyPage() {
                 style={{
                   width: "100%",
                   padding: "0.5rem 0.75rem",
-                  background: "rgba(15, 23, 42, 0.6)",
-                  border: "1px solid rgba(148, 163, 184, 0.2)",
+                  background: "var(--bg-surface-elevated)",
+                  border: "1px solid var(--border-medium)",
                   borderRadius: "0.375rem",
-                  color: "#f8fafc",
+                  color: "var(--text-primary)",
                   fontSize: "0.85rem"
                 }}
               />
@@ -354,10 +355,10 @@ export default function GeographyPage() {
                 onChange={e => { setSelectedDistrict(e.target.value); setCurrentPage(1); }}
                 style={{
                   padding: "0.5rem 0.75rem",
-                  background: "rgba(15, 23, 42, 0.6)",
-                  border: "1px solid rgba(148, 163, 184, 0.2)",
+                  background: "var(--bg-surface-elevated)",
+                  border: "1px solid var(--border-medium)",
                   borderRadius: "0.375rem",
-                  color: "#f8fafc",
+                  color: "var(--text-primary)",
                   fontSize: "0.85rem"
                 }}
               >
@@ -373,10 +374,10 @@ export default function GeographyPage() {
                 onChange={e => { setSelectedTier(e.target.value); setCurrentPage(1); }}
                 style={{
                   padding: "0.5rem 0.75rem",
-                  background: "rgba(15, 23, 42, 0.6)",
-                  border: "1px solid rgba(148, 163, 184, 0.2)",
+                  background: "var(--bg-surface-elevated)",
+                  border: "1px solid var(--border-medium)",
                   borderRadius: "0.375rem",
-                  color: "#f8fafc",
+                  color: "var(--text-primary)",
                   fontSize: "0.85rem"
                 }}
               >
@@ -388,22 +389,22 @@ export default function GeographyPage() {
                 <option value="5th">5th Prize</option>
               </select>
             </div>
-            <div style={{ fontSize: "0.8rem", color: "#94a3b8" }}>
+            <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
               Showing {filteredObservations.length} observations
             </div>
           </div>
 
           {/* Observations Table */}
           <div style={{
-            background: "rgba(30, 41, 59, 0.4)",
-            border: "1px solid rgba(148, 163, 184, 0.15)",
+            background: "var(--bg-surface)",
+            border: "1px solid var(--border-subtle)",
             borderRadius: "0.5rem",
             overflow: "hidden"
           }}>
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "0.85rem" }}>
                 <thead>
-                  <tr style={{ background: "rgba(15, 23, 42, 0.6)", color: "#94a3b8", borderBottom: "1px solid rgba(148, 163, 184, 0.15)" }}>
+                  <tr style={{ background: "var(--bg-surface-elevated)", color: "var(--text-secondary)", borderBottom: "1px solid var(--border-subtle)" }}>
                     <th style={{ padding: "0.75rem 1rem" }}>Draw Date</th>
                     <th style={{ padding: "0.75rem 1rem" }}>Lottery</th>
                     <th style={{ padding: "0.75rem 1rem" }}>Prize Tier</th>
@@ -418,14 +419,14 @@ export default function GeographyPage() {
                     <tr
                       key={obs.observationId}
                       style={{
-                        borderBottom: "1px solid rgba(148, 163, 184, 0.1)",
-                        background: idx % 2 === 0 ? "rgba(15, 23, 42, 0.2)" : "transparent"
+                        borderBottom: "1px solid var(--border-subtle)",
+                        background: idx % 2 === 0 ? "var(--bg-surface-elevated)" : "transparent"
                       }}
                     >
-                      <td style={{ padding: "0.75rem 1rem", color: "#94a3b8" }}>
+                      <td style={{ padding: "0.75rem 1rem", color: "var(--text-secondary)" }}>
                         {obs.drawDate}
                       </td>
-                      <td style={{ padding: "0.75rem 1rem", fontWeight: 600, color: "#f8fafc" }}>
+                      <td style={{ padding: "0.75rem 1rem", fontWeight: 600, color: "var(--text-primary)" }}>
                         {obs.lotteryCode} ({obs.drawNumber})
                       </td>
                       <td style={{ padding: "0.75rem 1rem" }}>
@@ -435,18 +436,18 @@ export default function GeographyPage() {
                           fontSize: "0.75rem",
                           fontWeight: 600,
                           background: obs.prizeTier.includes("1st") ? "rgba(234, 179, 8, 0.15)" : "rgba(148, 163, 184, 0.15)",
-                          color: obs.prizeTier.includes("1st") ? "#eab308" : "#cbd5e1"
+                          color: obs.prizeTier.includes("1st") ? "var(--accent-amber)" : "var(--text-secondary)"
                         }}>
                           {obs.prizeTier}
                         </span>
                       </td>
-                      <td style={{ padding: "0.75rem 1rem", fontFamily: "monospace", fontWeight: 600, color: "#38bdf8" }}>
+                      <td style={{ padding: "0.75rem 1rem", fontFamily: "monospace", fontWeight: 600, color: "var(--accent-cyan)" }}>
                         {obs.series} {obs.winningNumber}
                       </td>
-                      <td style={{ padding: "0.75rem 1rem", color: "#e2e8f0" }}>
+                      <td style={{ padding: "0.75rem 1rem", color: "var(--text-primary)" }}>
                         {obs.rawLocation}
                       </td>
-                      <td style={{ padding: "0.75rem 1rem", fontWeight: 600, color: "#10b981" }}>
+                      <td style={{ padding: "0.75rem 1rem", fontWeight: 600, color: "var(--accent-emerald)" }}>
                         {obs.normalizedDistrict}
                       </td>
                       <td style={{ padding: "0.75rem 1rem" }}>
@@ -456,7 +457,7 @@ export default function GeographyPage() {
                             padding: "0.25rem 0.5rem",
                             fontSize: "0.75rem",
                             background: "rgba(56, 189, 248, 0.1)",
-                            color: "#38bdf8",
+                            color: "var(--accent-cyan)",
                             border: "1px solid rgba(56, 189, 248, 0.3)",
                             borderRadius: "0.25rem",
                             cursor: "pointer"
@@ -474,12 +475,14 @@ export default function GeographyPage() {
             {/* Pagination Controls */}
             <div style={{
               padding: "0.75rem 1rem",
-              borderTop: "1px solid rgba(148, 163, 184, 0.15)",
+              borderTop: "1px solid var(--border-subtle)",
               display: "flex",
               justifyContent: "space-between",
-              alignItems: "center"
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "0.5rem"
             }}>
-              <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>
+              <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
                 Page {currentPage} of {totalPages} ({filteredObservations.length} results)
               </span>
               <div style={{ display: "flex", gap: "0.5rem" }}>
@@ -489,9 +492,9 @@ export default function GeographyPage() {
                   style={{
                     padding: "0.25rem 0.75rem",
                     fontSize: "0.8rem",
-                    background: "rgba(15, 23, 42, 0.6)",
-                    color: currentPage <= 1 ? "#64748b" : "#f8fafc",
-                    border: "1px solid rgba(148, 163, 184, 0.2)",
+                    background: "var(--bg-surface-elevated)",
+                    color: currentPage <= 1 ? "var(--text-muted)" : "var(--text-primary)",
+                    border: "1px solid var(--border-medium)",
                     borderRadius: "0.25rem",
                     cursor: currentPage <= 1 ? "not-allowed" : "pointer"
                   }}
@@ -504,9 +507,9 @@ export default function GeographyPage() {
                   style={{
                     padding: "0.25rem 0.75rem",
                     fontSize: "0.8rem",
-                    background: "rgba(15, 23, 42, 0.6)",
-                    color: currentPage >= totalPages ? "#64748b" : "#f8fafc",
-                    border: "1px solid rgba(148, 163, 184, 0.2)",
+                    background: "var(--bg-surface-elevated)",
+                    color: currentPage >= totalPages ? "var(--text-muted)" : "var(--text-primary)",
+                    border: "1px solid var(--border-medium)",
                     borderRadius: "0.25rem",
                     cursor: currentPage >= totalPages ? "not-allowed" : "pointer"
                   }}
@@ -523,41 +526,41 @@ export default function GeographyPage() {
       {activeTab === "semantics" && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "1.5rem" }}>
           <div style={{
-            background: "rgba(30, 41, 59, 0.4)",
-            border: "1px solid rgba(148, 163, 184, 0.15)",
+            background: "var(--bg-surface)",
+            border: "1px solid var(--border-subtle)",
             borderRadius: "0.5rem",
             padding: "1.25rem"
           }}>
-            <h3 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#f8fafc", margin: "0 0 1rem 0" }}>
+            <h3 style={{ fontSize: "1.1rem", fontWeight: 600, color: "var(--text-primary)", margin: "0 0 1rem 0" }}>
               Prize Structure Classification Across 39,550 Winning Results
             </h3>
             <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-              <div style={{ padding: "0.75rem", background: "rgba(15, 23, 42, 0.5)", borderRadius: "0.375rem", borderLeft: "4px solid #38bdf8" }}>
+              <div style={{ padding: "0.75rem", background: "var(--bg-surface-elevated)", borderRadius: "0.375rem", borderLeft: "4px solid var(--accent-cyan)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontWeight: 600, color: "#f8fafc" }}>1. Exact-Ticket Major Prizes</span>
-                  <span style={{ fontWeight: 700, color: "#38bdf8" }}>380 tickets (1.0%)</span>
+                  <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>1. Exact-Ticket Major Prizes</span>
+                  <span style={{ fontWeight: 700, color: "var(--accent-cyan)" }}>380 tickets (1.0%)</span>
                 </div>
-                <p style={{ margin: "0.35rem 0 0 0", fontSize: "0.8rem", color: "#94a3b8" }}>
+                <p style={{ margin: "0.35rem 0 0 0", fontSize: "0.8rem", color: "var(--text-secondary)" }}>
                   1st, 2nd, 3rd (and select Bumper 4th/5th) prizes. Published with complete 2-letter series, 6-digit ticket number, and ticket-issuing office location in parentheses.
                 </p>
               </div>
 
-              <div style={{ padding: "0.75rem", background: "rgba(15, 23, 42, 0.5)", borderRadius: "0.375rem", borderLeft: "4px solid #eab308" }}>
+              <div style={{ padding: "0.75rem", background: "var(--bg-surface-elevated)", borderRadius: "0.375rem", borderLeft: "4px solid var(--accent-amber)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontWeight: 600, color: "#f8fafc" }}>2. Consolation Prizes</span>
-                  <span style={{ fontWeight: 700, color: "#eab308" }}>1,124 tickets (2.8%)</span>
+                  <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>2. Consolation Prizes</span>
+                  <span style={{ fontWeight: 700, color: "var(--accent-amber)" }}>1,124 tickets (2.8%)</span>
                 </div>
-                <p style={{ margin: "0.35rem 0 0 0", fontSize: "0.8rem", color: "#94a3b8" }}>
+                <p style={{ margin: "0.35rem 0 0 0", fontSize: "0.8rem", color: "var(--text-secondary)" }}>
                   Tickets sharing the 1st prize 6-digit number in the remaining series. The gazette lists the series and number, but does not reprint an independent location string.
                 </p>
               </div>
 
-              <div style={{ padding: "0.75rem", background: "rgba(15, 23, 42, 0.5)", borderRadius: "0.375rem", borderLeft: "4px solid #64748b" }}>
+              <div style={{ padding: "0.75rem", background: "var(--bg-surface-elevated)", borderRadius: "0.375rem", borderLeft: "4px solid var(--text-muted)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontWeight: 600, color: "#f8fafc" }}>3. Suffix-Class Prizes (4th through 9th)</span>
-                  <span style={{ fontWeight: 700, color: "#94a3b8" }}>38,046 tickets (96.2%)</span>
+                  <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>3. Suffix-Class Prizes (4th through 9th)</span>
+                  <span style={{ fontWeight: 700, color: "var(--text-secondary)" }}>38,046 tickets (96.2%)</span>
                 </div>
-                <p style={{ margin: "0.35rem 0 0 0", fontSize: "0.8rem", color: "#94a3b8" }}>
+                <p style={{ margin: "0.35rem 0 0 0", fontSize: "0.8rem", color: "var(--text-secondary)" }}>
                   Awarded to all tickets in all series whose final 4 digits match the published winning suffix. No ticket series or issuing office location exists in official gazettes for this tier.
                 </p>
               </div>
@@ -565,39 +568,39 @@ export default function GeographyPage() {
           </div>
 
           <div style={{
-            background: "rgba(30, 41, 59, 0.4)",
-            border: "1px solid rgba(148, 163, 184, 0.15)",
+            background: "var(--bg-surface)",
+            border: "1px solid var(--border-subtle)",
             borderRadius: "0.5rem",
             padding: "1.25rem"
           }}>
-            <h3 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#f8fafc", margin: "0 0 1rem 0" }}>
+            <h3 style={{ fontSize: "1.1rem", fontWeight: 600, color: "var(--text-primary)", margin: "0 0 1rem 0" }}>
               Mathematical Corpus Reconciliation
             </h3>
             <table style={{ width: "100%", fontSize: "0.85rem", borderCollapse: "collapse" }}>
               <tbody>
-                <tr style={{ borderBottom: "1px solid rgba(148, 163, 184, 0.1)" }}>
-                  <td style={{ padding: "0.6rem 0", color: "#cbd5e1" }}>Total Canonical PDF Files</td>
-                  <td style={{ padding: "0.6rem 0", textAlign: "right", fontWeight: 600, color: "#f8fafc" }}>103</td>
+                <tr style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                  <td style={{ padding: "0.6rem 0", color: "var(--text-secondary)" }}>Total Canonical PDF Files</td>
+                  <td style={{ padding: "0.6rem 0", textAlign: "right", fontWeight: 600, color: "var(--text-primary)" }}>103</td>
                 </tr>
-                <tr style={{ borderBottom: "1px solid rgba(148, 163, 184, 0.1)" }}>
-                  <td style={{ padding: "0.6rem 0", color: "#cbd5e1" }}>Total Results in Research Corpus</td>
-                  <td style={{ padding: "0.6rem 0", textAlign: "right", fontWeight: 600, color: "#f8fafc" }}>39,550</td>
+                <tr style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                  <td style={{ padding: "0.6rem 0", color: "var(--text-secondary)" }}>Total Results in Research Corpus</td>
+                  <td style={{ padding: "0.6rem 0", textAlign: "right", fontWeight: 600, color: "var(--text-primary)" }}>39,550</td>
                 </tr>
-                <tr style={{ borderBottom: "1px solid rgba(148, 163, 184, 0.1)" }}>
-                  <td style={{ padding: "0.6rem 0", color: "#cbd5e1" }}>Exact Tickets with Published Location</td>
-                  <td style={{ padding: "0.6rem 0", textAlign: "right", fontWeight: 600, color: "#38bdf8" }}>380</td>
+                <tr style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                  <td style={{ padding: "0.6rem 0", color: "var(--text-secondary)" }}>Exact Tickets with Published Location</td>
+                  <td style={{ padding: "0.6rem 0", textAlign: "right", fontWeight: 600, color: "var(--accent-cyan)" }}>380</td>
                 </tr>
-                <tr style={{ borderBottom: "1px solid rgba(148, 163, 184, 0.1)" }}>
-                  <td style={{ padding: "0.6rem 0", color: "#cbd5e1" }}>Consolation Tickets</td>
-                  <td style={{ padding: "0.6rem 0", textAlign: "right", fontWeight: 600, color: "#eab308" }}>1,124</td>
+                <tr style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                  <td style={{ padding: "0.6rem 0", color: "var(--text-secondary)" }}>Consolation Tickets</td>
+                  <td style={{ padding: "0.6rem 0", textAlign: "right", fontWeight: 600, color: "var(--accent-amber)" }}>1,124</td>
                 </tr>
-                <tr style={{ borderBottom: "1px solid rgba(148, 163, 184, 0.1)" }}>
-                  <td style={{ padding: "0.6rem 0", color: "#cbd5e1" }}>Suffix Results (4th through 9th)</td>
-                  <td style={{ padding: "0.6rem 0", textAlign: "right", fontWeight: 600, color: "#94a3b8" }}>38,046</td>
+                <tr style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                  <td style={{ padding: "0.6rem 0", color: "var(--text-secondary)" }}>Suffix Results (4th through 9th)</td>
+                  <td style={{ padding: "0.6rem 0", textAlign: "right", fontWeight: 600, color: "var(--text-secondary)" }}>38,046</td>
                 </tr>
-                <tr style={{ borderTop: "2px solid rgba(148, 163, 184, 0.3)" }}>
-                  <td style={{ padding: "0.75rem 0", fontWeight: 700, color: "#10b981" }}>Reconciliation Sum</td>
-                  <td style={{ padding: "0.75rem 0", textAlign: "right", fontWeight: 700, color: "#10b981" }}>
+                <tr style={{ borderTop: "2px solid var(--border-medium)" }}>
+                  <td style={{ padding: "0.75rem 0", fontWeight: 700, color: "var(--accent-emerald)" }}>Reconciliation Sum</td>
+                  <td style={{ padding: "0.75rem 0", textAlign: "right", fontWeight: 700, color: "var(--accent-emerald)" }}>
                     380 + 1,124 + 38,046 = 39,550
                   </td>
                 </tr>
@@ -610,15 +613,15 @@ export default function GeographyPage() {
       {/* Tab 4: 11-Stage Lineage & Provenance */}
       {activeTab === "lineage" && (
         <div style={{
-          background: "rgba(30, 41, 59, 0.4)",
-          border: "1px solid rgba(148, 163, 184, 0.15)",
+          background: "var(--bg-surface)",
+          border: "1px solid var(--border-subtle)",
           borderRadius: "0.5rem",
           padding: "1.5rem"
         }}>
-          <h3 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#f8fafc", margin: "0 0 0.5rem 0" }}>
+          <h3 style={{ fontSize: "1.1rem", fontWeight: 600, color: "var(--text-primary)", margin: "0 0 0.5rem 0" }}>
             11-Stage Geographic Provenance DAG (Extending Milestone 9D)
           </h3>
-          <p style={{ color: "#94a3b8", fontSize: "0.85rem", margin: "0 0 1.5rem 0" }}>
+          <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", margin: "0 0 1.5rem 0" }}>
             Every geographic claim is grounded in official gazetted PDFs and traverses an unbroken cryptographic DAG.
           </p>
 
@@ -642,8 +645,8 @@ export default function GeographyPage() {
                   display: "flex",
                   alignItems: "center",
                   padding: "0.75rem 1rem",
-                  background: st.status === "UNAVAILABLE" ? "rgba(245, 158, 11, 0.08)" : "rgba(15, 23, 42, 0.4)",
-                  border: st.status === "UNAVAILABLE" ? "1px solid rgba(245, 158, 11, 0.3)" : "1px solid rgba(148, 163, 184, 0.15)",
+                  background: st.status === "UNAVAILABLE" ? "rgba(245, 158, 11, 0.08)" : "var(--bg-surface-elevated)",
+                  border: st.status === "UNAVAILABLE" ? "1px solid rgba(245, 158, 11, 0.3)" : "1px solid var(--border-subtle)",
                   borderRadius: "0.375rem",
                   gap: "1rem"
                 }}
@@ -664,21 +667,21 @@ export default function GeographyPage() {
                   {st.stage}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                    <span style={{ fontWeight: 600, color: "#f8fafc", fontSize: "0.9rem" }}>{st.name}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+                    <span style={{ fontWeight: 600, color: "var(--text-primary)", fontSize: "0.9rem" }}>{st.name}</span>
                     <span style={{
                       fontSize: "0.7rem",
                       padding: "0.1rem 0.4rem",
                       borderRadius: "0.2rem",
                       fontWeight: 600,
                       background: st.status === "CONFIRMED" ? "rgba(16, 185, 129, 0.15)" : "rgba(245, 158, 11, 0.2)",
-                      color: st.status === "CONFIRMED" ? "#10b981" : "#f59e0b"
+                      color: st.status === "CONFIRMED" ? "var(--accent-emerald)" : "var(--accent-amber)"
                     }}>
                       {st.status}
                     </span>
                   </div>
-                  <div style={{ fontSize: "0.8rem", color: "#94a3b8", marginTop: "0.2rem" }}>
-                    {st.desc} {st.note && <strong style={{ color: "#f59e0b" }}>({st.note})</strong>}
+                  <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginTop: "0.2rem" }}>
+                    {st.desc} {st.note && <strong style={{ color: "var(--accent-amber)" }}>({st.note})</strong>}
                   </div>
                 </div>
               </div>
@@ -703,8 +706,8 @@ export default function GeographyPage() {
           zIndex: 50
         }}>
           <div style={{
-            background: "#1e293b",
-            border: "1px solid rgba(148, 163, 184, 0.25)",
+            background: "var(--bg-surface)",
+            border: "1px solid var(--border-medium)",
             borderRadius: "0.5rem",
             maxWidth: "600px",
             width: "100%",
@@ -712,12 +715,12 @@ export default function GeographyPage() {
             boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.5)"
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-              <h3 style={{ margin: 0, fontSize: "1.1rem", color: "#f8fafc", fontWeight: 600 }}>
+              <h3 style={{ margin: 0, fontSize: "1.1rem", color: "var(--text-primary)", fontWeight: 600 }}>
                 Audit Source Traceability
               </h3>
               <button
                 onClick={() => setSelectedObs(null)}
-                style={{ background: "transparent", border: "none", color: "#94a3b8", fontSize: "1.2rem", cursor: "pointer" }}
+                style={{ background: "transparent", border: "none", color: "var(--text-secondary)", fontSize: "1.2rem", cursor: "pointer" }}
               >
                 ✕
               </button>
@@ -725,34 +728,34 @@ export default function GeographyPage() {
 
             <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", fontSize: "0.85rem" }}>
               <div>
-                <span style={{ color: "#94a3b8" }}>Winning Ticket: </span>
-                <strong style={{ color: "#38bdf8", fontFamily: "monospace" }}>{selectedObs.series} {selectedObs.winningNumber}</strong> ({selectedObs.prizeTier})
+                <span style={{ color: "var(--text-secondary)" }}>Winning Ticket: </span>
+                <strong style={{ color: "var(--accent-cyan)", fontFamily: "monospace" }}>{selectedObs.series} {selectedObs.winningNumber}</strong> ({selectedObs.prizeTier})
               </div>
               <div>
-                <span style={{ color: "#94a3b8" }}>Raw Published Location: </span>
-                <strong style={{ color: "#f8fafc" }}>&quot;{selectedObs.rawLocation}&quot;</strong>
+                <span style={{ color: "var(--text-secondary)" }}>Raw Published Location: </span>
+                <strong style={{ color: "var(--text-primary)" }}>&quot;{selectedObs.rawLocation}&quot;</strong>
               </div>
               <div>
-                <span style={{ color: "#94a3b8" }}>Normalized Revenue District: </span>
-                <strong style={{ color: "#10b981" }}>{selectedObs.normalizedDistrict}</strong>
+                <span style={{ color: "var(--text-secondary)" }}>Normalized Revenue District: </span>
+                <strong style={{ color: "var(--accent-emerald)" }}>{selectedObs.normalizedDistrict}</strong>
               </div>
               <div>
-                <span style={{ color: "#94a3b8" }}>Normalization Rule: </span>
-                <span style={{ color: "#cbd5e1" }}>{selectedObs.normalizationRule}</span> (Confidence: {selectedObs.confidence * 100}%)
+                <span style={{ color: "var(--text-secondary)" }}>Normalization Rule: </span>
+                <span style={{ color: "var(--text-secondary)" }}>{selectedObs.normalizationRule}</span> (Confidence: {selectedObs.confidence * 100}%)
               </div>
               <div>
-                <span style={{ color: "#94a3b8" }}>Source Document File: </span>
-                <span style={{ color: "#cbd5e1", fontFamily: "monospace" }}>{selectedObs.canonicalFilename}</span> (Page {selectedObs.sourcePage})
+                <span style={{ color: "var(--text-secondary)" }}>Source Document File: </span>
+                <span style={{ color: "var(--text-secondary)", fontFamily: "monospace" }}>{selectedObs.canonicalFilename}</span> (Page {selectedObs.sourcePage})
               </div>
               <div>
-                <span style={{ color: "#94a3b8" }}>Source Document SHA-256: </span>
-                <div style={{ fontFamily: "monospace", fontSize: "0.75rem", wordBreak: "break-all", color: "#64748b", marginTop: "0.2rem" }}>
+                <span style={{ color: "var(--text-secondary)" }}>Source Document SHA-256: </span>
+                <div style={{ fontFamily: "monospace", fontSize: "0.75rem", wordBreak: "break-all", color: "var(--text-muted)", marginTop: "0.2rem" }}>
                   {selectedObs.sourceDocumentSha256}
                 </div>
               </div>
-              <div style={{ marginTop: "0.5rem", padding: "0.75rem", background: "rgba(15, 23, 42, 0.6)", borderRadius: "0.375rem" }}>
-                <div style={{ fontSize: "0.75rem", color: "#94a3b8", marginBottom: "0.25rem" }}>Exact Raw Text Extracted from Gazette:</div>
-                <div style={{ fontFamily: "monospace", fontSize: "0.8rem", color: "#e2e8f0" }}>
+              <div style={{ marginTop: "0.5rem", padding: "0.75rem", background: "var(--bg-surface-elevated)", borderRadius: "0.375rem" }}>
+                <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginBottom: "0.25rem" }}>Exact Raw Text Extracted from Gazette:</div>
+                <div style={{ fontFamily: "monospace", fontSize: "0.8rem", color: "var(--text-primary)" }}>
                   {selectedObs.sourceText}
                 </div>
               </div>
@@ -764,7 +767,7 @@ export default function GeographyPage() {
                 style={{
                   padding: "0.4rem 1rem",
                   background: "rgba(56, 189, 248, 0.15)",
-                  color: "#38bdf8",
+                  color: "var(--accent-cyan)",
                   border: "1px solid rgba(56, 189, 248, 0.3)",
                   borderRadius: "0.25rem",
                   cursor: "pointer",

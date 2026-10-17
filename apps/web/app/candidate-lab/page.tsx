@@ -256,16 +256,7 @@ export default function CandidateLabPage() {
             {candidates.map((c, idx) => (
               <div
                 key={idx}
-                style={{
-                  background: "rgba(15, 23, 42, 0.4)",
-                  border: "1px solid var(--border-subtle)",
-                  borderRadius: "0.5rem",
-                  padding: "1rem",
-                  display: "grid",
-                  gridTemplateColumns: "auto 1fr 140px 180px auto",
-                  gap: "0.75rem",
-                  alignItems: "center"
-                }}
+                className="candidate-entry-row"
               >
                 {/* Candidate Badge */}
                 <div
@@ -361,15 +352,13 @@ export default function CandidateLabPage() {
 
           {/* Temporal Cutoff & Window Controls */}
           <div
+            className="cutoff-grid"
             style={{
-              background: "rgba(15, 23, 42, 0.4)",
+              background: "var(--bg-surface-elevated)",
               border: "1px solid var(--border-subtle)",
               borderRadius: "0.5rem",
               padding: "1rem",
-              marginBottom: "1.5rem",
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "1.5rem"
+              marginBottom: "1.5rem"
             }}
           >
             <div>
@@ -409,7 +398,7 @@ export default function CandidateLabPage() {
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem", alignItems: "center" }}>
             <button
               type="submit"
               className="btn btn-primary"
@@ -483,7 +472,7 @@ export default function CandidateLabPage() {
             <h2 style={{ fontSize: "1.15rem", fontWeight: 600, marginBottom: "1rem" }}>
               1. Candidate Structural Validation &amp; Duplicate Detection
             </h2>
-            <div style={{ display: "grid", gridTemplateColumns: `repeat(${analysis.validationSummaries.length}, 1fr)`, gap: "1rem" }}>
+            <div className="validation-summary-grid">
               {analysis.validationSummaries.map((v) => (
                 <div
                   key={v.candidateId}
@@ -871,12 +860,12 @@ export default function CandidateLabPage() {
               </div>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: `repeat(${analysis.tradeOffAnalysis.comparisonMatrix.length}, 1fr)`, gap: "1rem" }}>
+            <div className="validation-summary-grid">
               {getSortedComparisonMatrix(analysis.tradeOffAnalysis.comparisonMatrix).map((t) => (
                 <div
                   key={t.candidateId}
                   style={{
-                    background: "rgba(15, 23, 42, 0.4)",
+                    background: "var(--bg-surface-elevated)",
                     border: "1px solid var(--border-subtle)",
                     borderRadius: "0.5rem",
                     padding: "1.25rem",
@@ -953,7 +942,7 @@ export default function CandidateLabPage() {
                 <div
                   key={ci.candidateId}
                   style={{
-                    background: "rgba(15, 23, 42, 0.4)",
+                    background: "var(--bg-surface-elevated)",
                     border: "1px solid var(--border-subtle)",
                     borderRadius: "0.5rem",
                     padding: "1rem"
@@ -1001,7 +990,7 @@ export default function CandidateLabPage() {
             <h2 style={{ fontSize: "1.15rem", fontWeight: 600, marginBottom: "1rem" }}>
               8. Scientific Limitations &amp; Cryptographic Provenance
             </h2>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem", fontSize: "0.85rem" }}>
+            <div className="cutoff-grid" style={{ fontSize: "0.85rem" }}>
               <div>
                 <h3 style={{ fontSize: "0.95rem", fontWeight: 600, marginBottom: "0.5rem" }}>Platform Limitations</h3>
                 <ul style={{ margin: 0, paddingLeft: "1.2rem", color: "var(--text-secondary)", lineHeight: 1.6 }}>

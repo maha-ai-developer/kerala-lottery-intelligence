@@ -274,7 +274,7 @@ export default function ResearchSandboxPage() {
           {/* Optional Replay and Context Settings */}
           <div
             style={{
-              background: "rgba(15, 23, 42, 0.4)",
+              background: "var(--bg-surface-elevated)",
               border: "1px solid var(--border-subtle)",
               borderRadius: "0.5rem",
               padding: "1rem",
@@ -559,7 +559,7 @@ export default function ResearchSandboxPage() {
                 {/* Structural patterns */}
                 <div
                   style={{
-                    background: "rgba(15, 23, 42, 0.5)",
+                    background: "var(--bg-surface-elevated)",
                     border: "1px solid var(--border-subtle)",
                     borderRadius: "0.5rem",
                     padding: "1rem",
@@ -641,7 +641,7 @@ export default function ResearchSandboxPage() {
                   style={{
                     background: analysis.historicalComparison.exactTicketMatch.observedInCorpus
                       ? "rgba(16, 185, 129, 0.1)"
-                      : "rgba(30, 41, 59, 0.5)",
+                      : "var(--bg-surface-elevated)",
                     border: analysis.historicalComparison.exactTicketMatch.observedInCorpus
                       ? "1px solid rgba(16, 185, 129, 0.4)"
                       : "1px solid var(--border-subtle)",
@@ -708,7 +708,7 @@ export default function ResearchSandboxPage() {
 
                 {/* Marginal Comparison Cards */}
                 <div className="grid-3" style={{ gap: "1rem", marginBottom: "1.5rem" }}>
-                  <div style={{ background: "rgba(15, 23, 42, 0.4)", padding: "1rem", borderRadius: "0.5rem", border: "1px solid var(--border-subtle)" }}>
+                  <div style={{ background: "var(--bg-surface-elevated)", padding: "1rem", borderRadius: "0.5rem", border: "1px solid var(--border-subtle)" }}>
                     <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", textTransform: "uppercase" }}>
                       Last Digit Empirical Frequency
                     </div>
@@ -728,7 +728,7 @@ export default function ResearchSandboxPage() {
                     </div>
                   </div>
 
-                  <div style={{ background: "rgba(15, 23, 42, 0.4)", padding: "1rem", borderRadius: "0.5rem", border: "1px solid var(--border-subtle)" }}>
+                  <div style={{ background: "var(--bg-surface-elevated)", padding: "1rem", borderRadius: "0.5rem", border: "1px solid var(--border-subtle)" }}>
                     <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", textTransform: "uppercase" }}>
                       First Digit Empirical Frequency
                     </div>
@@ -748,7 +748,7 @@ export default function ResearchSandboxPage() {
                     </div>
                   </div>
 
-                  <div style={{ background: "rgba(15, 23, 42, 0.4)", padding: "1rem", borderRadius: "0.5rem", border: "1px solid var(--border-subtle)" }}>
+                  <div style={{ background: "var(--bg-surface-elevated)", padding: "1rem", borderRadius: "0.5rem", border: "1px solid var(--border-subtle)" }}>
                     <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", textTransform: "uppercase" }}>
                       Digit Sum Empirical Percentile
                     </div>
@@ -838,7 +838,7 @@ export default function ResearchSandboxPage() {
                     <div
                       key={exp.experimentId}
                       style={{
-                        background: "rgba(15, 23, 42, 0.4)",
+                        background: "var(--bg-surface-elevated)",
                         border: "1px solid var(--border-subtle)",
                         borderRadius: "0.5rem",
                         padding: "1rem"
@@ -916,7 +916,7 @@ export default function ResearchSandboxPage() {
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
                     <span className="badge badge-yellow">MANDATORY METHODOLOGICAL NOTICE</span>
-                    <strong style={{ color: "#fbbf24", fontSize: "0.85rem" }}>TICKET EXPOSURE DENOMINATOR UNAVAILABLE</strong>
+                    <strong style={{ color: "var(--accent-amber)", fontSize: "0.85rem" }}>TICKET EXPOSURE DENOMINATOR UNAVAILABLE</strong>
                   </div>
                   <p style={{ margin: 0, fontSize: "0.85rem", color: "var(--text-secondary)" }}>
                     {analysis.geographicContext?.criticalExposureLimitation}
@@ -1003,7 +1003,7 @@ export default function ResearchSandboxPage() {
           {/* SECTION H: METHODOLOGICAL LIMITATIONS */}
           <div
             style={{
-              background: "rgba(15, 23, 42, 0.6)",
+              background: "var(--bg-surface-elevated)",
               border: "1px solid var(--border-subtle)",
               borderRadius: "0.75rem",
               padding: "1.5rem"

@@ -391,9 +391,9 @@ export default function IngestionConsolePage() {
   return (
     <div className="container" style={{ padding: "2rem 1.5rem" }}>
       {/* Header & Operational Mode Controls */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "2rem" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem", marginBottom: "2rem" }}>
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.5rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap", marginBottom: "0.5rem" }}>
             <h1 style={{ fontSize: "1.875rem", fontWeight: 700, margin: 0 }}>
               Daily Data Ingestion Console
             </h1>
@@ -461,7 +461,9 @@ export default function IngestionConsolePage() {
             marginBottom: "1.75rem",
             display: "flex",
             alignItems: "center",
-            justifyContent: "space-between"
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "0.75rem"
           }}
         >
           <div>
@@ -495,10 +497,10 @@ export default function IngestionConsolePage() {
       )}
 
       {/* Storage Integrity & Local ↔ Cloud Reconciliation Panel */}
-      <div className="card" style={{ marginBottom: "2rem", background: "linear-gradient(180deg, var(--bg-surface) 0%, rgba(15, 23, 42, 0.6) 100%)" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
+      <div className="card" style={{ marginBottom: "2rem", background: "var(--bg-surface)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.75rem", marginBottom: "1.25rem" }}>
           <div>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
               <h2 style={{ fontSize: "1.15rem", fontWeight: 700, margin: 0 }}>Storage Integrity & Local ↔ Cloud Reconciliation</h2>
               <span className="badge badge-blue">Deterministic SHA-256</span>
             </div>
@@ -530,7 +532,7 @@ export default function IngestionConsolePage() {
 
         {/* Counts Grid */}
         <div className="grid-4" style={{ marginBottom: "1rem" }}>
-          <div style={{ background: "rgba(30, 41, 59, 0.5)", padding: "1rem", borderRadius: "0.5rem", border: "1px solid var(--border-subtle)" }}>
+          <div style={{ background: "var(--bg-surface-elevated)", padding: "1rem", borderRadius: "0.5rem", border: "1px solid var(--border-subtle)" }}>
             <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase" }}>Local Pi Cache</div>
             <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--accent-cyan)", margin: "0.25rem 0" }}>
               {integrityData ? `${integrityData.counts.localDocumentCount} PDFs` : "..."}
@@ -540,7 +542,7 @@ export default function IngestionConsolePage() {
             </div>
           </div>
 
-          <div style={{ background: "rgba(30, 41, 59, 0.5)", padding: "1rem", borderRadius: "0.5rem", border: "1px solid var(--border-subtle)" }}>
+          <div style={{ background: "var(--bg-surface-elevated)", padding: "1rem", borderRadius: "0.5rem", border: "1px solid var(--border-subtle)" }}>
             <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase" }}>Authoritative Cloud</div>
             <div style={{ fontSize: "1.5rem", fontWeight: 700, color: integrityData && integrityData.counts.cloudStorageDocumentCount !== null ? "var(--accent-emerald)" : "var(--accent-amber)", margin: "0.25rem 0" }}>
               {integrityData
@@ -554,7 +556,7 @@ export default function IngestionConsolePage() {
             </div>
           </div>
 
-          <div style={{ background: "rgba(30, 41, 59, 0.5)", padding: "1rem", borderRadius: "0.5rem", border: "1px solid var(--border-subtle)" }}>
+          <div style={{ background: "var(--bg-surface-elevated)", padding: "1rem", borderRadius: "0.5rem", border: "1px solid var(--border-subtle)" }}>
             <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase" }}>Firestore Metadata</div>
             <div style={{ fontSize: "1.5rem", fontWeight: 700, color: integrityData && integrityData.counts.firestoreDocumentCount !== null ? "var(--accent-blue)" : "var(--accent-amber)", margin: "0.25rem 0" }}>
               {integrityData
@@ -568,7 +570,7 @@ export default function IngestionConsolePage() {
             </div>
           </div>
 
-          <div style={{ background: "rgba(30, 41, 59, 0.5)", padding: "1rem", borderRadius: "0.5rem", border: "1px solid var(--border-subtle)" }}>
+          <div style={{ background: "var(--bg-surface-elevated)", padding: "1rem", borderRadius: "0.5rem", border: "1px solid var(--border-subtle)" }}>
             <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase" }}>Baseline Isolation</div>
             <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--accent-amber)", margin: "0.25rem 0" }}>
               {integrityData ? `${integrityData.counts.researchDrawCount} DEV / ${integrityData.counts.prodDrawCount} PROD` : "..."}
@@ -579,9 +581,16 @@ export default function IngestionConsolePage() {
           </div>
         </div>
 
+        {/* Truthful Cloud Verification Disclosure */}
+        {integrityData && (integrityData.counts.cloudStorageDocumentCount === null || integrityData.operationalGuards.cloudConnectionStatus === "UNVERIFIED_OFFLINE") && (
+          <div style={{ fontSize: "0.78rem", color: "var(--text-secondary)", background: "var(--bg-surface-elevated)", border: "1px solid var(--border-subtle)", borderRadius: "0.375rem", padding: "0.6rem 0.85rem", marginBottom: "0.75rem" }}>
+            <strong>Cloud Residency Status ({integrityData.operationalGuards.cloudConnectionStatus}):</strong> Live Cloud Storage and Firestore bucket enumeration requires runtime cloud credentials. When live cloud inspection is not configured in the active web runtime, counts report <span className="mono">UNVERIFIED</span> rather than assuming cloud residency from local cache files.
+          </div>
+        )}
+
         {/* Deep Verification Report Modal / Expansion */}
         {showIntegrityDetails && integrityData?.verification && (
-          <div style={{ marginTop: "1rem", padding: "1rem", background: "rgba(15, 23, 42, 0.9)", border: "1px solid var(--border-medium)", borderRadius: "0.5rem" }}>
+          <div style={{ marginTop: "1rem", padding: "1rem", background: "var(--bg-surface-elevated)", border: "1px solid var(--border-medium)", borderRadius: "0.5rem" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                 <span className={`badge ${integrityData.verification.integrityStatus === "VERIFIED" ? "badge-emerald" : "badge-amber"}`}>
@@ -845,7 +854,7 @@ export default function IngestionConsolePage() {
 
               {/* Dry-Run Result Preview */}
               {dryRunResult && (
-                <div style={{ marginTop: "1rem", padding: "1rem", background: "rgba(15, 23, 42, 0.8)", borderRadius: "0.5rem", border: "1px solid var(--border-subtle)" }}>
+                <div style={{ marginTop: "1rem", padding: "1rem", background: "var(--bg-surface-elevated)", borderRadius: "0.5rem", border: "1px solid var(--border-subtle)" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
                     <span className="badge badge-emerald">DRY RUN PREVIEW (ZERO MUTATION)</span>
                     <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
@@ -905,7 +914,7 @@ export default function IngestionConsolePage() {
               padding: "2.5rem 1.5rem",
               textAlign: "center",
               cursor: "pointer",
-              background: "rgba(15, 23, 42, 0.6)",
+              background: "var(--bg-surface-elevated)",
               marginBottom: "1.5rem",
               transition: "border-color 0.2s ease"
             }}
@@ -1003,7 +1012,7 @@ export default function IngestionConsolePage() {
 
               {/* Dry-Run Result Preview */}
               {dryRunResult && (
-                <div style={{ marginTop: "1rem", padding: "1rem", background: "rgba(15, 23, 42, 0.8)", borderRadius: "0.5rem", border: "1px solid var(--border-subtle)" }}>
+                <div style={{ marginTop: "1rem", padding: "1rem", background: "var(--bg-surface-elevated)", borderRadius: "0.5rem", border: "1px solid var(--border-subtle)" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
                     <span className="badge badge-emerald">UPLOAD VALIDATION REPORT</span>
                     <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
@@ -1045,7 +1054,7 @@ export default function IngestionConsolePage() {
           className="card"
           style={{
             marginBottom: "2rem",
-            background: "linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(15, 23, 42, 0.9) 100%)",
+            background: "var(--bg-surface)",
             border: "1px solid rgba(16, 185, 129, 0.4)"
           }}
         >
@@ -1062,21 +1071,21 @@ export default function IngestionConsolePage() {
           </div>
 
           <div className="grid-4" style={{ marginBottom: "1rem" }}>
-            <div style={{ background: "rgba(15, 23, 42, 0.6)", padding: "0.75rem", borderRadius: "0.375rem" }}>
+            <div style={{ background: "var(--bg-surface-elevated)", padding: "0.75rem", borderRadius: "0.375rem" }}>
               <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>ENVIRONMENT</div>
               <div style={{ fontWeight: 600, color: "var(--accent-emerald)" }}>{postIngestResult.environment}</div>
             </div>
-            <div style={{ background: "rgba(15, 23, 42, 0.6)", padding: "0.75rem", borderRadius: "0.375rem" }}>
+            <div style={{ background: "var(--bg-surface-elevated)", padding: "0.75rem", borderRadius: "0.375rem" }}>
               <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>WINNING RESULTS</div>
               <div style={{ fontWeight: 600 }}>{postIngestResult.resultCount.toLocaleString()}</div>
             </div>
-            <div style={{ background: "rgba(15, 23, 42, 0.6)", padding: "0.75rem", borderRadius: "0.375rem" }}>
+            <div style={{ background: "var(--bg-surface-elevated)", padding: "0.75rem", borderRadius: "0.375rem" }}>
               <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>FULL TICKET / SUFFIX</div>
               <div style={{ fontWeight: 600 }}>
                 {postIngestResult.fullTicketCount} full / {postIngestResult.suffixCount} suffix
               </div>
             </div>
-            <div style={{ background: "rgba(15, 23, 42, 0.6)", padding: "0.75rem", borderRadius: "0.375rem" }}>
+            <div style={{ background: "var(--bg-surface-elevated)", padding: "0.75rem", borderRadius: "0.375rem" }}>
               <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>PIPELINE STATUS</div>
               <div style={{ fontWeight: 600, color: "var(--accent-cyan)" }}>
                 {postIngestResult.promoted > 0 ? "PROMOTED TO DEV" : "ALREADY KNOWN"}
@@ -1084,7 +1093,7 @@ export default function IngestionConsolePage() {
             </div>
           </div>
 
-          <div style={{ fontSize: "0.8rem", background: "rgba(15, 23, 42, 0.8)", padding: "0.75rem", borderRadius: "0.375rem", border: "1px solid var(--border-subtle)" }}>
+          <div style={{ fontSize: "0.8rem", background: "var(--bg-surface-elevated)", padding: "0.75rem", borderRadius: "0.375rem", border: "1px solid var(--border-subtle)" }}>
             <div style={{ marginBottom: "0.25rem" }}>
               <strong>Cryptographic SHA-256:</strong>{" "}
               <span className="mono" style={{ color: "var(--accent-cyan)" }}>{postIngestResult.sha256}</span>

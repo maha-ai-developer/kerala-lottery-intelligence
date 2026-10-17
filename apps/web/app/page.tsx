@@ -176,7 +176,7 @@ export default function OverviewPage() {
       {/* Research Sandbox Feature Callout Card */}
       <div
         style={{
-          background: "linear-gradient(135deg, rgba(14, 165, 233, 0.12), rgba(15, 23, 42, 0.95))",
+          background: "var(--bg-surface-elevated)",
           border: "1px solid rgba(56, 189, 248, 0.35)",
           borderRadius: "0.75rem",
           padding: "1.5rem",
@@ -355,7 +355,7 @@ export default function OverviewPage() {
           marginBottom: "2rem"
         }}
       >
-        <form onSubmit={handleSearch} style={{ display: "flex", gap: "0.75rem" }}>
+        <form onSubmit={handleSearch} style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem" }}>
           <input
             type="text"
             className="search-input"
@@ -400,7 +400,7 @@ export default function OverviewPage() {
                       justifyContent: "space-between",
                       alignItems: "center",
                       padding: "0.75rem 1rem",
-                      background: "rgba(255, 255, 255, 0.02)",
+                      background: "var(--bg-surface-elevated)",
                       border: "1px solid var(--border-subtle)",
                       borderRadius: "0.5rem"
                     }}
@@ -428,7 +428,7 @@ export default function OverviewPage() {
       {/* Anchor Case Study Card: BHAGYATHARA BT-73 */}
       <div
         style={{
-          background: "linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.95))",
+          background: "var(--bg-surface)",
           border: "1px solid rgba(56, 189, 248, 0.3)",
           borderRadius: "0.75rem",
           padding: "1.5rem",
@@ -460,13 +460,13 @@ export default function OverviewPage() {
         </div>
 
         <div className="grid-3" style={{ fontSize: "0.85rem" }}>
-          <div style={{ background: "rgba(15, 23, 42, 0.6)", padding: "0.875rem", borderRadius: "0.5rem", border: "1px solid var(--border-subtle)" }}>
+          <div style={{ background: "var(--bg-surface-elevated)", padding: "0.875rem", borderRadius: "0.5rem", border: "1px solid var(--border-subtle)" }}>
             <div style={{ color: "var(--text-muted)", fontSize: "0.75rem", textTransform: "uppercase" }}>Source Document SHA-256</div>
             <div className="mono" style={{ color: "var(--accent-cyan)", fontSize: "0.75rem", wordBreak: "break-all", marginTop: "0.25rem" }}>
               cddb3d4d05c102b98f38050ac1ff297ad15bc442b12087c0505927f7bb1cf3dc
             </div>
           </div>
-          <div style={{ background: "rgba(15, 23, 42, 0.6)", padding: "0.875rem", borderRadius: "0.5rem", border: "1px solid var(--border-subtle)" }}>
+          <div style={{ background: "var(--bg-surface-elevated)", padding: "0.875rem", borderRadius: "0.5rem", border: "1px solid var(--border-subtle)" }}>
             <div style={{ color: "var(--text-muted)", fontSize: "0.75rem", textTransform: "uppercase" }}>Prize Structure</div>
             <div style={{ marginTop: "0.25rem", fontWeight: 600 }}>
               8 Tiers + Consolation | 378 Winning Numbers
@@ -475,7 +475,7 @@ export default function OverviewPage() {
               14 Full Tickets (1st & Consolation) + 364 Suffixes
             </div>
           </div>
-          <div style={{ background: "rgba(15, 23, 42, 0.6)", padding: "0.875rem", borderRadius: "0.5rem", border: "1px solid var(--border-subtle)" }}>
+          <div style={{ background: "var(--bg-surface-elevated)", padding: "0.875rem", borderRadius: "0.5rem", border: "1px solid var(--border-subtle)" }}>
             <div style={{ color: "var(--text-muted)", fontSize: "0.75rem", textTransform: "uppercase" }}>Prize Scheme ID</div>
             <div className="mono" style={{ color: "var(--accent-emerald)", fontSize: "0.8rem", marginTop: "0.25rem" }}>
               scheme_ver_bt_2025_11_sro1297

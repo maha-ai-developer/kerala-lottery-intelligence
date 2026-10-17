@@ -297,7 +297,7 @@ export default function FindingsPage() {
             borderRadius: "0.5rem",
             background: "rgba(234, 179, 8, 0.08)",
             border: "1px solid rgba(234, 179, 8, 0.25)",
-            color: "#fde047",
+            color: "var(--accent-amber)",
             fontSize: "0.82rem",
             lineHeight: 1.5
           }}
@@ -327,7 +327,7 @@ export default function FindingsPage() {
           </div>
           <div style={{ padding: "1rem", borderRadius: "0.5rem", background: "var(--card-bg)", border: "1px solid var(--border-color)" }}>
             <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase" }}>Source Documents</div>
-            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#e2e8f0", marginTop: "0.25rem" }}>
+            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--text-primary)", marginTop: "0.25rem" }}>
               103 PDFs
             </div>
             <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
@@ -336,7 +336,7 @@ export default function FindingsPage() {
           </div>
           <div style={{ padding: "1rem", borderRadius: "0.5rem", background: "var(--card-bg)", border: "1px solid var(--border-color)" }}>
             <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase" }}>V1 Baseline Corpus</div>
-            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#e2e8f0", marginTop: "0.25rem" }}>
+            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--text-primary)", marginTop: "0.25rem" }}>
               39,550
             </div>
             <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
@@ -433,7 +433,7 @@ export default function FindingsPage() {
                                 ? "var(--accent-cyan)"
                                 : finding.claimType === "OBSERVATION"
                                 ? "var(--accent-green)"
-                                : "#fde047"
+                                : "var(--accent-amber)"
                           }}
                         >
                           {finding.claimType}
@@ -497,7 +497,7 @@ export default function FindingsPage() {
           </div>
 
           {/* Navigation Tabs */}
-          <div style={{ display: "flex", borderBottom: "1px solid var(--border-color)", gap: "0.5rem" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", borderBottom: "1px solid var(--border-color)", gap: "0.5rem" }}>
             {[
               { id: "lineage", label: "10-Stage Lineage DAG" },
               { id: "evidence", label: "Evidence Bundle & Hashes" },
@@ -682,7 +682,7 @@ export default function FindingsPage() {
                           overflowY: "auto",
                           padding: "0.75rem",
                           borderRadius: "0.375rem",
-                          background: "rgba(0, 0, 0, 0.3)",
+                          background: "var(--bg-code)",
                           border: "1px solid var(--border-color)",
                           fontSize: "0.72rem",
                           fontFamily: "monospace",
@@ -723,7 +723,7 @@ export default function FindingsPage() {
 
                 <div style={{ padding: "1rem", borderRadius: "0.5rem", background: "rgba(255, 255, 255, 0.02)", border: "1px solid var(--border-color)" }}>
                   <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase" }}>Margin of Error (95%)</div>
-                  <div style={{ fontSize: "1.3rem", fontWeight: 700, fontFamily: "monospace", color: "#e2e8f0", marginTop: "0.25rem" }}>
+                  <div style={{ fontSize: "1.3rem", fontWeight: 700, fontFamily: "monospace", color: "var(--text-primary)", marginTop: "0.25rem" }}>
                     ±{(selectedFinding.uncertainty.marginOfError * 100).toFixed(2)}%
                   </div>
                   <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "0.25rem" }}>
@@ -743,7 +743,7 @@ export default function FindingsPage() {
 
                 <div style={{ padding: "1rem", borderRadius: "0.5rem", background: "rgba(255, 255, 255, 0.02)", border: "1px solid var(--border-color)" }}>
                   <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase" }}>Bootstrap 95% CI</div>
-                  <div style={{ fontSize: "1.1rem", fontWeight: 700, fontFamily: "monospace", color: "#c084fc", marginTop: "0.25rem" }}>
+                  <div style={{ fontSize: "1.1rem", fontWeight: 700, fontFamily: "monospace", color: "var(--accent-purple)", marginTop: "0.25rem" }}>
                     [{(selectedFinding.uncertainty.bootstrap95CI[0] * 100).toFixed(2)}%, {(selectedFinding.uncertainty.bootstrap95CI[1] * 100).toFixed(2)}%]
                   </div>
                   <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "0.25rem" }}>
@@ -776,7 +776,7 @@ export default function FindingsPage() {
                   </div>
                   <div>
                     <span style={{ color: "var(--text-muted)" }}>Holm Adjusted P:</span>{" "}
-                    <strong style={{ color: selectedFinding.evidence.isSignificant ? "var(--accent-green)" : "#e2e8f0" }}>
+                    <strong style={{ color: selectedFinding.evidence.isSignificant ? "var(--accent-green)" : "var(--text-primary)" }}>
                       {selectedFinding.evidence.adjustedPValue.toFixed(4)}
                     </strong>
                   </div>
@@ -809,11 +809,11 @@ export default function FindingsPage() {
           {/* Tab 4: Publication Report */}
           {activeTab === "report" && (
             <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem" }}>
                 <span style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>
                   Deterministic Publication-Grade Academic Markdown & JSON
                 </span>
-                <div style={{ display: "flex", gap: "0.5rem" }}>
+                <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                   <button
                     onClick={handleCopyMarkdown}
                     style={{
@@ -856,11 +856,11 @@ export default function FindingsPage() {
                     overflowY: "auto",
                     padding: "1rem",
                     borderRadius: "0.5rem",
-                    background: "rgba(0, 0, 0, 0.4)",
+                    background: "var(--bg-code)",
                     border: "1px solid var(--border-color)",
                     fontSize: "0.8rem",
                     fontFamily: "monospace",
-                    color: "#e2e8f0",
+                    color: "var(--text-primary)",
                     lineHeight: 1.5,
                     whiteSpace: "pre-wrap"
                   }}
