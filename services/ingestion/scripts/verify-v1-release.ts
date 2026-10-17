@@ -4,8 +4,8 @@
  * Milestone V1.0: Final Project Completion & Release Verifier
  *
  * Verifies all 20 Quality Gates (Gate 01 through Gate 20):
- *   1. Research corpus integrity (103 draws, 39,550 winning results, 103 PDF SHA-256 identities)
- *   2. 103-draw research state consistency
+ *   1. Research corpus integrity (114 draws, 43,712 winning results, 114 PDF SHA-256 identities)
+ *   2. 114-draw research state consistency
  *   3. 100-draw PROD state baseline & PAUSED scheduler
  *   4. 9A research surface integrity
  *   5. 9B continuous experiment engine integrity (EXP-001, EXP-002, EXP-003)
@@ -145,7 +145,7 @@ async function verifyAllV1Gates() {
     details.push(`Every draw retains validated prizeSchemeId and SHA-256 source identity.`);
     recordGate("Gate 02", "114-Draw Research State Consistency", "PASS", details);
   } catch (err: any) {
-    recordGate("Gate 02", "103-Draw Research State Consistency", "FAIL", [err.message]);
+    recordGate("Gate 02", "114-Draw Research State Consistency", "FAIL", [err.message]);
   }
 
   // --------------------------------------------------------------------------

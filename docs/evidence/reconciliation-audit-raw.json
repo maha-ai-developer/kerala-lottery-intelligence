@@ -1,0 +1,2841 @@
+{
+  "auditTimestamp": "2026-10-16T14:39:22.476Z",
+  "overallStatus": "PASS",
+  "authInterface": {
+    "library": "google-auth-library",
+    "version": "9.15.1",
+    "mechanism": "Application Default Credentials (ADC)",
+    "scopes": [
+      "https://www.googleapis.com/auth/cloud-platform"
+    ],
+    "privateCacheFileUsed": false,
+    "credentialLogging": "STRICTLY_NONE"
+  },
+  "resourceIdentifiers": {
+    "prodProjectId": "kerala-lottery-intelligence",
+    "devProjectId": "kerala-lottery-intel-dev",
+    "prodStorageBucket": "kerala-lottery-intelligence.firebasestorage.app",
+    "devStorageBucket": "kerala-lottery-intel-dev.firebasestorage.app",
+    "prodSchedulerJob": "projects/kerala-lottery-intelligence/locations/asia-south1/jobs/prod-daily-lottery-ingestion",
+    "schedulerRegion": "asia-south1",
+    "appHostingRegion": "asia-southeast1",
+    "storageObjectPrefix": "source-documents/",
+    "replayTestObject": "source-documents/3a0ea2c300e39acaa4205374988c46d54b5050446fd0082071495715cecb68b8.pdf",
+    "firestoreDocumentCollection": "documents"
+  },
+  "coverageLimit": {
+    "corpusEndingDate": "13/10/2026",
+    "totalDrawsInCorpus": 114,
+    "totalResultsInCorpus": 43712,
+    "absentLaterDraws": [
+      {
+        "drawId": "DL-73rd",
+        "serial": 75408,
+        "drawDate": "14/10/2026",
+        "status": "ABSENT_FROM_CORPUS"
+      },
+      {
+        "drawId": "KN-645th",
+        "serial": 75409,
+        "drawDate": "15/10/2026",
+        "status": "ABSENT_FROM_CORPUS"
+      },
+      {
+        "drawId": "SK-73rd",
+        "serial": 75410,
+        "drawDate": "16/10/2026",
+        "status": "ABSENT_FROM_CORPUS"
+      }
+    ],
+    "scopeStatement": "The verified V1 corpus strictly covers draws up to 13 October 2026 (114 draws). Draws DL-73 (14/10), KN-645 (15/10), and SK-73 (16/10) are published on the portal but excluded from this V1 audit scope and must not be claimed as covered."
+  },
+  "prodComparisonEvidence": {
+    "historicalPreAuditDiskLimitation": {
+      "isCompleteIndividualPreAuditInventoryPersistedToDiskPriorToAudit": false,
+      "statement": "The historical disk artifact created before any audit operations (audit-snapshot-2026-10-16/cloud-metadata.json, timestamp 2026-10-16T12:11:25.665Z) preserved exact scheduler configuration (PAUSED, userUpdateTime: 2026-09-29T02:33:32.611005Z), total Cloud Storage object count (100), and total Firestore document count (100). Individual object generations and document update timestamps were NOT serialized to disk in that initial snapshot and are not retrospectively reconstructed. Instead, this verifier captures full distinct pre-audit and post-audit inventories during its execution, proving zero mutations occurred."
+    },
+    "comparisonResult": {
+      "verdict": "zero net state changes observed between the captured inventories",
+      "storage": {
+        "preCount": 100,
+        "postCount": 100,
+        "additionsCount": 0,
+        "deletionsCount": 0,
+        "changedGenerationsCount": 0,
+        "changedSizesCount": 0,
+        "changedTimestampsCount": 0,
+        "additionsList": [],
+        "deletionsList": [],
+        "changedGenerationsList": [],
+        "changedSizesList": [],
+        "changedTimestampsList": [],
+        "isIdentical": true
+      },
+      "firestore": {
+        "preCount": 100,
+        "postCount": 100,
+        "additionsCount": 0,
+        "deletionsCount": 0,
+        "changedUpdateTimesCount": 0,
+        "additionsList": [],
+        "deletionsList": [],
+        "changedUpdateTimesList": [],
+        "isIdentical": true
+      },
+      "scheduler": {
+        "preState": "PAUSED",
+        "postState": "PAUSED",
+        "preUpdateTime": "2026-09-29T02:33:32.611005Z",
+        "postUpdateTime": "2026-09-29T02:33:32.611005Z",
+        "stateChanged": false,
+        "updateTimeChanged": false,
+        "isIdentical": true
+      },
+      "overallProdZeroMutation": true
+    },
+    "liveTimestampInvariant": {
+      "latestProdStorageUpdated": "2026-09-29T02:26:43.827Z",
+      "latestProdFirestoreUpdated": "2026-09-29T02:26:44.118153Z",
+      "invariantConclusion": "Both latest timestamps date from 2026-09-29, demonstrating zero writes, updates, or creations occurred in PROD during any October audit operations."
+    },
+    "distinctPreAuditInventory": {
+      "scheduler": {
+        "name": "projects/kerala-lottery-intelligence/locations/asia-south1/jobs/prod-daily-lottery-ingestion",
+        "state": "PAUSED",
+        "userUpdateTime": "2026-09-29T02:33:32.611005Z"
+      },
+      "storageCount": 100,
+      "firestoreCount": 100,
+      "storageObjects": [
+        {
+          "name": "source-documents/047ddf6dacd28c5995197ce8327cd3b61dd190122387c625e3bf92ff30311998.pdf",
+          "generation": "1790648702890211",
+          "size": 87193,
+          "updated": "2026-09-29T02:25:03.248Z",
+          "md5Hash": "ZfTh+rdbmw8TFnpu+/RFxw=="
+        },
+        {
+          "name": "source-documents/04dd99bf3f6b02775cd8c59d06f19e78204d2fc41645d9bb76c291dcf2682563.pdf",
+          "generation": "1790648776928314",
+          "size": 87219,
+          "updated": "2026-09-29T02:26:17.730Z",
+          "md5Hash": "Owmr9PKNMB7rUIlHnUNV9w=="
+        },
+        {
+          "name": "source-documents/07ff36db6bd515e2c1d116338c3418feee1a521f47f8840abceeb2c9bc89a983.pdf",
+          "generation": "1790648721487667",
+          "size": 87172,
+          "updated": "2026-09-29T02:25:21.846Z",
+          "md5Hash": "EXP6R68pYwBQxuCag/gI8A=="
+        },
+        {
+          "name": "source-documents/08e711172087ba91a858ed4c6f3521f903fc70a5493f99fd523b708b75dc68ea.pdf",
+          "generation": "1790648699055948",
+          "size": 87182,
+          "updated": "2026-09-29T02:25:00.756Z",
+          "md5Hash": "SX+FC2qlzOa80oUUAxi4fw=="
+        },
+        {
+          "name": "source-documents/094995013d620442f68d703678fe4092c4553b64036cdb5e0f13e4ad44ca0b9b.pdf",
+          "generation": "1790648732112031",
+          "size": 87198,
+          "updated": "2026-09-29T02:25:32.469Z",
+          "md5Hash": "4G9doCGEzGu5BxXPYYNQxQ=="
+        },
+        {
+          "name": "source-documents/0a2d3bf52c34b0daf9743f2b6de95f31c530dae39e6aa6286efe4dd69d87aa06.pdf",
+          "generation": "1790648798463666",
+          "size": 90697,
+          "updated": "2026-09-29T02:26:38.896Z",
+          "md5Hash": "4JlOzSYzUd0M5EUstEZZPA=="
+        },
+        {
+          "name": "source-documents/0c2795d280bd93250697d72a7936883d4392d326d80174f68c996b494d889705.pdf",
+          "generation": "1790648602240788",
+          "size": 263660,
+          "updated": "2026-09-29T02:23:22.635Z",
+          "md5Hash": "s8JQtWKW8yKJrvzhtsou3g=="
+        },
+        {
+          "name": "source-documents/0ef724676250df730e81125b0f9df8f4a8464d331cfc405270dce0b8dac19132.pdf",
+          "generation": "1790648783921027",
+          "size": 87235,
+          "updated": "2026-09-29T02:26:24.289Z",
+          "md5Hash": "bLS7vA3MXNu6gMgEShQ+lA=="
+        },
+        {
+          "name": "source-documents/0fb7475841cb44995459be364b8046c16c0ff5b217dbf7f27b63e5acb34cde16.pdf",
+          "generation": "1790648606598970",
+          "size": 87201,
+          "updated": "2026-09-29T02:23:27.002Z",
+          "md5Hash": "R8NV2e765i33WlO/kIg18A=="
+        },
+        {
+          "name": "source-documents/119a4e260a935c705556efa5dd24175f683455d1326ed89682f2f3bca941c7e2.pdf",
+          "generation": "1790648696145350",
+          "size": 87193,
+          "updated": "2026-09-29T02:24:56.975Z",
+          "md5Hash": "wurtp0bTOI8JtOuICG9Muw=="
+        },
+        {
+          "name": "source-documents/128af555e35eecd051ce3184fb0623a474de6ccc9fc6d9eaf0b691a332df3c49.pdf",
+          "generation": "1790648559219017",
+          "size": 87147,
+          "updated": "2026-09-29T02:22:39.592Z",
+          "md5Hash": "B5Q/v/kMT3V1liKMfjcTBQ=="
+        },
+        {
+          "name": "source-documents/13f3e2f56aafac5934e28db86f67e33e8d79cb98b66715bfeade4a9f37188600.pdf",
+          "generation": "1790648690683761",
+          "size": 263579,
+          "updated": "2026-09-29T02:24:51.037Z",
+          "md5Hash": "vMrtbidEZn7GGUJVxIWI2A=="
+        },
+        {
+          "name": "source-documents/1af9b133db490335b2c4f81247e5c02b2ceefa9914f333f863cb3144961e7899.pdf",
+          "generation": "1790648725707417",
+          "size": 87175,
+          "updated": "2026-09-29T02:25:26.057Z",
+          "md5Hash": "jll6Ct5aaeEiLlWhzqdsnw=="
+        },
+        {
+          "name": "source-documents/1e7bbfc75b087a7226ed6a1df817fed677385bab0e3a8da0bd865d5928e23627.pdf",
+          "generation": "1790648543627170",
+          "size": 87183,
+          "updated": "2026-09-29T02:22:23.996Z",
+          "md5Hash": "9aKr4VJELkIRhRVVIp3QiQ=="
+        },
+        {
+          "name": "source-documents/211aa5e97d35c6f1feaf0e63ff11f95087fe1e3a63d60dd6649b6016fd3a128d.pdf",
+          "generation": "1790648740007515",
+          "size": 87184,
+          "updated": "2026-09-29T02:25:40.593Z",
+          "md5Hash": "QLZsDEfc6CMY4EDGB2bjCA=="
+        },
+        {
+          "name": "source-documents/2217bad20d023978ae62c4fb728f979ed0a5f31672812cc3196e9595c1426d28.pdf",
+          "generation": "1790648638521199",
+          "size": 263586,
+          "updated": "2026-09-29T02:23:58.890Z",
+          "md5Hash": "IKG3bYFvdXcQmrvuvEmgiQ=="
+        },
+        {
+          "name": "source-documents/25ee2fcbbf436e359afcb9a7f59a5a88f5f21a992443b336d677c7038ee4475c.pdf",
+          "generation": "1790648613793264",
+          "size": 87195,
+          "updated": "2026-09-29T02:23:34.176Z",
+          "md5Hash": "J+FYSNOJ4lcQs8aWSLpNfA=="
+        },
+        {
+          "name": "source-documents/273c81976228b67a1cb6045ff14d0aae1e865b4435fc7f38b74f2975ab7593ef.pdf",
+          "generation": "1790648742410494",
+          "size": 87148,
+          "updated": "2026-09-29T02:25:42.795Z",
+          "md5Hash": "OC/3vo6hqDYq52n+w59AeA=="
+        },
+        {
+          "name": "source-documents/292db5b08f96ce05b448d4aa17c88918b4288e136bf5544b47a7a7bbde689d05.pdf",
+          "generation": "1790648655785422",
+          "size": 87244,
+          "updated": "2026-09-29T02:24:16.148Z",
+          "md5Hash": "xEC1eQL2ASdrk5U4eYTjRg=="
+        },
+        {
+          "name": "source-documents/2d8441e6b07531e24fc6c4a9fc6d1c229a0d1e024765d6d617b4c6c70b666445.pdf",
+          "generation": "1790648616157354",
+          "size": 87175,
+          "updated": "2026-09-29T02:23:36.540Z",
+          "md5Hash": "30LAKW9zmFIYjvZIyVGmHQ=="
+        },
+        {
+          "name": "source-documents/2fa26996eff26d0be6e9a6feea74550467500e25a343291062b73ca9e54fab3c.pdf",
+          "generation": "1790648684186797",
+          "size": 87192,
+          "updated": "2026-09-29T02:24:44.559Z",
+          "md5Hash": "oBu/p7WtQ8WNmNm/OrGYeQ=="
+        },
+        {
+          "name": "source-documents/2febfe5e7f27f934a8a5b4e34262c261d83371aef732cc89d0dd9f5672be82b3.pdf",
+          "generation": "1790648645947754",
+          "size": 87223,
+          "updated": "2026-09-29T02:24:06.335Z",
+          "md5Hash": "8NbABa8I/PM3Ppin3ibzow=="
+        },
+        {
+          "name": "source-documents/3173a50c822e6ef4efbe65ca056d1f3b6f3fd7c6a0444941531b6c7b491a6cfe.pdf",
+          "generation": "1790648756708491",
+          "size": 87252,
+          "updated": "2026-09-29T02:25:57.100Z",
+          "md5Hash": "MYOAWKklH7tl6Xic0+ChZA=="
+        },
+        {
+          "name": "source-documents/325df39eeccf7b9942f20f5be668cc803fa7317262e8ee07f1c8e12ad32d1e87.pdf",
+          "generation": "1790648664442662",
+          "size": 87217,
+          "updated": "2026-09-29T02:24:24.833Z",
+          "md5Hash": "s4WxBON3OAnB3YR6rT9JQA=="
+        },
+        {
+          "name": "source-documents/352d0a76831baa854672b51f966af71d1769d462999b1be0e4509f449cedd487.pdf",
+          "generation": "1790648633461153",
+          "size": 263687,
+          "updated": "2026-09-29T02:23:53.852Z",
+          "md5Hash": "ExQoH+bvFDSpkRgRouiEvA=="
+        },
+        {
+          "name": "source-documents/3f66f9acb0a96490bde7e420397954982d261b30959fd6a0b6135470a2ef42d5.pdf",
+          "generation": "1790648561416143",
+          "size": 87150,
+          "updated": "2026-09-29T02:22:41.789Z",
+          "md5Hash": "UL1dfUE4QaBpbqhXBHWokg=="
+        },
+        {
+          "name": "source-documents/415e0ac1d24bc6f737f315e747df0f8aa175065b68fa9839c4f5e585192d1f0b.pdf",
+          "generation": "1790648693802162",
+          "size": 263608,
+          "updated": "2026-09-29T02:24:54.154Z",
+          "md5Hash": "RvQkl/oLzRenld2pWqiWvQ=="
+        },
+        {
+          "name": "source-documents/43a621b7e24780fd583911b45e01bb2d2cf7aa9efd084f7526ef28e12fd9824f.pdf",
+          "generation": "1790648553228912",
+          "size": 263623,
+          "updated": "2026-09-29T02:22:33.833Z",
+          "md5Hash": "moyNyG8oeDYuSngEMK/CtA=="
+        },
+        {
+          "name": "source-documents/45afadcf3bdc088cc992c7e15156700cd456cc33811325096c50ddc02a2918ba.pdf",
+          "generation": "1790648581231750",
+          "size": 87214,
+          "updated": "2026-09-29T02:23:01.615Z",
+          "md5Hash": "kxfX+sRRmDwQlKvdkCfG0Q=="
+        },
+        {
+          "name": "source-documents/478dbd5fe0952a3ab8e7b26fadf427ac0c4a899de8fb7ccc99f680b6eafd4aa7.pdf",
+          "generation": "1790648789459708",
+          "size": 87230,
+          "updated": "2026-09-29T02:26:30.560Z",
+          "md5Hash": "nHBQN6bJb5opjbG9VQFEEQ=="
+        },
+        {
+          "name": "source-documents/4c855490f1aef2cf9e6bddc4c85b6a1e820f767c48cf6a6693ef7956ae1a43a0.pdf",
+          "generation": "1790648787068282",
+          "size": 263641,
+          "updated": "2026-09-29T02:26:27.432Z",
+          "md5Hash": "p7Qoxr6u06cgkdyyOUPjig=="
+        },
+        {
+          "name": "source-documents/4e91e05ca73bf512e27a4ef43977a64d86fb772bb5055fc72f8ca80fbec5b2ac.pdf",
+          "generation": "1790648609026294",
+          "size": 87208,
+          "updated": "2026-09-29T02:23:29.420Z",
+          "md5Hash": "+vI3rKAfvAR5GUlr4so9MQ=="
+        },
+        {
+          "name": "source-documents/523df3d477cbc24a132d6b2d9e25ed228b90b3f4a45f3a87108a0d6fbdaa4370.pdf",
+          "generation": "1790648770089913",
+          "size": 263626,
+          "updated": "2026-09-29T02:26:10.459Z",
+          "md5Hash": "L9E/LMx4NG+n6igKTPCi7A=="
+        },
+        {
+          "name": "source-documents/53695be7ae8b0093f992629372dd64babbcd7cfeb26b77e9e6e2b86daec33c03.pdf",
+          "generation": "1790648781318543",
+          "size": 87195,
+          "updated": "2026-09-29T02:26:21.963Z",
+          "md5Hash": "6SA4wJhC08jtJ+K019zN3w=="
+        },
+        {
+          "name": "source-documents/53b7589633519fecf7b68dac91a44e4970c71a82f9c8bf85da45351319e5eab7.pdf",
+          "generation": "1790648687839835",
+          "size": 263655,
+          "updated": "2026-09-29T02:24:48.200Z",
+          "md5Hash": "sWbIta101TVLq9fc9C3cJw=="
+        },
+        {
+          "name": "source-documents/5b247e8d594f20f76378f8eb7e17dc69a6c69f71a9715a01638a81aba05d3a3c.pdf",
+          "generation": "1790648753758563",
+          "size": 263623,
+          "updated": "2026-09-29T02:25:54.197Z",
+          "md5Hash": "Ttd4eAZLur5s+MbCcTsfRw=="
+        },
+        {
+          "name": "source-documents/5db61150fc776794c5a79db820a98b5d12f24055b24b36c5ffb9f5420f6fc3a6.pdf",
+          "generation": "1790648650340881",
+          "size": 87250,
+          "updated": "2026-09-29T02:24:10.709Z",
+          "md5Hash": "At5AYBzAjU4vUlRwyGILSw=="
+        },
+        {
+          "name": "source-documents/5f19a6e12a7631ac39feca957e90d87ab8fa20b9e7bddc0ea1fb29955a634c7f.pdf",
+          "generation": "1790648670209487",
+          "size": 87176,
+          "updated": "2026-09-29T02:24:30.568Z",
+          "md5Hash": "KD6nD4DdTl7w3Fig25d0gA=="
+        },
+        {
+          "name": "source-documents/60d3bcc61b5a23b57aef510b9b0b14467d4220f7585eec2462f31f4611b5bfec.pdf",
+          "generation": "1790648611577427",
+          "size": 87163,
+          "updated": "2026-09-29T02:23:31.951Z",
+          "md5Hash": "5N/+J6VvXwTo4ihUjxQh0w=="
+        },
+        {
+          "name": "source-documents/67bd4c8222548a7e9d6fdbe4a94dd692b76fa48836b8a1745c1e194983ff3fc6.pdf",
+          "generation": "1790648564589290",
+          "size": 263627,
+          "updated": "2026-09-29T02:22:45.288Z",
+          "md5Hash": "RAQgwGgF3iUq867qV4NiGg=="
+        },
+        {
+          "name": "source-documents/67c030636de44ced2042e56ee727614863f6a7489d59c5eb5c5997e45bd9d115.pdf",
+          "generation": "1790648745504318",
+          "size": 263682,
+          "updated": "2026-09-29T02:25:45.859Z",
+          "md5Hash": "zwSMepkxRifn+2mxAlCw1A=="
+        },
+        {
+          "name": "source-documents/6a8a15aa41be4bf8db53cdb9288bfc18cdc997ed2c8adb7c1313850df735fb28.pdf",
+          "generation": "1790648533900467",
+          "size": 87196,
+          "updated": "2026-09-29T02:22:15.713Z",
+          "md5Hash": "5zrVlI1ZVqZM5OLgheo3uQ=="
+        },
+        {
+          "name": "source-documents/6a8fc1b10e8b42e84504ba92b9502245e24a0b99252c90239b4882c37ce19211.pdf",
+          "generation": "1790648541250896",
+          "size": 87213,
+          "updated": "2026-09-29T02:22:21.614Z",
+          "md5Hash": "UX7JN0Qp6DbB5kFBBUXXpA=="
+        },
+        {
+          "name": "source-documents/6dec53f17869776bd70f1d8262b3d654bda41a02fe405cd7c3956cf422586c78.pdf",
+          "generation": "1790648598636067",
+          "size": 263664,
+          "updated": "2026-09-29T02:23:18.997Z",
+          "md5Hash": "FgrjsE3bmMRzAQjoSfRSYA=="
+        },
+        {
+          "name": "source-documents/71a1c0cf134e5820aaf09b4dd6fb60964a4b09672ecf3ad40bdd15312d434d7c.pdf",
+          "generation": "1790648666663050",
+          "size": 87221,
+          "updated": "2026-09-29T02:24:27.269Z",
+          "md5Hash": "0PjXJmCgATo16kzaNPacrQ=="
+        },
+        {
+          "name": "source-documents/76fb8fb7291d002df4644b0331fee1fa7bd8d1bf9c00c92426ac4cb946bb8eb7.pdf",
+          "generation": "1790648547210740",
+          "size": 263602,
+          "updated": "2026-09-29T02:22:27.726Z",
+          "md5Hash": "DE6SL70v+2kgxWukX7eLkA=="
+        },
+        {
+          "name": "source-documents/789c825baa2527e7e3b1caa30291f8f4255092213070652b0f820d5626e14957.pdf",
+          "generation": "1790648661810647",
+          "size": 263693,
+          "updated": "2026-09-29T02:24:22.357Z",
+          "md5Hash": "PWf+IWw+hZS0BkjP3TCG/w=="
+        },
+        {
+          "name": "source-documents/78db09d054675026aba6240c5a64db8eb9dcd711f7e184d8df3585e0df3db18c.pdf",
+          "generation": "1790648761554276",
+          "size": 87232,
+          "updated": "2026-09-29T02:26:01.935Z",
+          "md5Hash": "Iw3EcNkfmjP7hsEaCkDPHA=="
+        },
+        {
+          "name": "source-documents/7f98d6edda4ed1126fb0b2475001a6a9ca9669a249051066404a1fda343148b5.pdf",
+          "generation": "1790648719272344",
+          "size": 87184,
+          "updated": "2026-09-29T02:25:19.750Z",
+          "md5Hash": "gGL9JxbQ6uYAgtsmy1gi/A=="
+        },
+        {
+          "name": "source-documents/813a54a72b31e333cf1b7b5c10a714136a3bfcec85b182fea58531b80d111a95.pdf",
+          "generation": "1790648538561374",
+          "size": 87208,
+          "updated": "2026-09-29T02:22:18.932Z",
+          "md5Hash": "aBw2w0ge/wG4wAUkxCGvkg=="
+        },
+        {
+          "name": "source-documents/81d0f9da09bb660fe91dc86c4c8485faff2bcda8bd5570768e288b0938a29425.pdf",
+          "generation": "1790648549926467",
+          "size": 87237,
+          "updated": "2026-09-29T02:22:30.380Z",
+          "md5Hash": "NOEXWSh/JuFncXPsNcW7IA=="
+        },
+        {
+          "name": "source-documents/83854dcc16b0432700149651a8b361047d9c316d4310fa934179589c6c726e05.pdf",
+          "generation": "1790648682001553",
+          "size": 87181,
+          "updated": "2026-09-29T02:24:42.373Z",
+          "md5Hash": "fUub2olHu706WiWMDnKADQ=="
+        },
+        {
+          "name": "source-documents/8816540acc033ec26d26a8c8b30d029f4ea445b68cc4deabea54b8eb1644a90b.pdf",
+          "generation": "1790648556418595",
+          "size": 263585,
+          "updated": "2026-09-29T02:22:37.231Z",
+          "md5Hash": "9vtss6za0rxzK8V3iLOJMw=="
+        },
+        {
+          "name": "source-documents/8b38eb97e7c00573a985ced2658b81db0dcb189423ba0f9ab56f5ee40f401efb.pdf",
+          "generation": "1790648679713202",
+          "size": 87202,
+          "updated": "2026-09-29T02:24:40.082Z",
+          "md5Hash": "ucAR7Sbi7WAn+873FQ1h4g=="
+        },
+        {
+          "name": "source-documents/8d3bd9e8beb9a5b550c3d0d16cc499039588bbc2ba72334a18d3ff6baa3a075f.pdf",
+          "generation": "1790648629924800",
+          "size": 87174,
+          "updated": "2026-09-29T02:23:50.922Z",
+          "md5Hash": "QfNP8x7MH10jHcIye0sKLg=="
+        },
+        {
+          "name": "source-documents/8e4b7314fb17a31d5f961e8ef61450d9589fc79ece3a71684edff6dfd10de031.pdf",
+          "generation": "1790648575162042",
+          "size": 87188,
+          "updated": "2026-09-29T02:22:55.662Z",
+          "md5Hash": "Bjzo/dEiNZkpVbwkLs/o9A=="
+        },
+        {
+          "name": "source-documents/900e6e61cf6ca8ae51225a4714a7fd2d8a703b4e5004ae1f221746684bed63c5.pdf",
+          "generation": "1790648604436691",
+          "size": 87260,
+          "updated": "2026-09-29T02:23:24.794Z",
+          "md5Hash": "aPVlZH0JTe92qj4AQ7Effg=="
+        },
+        {
+          "name": "source-documents/9111cb72d37948f34b98c1edfbbc34ee7acdd0eb02bf78acfab39a1f33abae10.pdf",
+          "generation": "1790648621164441",
+          "size": 87158,
+          "updated": "2026-09-29T02:23:41.528Z",
+          "md5Hash": "VTseWCeqKxR6DRq1UNjY8A=="
+        },
+        {
+          "name": "source-documents/92f92d14fb267ae83bf084407aa3c10131d84553770759f0d5c68d7461b187fc.pdf",
+          "generation": "1790648618962842",
+          "size": 263633,
+          "updated": "2026-09-29T02:23:39.326Z",
+          "md5Hash": "/GCM7m5RrXeGTL+2Op+51Q=="
+        },
+        {
+          "name": "source-documents/93960883ff1af8f833b3e4965869a42c7e8dfb3b7a21c8a25b4a0ad88216f52c.pdf",
+          "generation": "1790648643719964",
+          "size": 263645,
+          "updated": "2026-09-29T02:24:04.086Z",
+          "md5Hash": "tvpeOLKVEUu1AcdVdtLgag=="
+        },
+        {
+          "name": "source-documents/95ff2d8504e7f7741f0328d450581985763be1ab458e5379959c7a4333f66113.pdf",
+          "generation": "1790648748311211",
+          "size": 263679,
+          "updated": "2026-09-29T02:25:48.699Z",
+          "md5Hash": "tGvdMfrTxXqab+dQYNw7PQ=="
+        },
+        {
+          "name": "source-documents/96ad0159b9c3c06b02fd579c9e902b7ace3e9ff6d48d69fad5cfafcac03b8310.pdf",
+          "generation": "1790648577767381",
+          "size": 87214,
+          "updated": "2026-09-29T02:22:58.429Z",
+          "md5Hash": "wkssax/iEwcR4is9XZKnAg=="
+        },
+        {
+          "name": "source-documents/9dab11082fedbbe2c14475c319f08cdb18d63ad653d288b98232ac79c0b6f5d4.pdf",
+          "generation": "1790648595646505",
+          "size": 87222,
+          "updated": "2026-09-29T02:23:16.123Z",
+          "md5Hash": "N5804psoRl6KE4rhDZS53g=="
+        },
+        {
+          "name": "source-documents/a146c6c0584d2ead526b3f9d625c436f17c67fa2bd8000a46993d7e99944d126.pdf",
+          "generation": "1790648734317936",
+          "size": 87186,
+          "updated": "2026-09-29T02:25:34.695Z",
+          "md5Hash": "VI32950wCsEB1YFyWMtxsg=="
+        },
+        {
+          "name": "source-documents/a5fbef025b51e68340ff8f850ebd620ae9ba35022e79929a9f0fa6db14c07a9a.pdf",
+          "generation": "1790648716779122",
+          "size": 263744,
+          "updated": "2026-09-29T02:25:17.133Z",
+          "md5Hash": "2bU8pg9WKZiRpytnIx4Lpg=="
+        },
+        {
+          "name": "source-documents/ad861e3a1a9c4ffbd0b1707606e04f2ae3f378b5c2b6bd735e36f282f1f67aab.pdf",
+          "generation": "1790648648174510",
+          "size": 87196,
+          "updated": "2026-09-29T02:24:08.559Z",
+          "md5Hash": "IwAsKL6nUF/s0d34cOJBOA=="
+        },
+        {
+          "name": "source-documents/adf26c5a1d786689cfd41ba90f38f9e23c2ce7b6587a92f446ebd4cf2210d6c6.pdf",
+          "generation": "1790648772318921",
+          "size": 87229,
+          "updated": "2026-09-29T02:26:12.684Z",
+          "md5Hash": "4+TW8K2fZ8A+hmQGosKH0w=="
+        },
+        {
+          "name": "source-documents/b7db3bceb2cb3d779ef88deafe5083915e8cbd926b7058ac2273fbab01ee7092.pdf",
+          "generation": "1790648677493339",
+          "size": 87206,
+          "updated": "2026-09-29T02:24:37.859Z",
+          "md5Hash": "Px7pkv7CfoLHkKrqOmshDw=="
+        },
+        {
+          "name": "source-documents/b81fe918af6fee8eeb0ae1e42d1beba246c450e7fda77d36f077ba303cab1d8e.pdf",
+          "generation": "1790648640688807",
+          "size": 87192,
+          "updated": "2026-09-29T02:24:01.056Z",
+          "md5Hash": "RiLW71yt10Adjjn6nDNY/g=="
+        },
+        {
+          "name": "source-documents/b9fa7c2e4e57e74d78719dda36e9f52a5479c00aaeb81ffb8926122d911c8cac.pdf",
+          "generation": "1790648705079952",
+          "size": 87199,
+          "updated": "2026-09-29T02:25:05.821Z",
+          "md5Hash": "GxnDS5QmXe1KkA53dM+4IA=="
+        },
+        {
+          "name": "source-documents/bc91f1d02ababc3b751099e654bc4d6bda54df96206fa85dc7d16afc17303f8e.pdf",
+          "generation": "1790648653225723",
+          "size": 263580,
+          "updated": "2026-09-29T02:24:13.614Z",
+          "md5Hash": "uiqeZ+sv6tuPprTgt1LACg=="
+        },
+        {
+          "name": "source-documents/bfb1ce9f7f0f3228065cb8b215c167d833f1783fd6982743ce8a162345cf202c.pdf",
+          "generation": "1790648624165017",
+          "size": 263655,
+          "updated": "2026-09-29T02:23:44.657Z",
+          "md5Hash": "yQcWPlI27Jzso3+zoQ5BWg=="
+        },
+        {
+          "name": "source-documents/c0cae04fa735cd6ca4768f371e59a0f60759b707afb4a30c5405f21d217e458f.pdf",
+          "generation": "1790648750808307",
+          "size": 87201,
+          "updated": "2026-09-29T02:25:51.174Z",
+          "md5Hash": "dbDIAd/hX3CiaOotWx+X9A=="
+        },
+        {
+          "name": "source-documents/c757b8fa2c76bfb64da787cd38e2a68052a40c9d4065beeb3d36730ec3977700.pdf",
+          "generation": "1790648585685238",
+          "size": 87223,
+          "updated": "2026-09-29T02:23:06.043Z",
+          "md5Hash": "9m6oo39WaWW6VUu/nJAFZw=="
+        },
+        {
+          "name": "source-documents/c887c9a0d9c85f2f8020d8b168aebd7f815dc58c059da58823ab59e88360ed71.pdf",
+          "generation": "1790648672896102",
+          "size": 87211,
+          "updated": "2026-09-29T02:24:33.297Z",
+          "md5Hash": "pJU+eawckdmbvoDv7NNFgA=="
+        },
+        {
+          "name": "source-documents/ca6ee0d7eca8692f088485f73ba6e907326bf177002a9bfdbc39bb1f7df863ba.pdf",
+          "generation": "1790648569938806",
+          "size": 87185,
+          "updated": "2026-09-29T02:22:50.308Z",
+          "md5Hash": "Khdip0fFyXFJvcSiceDf+w=="
+        },
+        {
+          "name": "source-documents/cd9782b5a0d836de5701b8c588189d23b06bd3f8574f31cc6fb5dbdda71c681b.pdf",
+          "generation": "1790648593102802",
+          "size": 87248,
+          "updated": "2026-09-29T02:23:13.482Z",
+          "md5Hash": "Ij05ubJvt15Ew+WIoH4Xjg=="
+        },
+        {
+          "name": "source-documents/cddb3d4d05c102b98f38050ac1ff297ad15bc442b12087c0505927f7bb1cf3dc.pdf",
+          "generation": "1790648803318162",
+          "size": 87173,
+          "updated": "2026-09-29T02:26:43.827Z",
+          "md5Hash": "K79/ahD9ASZvB9pCPgsUdA=="
+        },
+        {
+          "name": "source-documents/cfb85517fd1bf8b39e7930c40db00d1bb7487a55c7c7dc3ebb42e098ff148efe.pdf",
+          "generation": "1790648729943270",
+          "size": 87192,
+          "updated": "2026-09-29T02:25:30.321Z",
+          "md5Hash": "9KxIAaJzrwWA4xbwn9tIaA=="
+        },
+        {
+          "name": "source-documents/d5495b551a01d30e82f7de90377933fcca166c15e9f267b419428477ea463010.pdf",
+          "generation": "1790648759169800",
+          "size": 87179,
+          "updated": "2026-09-29T02:25:59.677Z",
+          "md5Hash": "6Svop4NSnYiWumt+fwHipA=="
+        },
+        {
+          "name": "source-documents/d62259ab3de4e69020571f70de1004d1d53e9b652a62c35bcb554d308a039b7b.pdf",
+          "generation": "1790648572216729",
+          "size": 87210,
+          "updated": "2026-09-29T02:22:52.693Z",
+          "md5Hash": "v1lxp46CSaXI/075vMWUMw=="
+        },
+        {
+          "name": "source-documents/d64065a1f7c9fd62d36b6a329939bebaac0825b7f80672a8c219dd192c3853b7.pdf",
+          "generation": "1790648764819562",
+          "size": 87203,
+          "updated": "2026-09-29T02:26:05.197Z",
+          "md5Hash": "TXxrxDbrItySAZ3cFAEvZA=="
+        },
+        {
+          "name": "source-documents/d9644e296bbecf591f6a69eefca99c0f005f94b736ffd76a33a4afba3e89c702.pdf",
+          "generation": "1790648727800570",
+          "size": 87188,
+          "updated": "2026-09-29T02:25:28.154Z",
+          "md5Hash": "1us2gDQeCB26DHNwduXVOw=="
+        },
+        {
+          "name": "source-documents/da673e4cc3161dcda7b9108279acd55d91ff4edb7599b1f5687d9cde6f6362d3.pdf",
+          "generation": "1790648635678094",
+          "size": 87184,
+          "updated": "2026-09-29T02:23:56.038Z",
+          "md5Hash": "4U2O6FY6cbMzLXAtbIhNMQ=="
+        },
+        {
+          "name": "source-documents/db2395432591415ba848377cdc5df6f4ccaf3a08b8a8d10e451cb1a902f454f8.pdf",
+          "generation": "1790648583427058",
+          "size": 87204,
+          "updated": "2026-09-29T02:23:03.795Z",
+          "md5Hash": "8N+RVQs8+4S6XH7YhoYzUw=="
+        },
+        {
+          "name": "source-documents/dbddb237a5c96d2b6a12ee87a9279ebb5db2bb42fc62d0805b78003dd30d211b.pdf",
+          "generation": "1790648796217788",
+          "size": 263782,
+          "updated": "2026-09-29T02:26:36.578Z",
+          "md5Hash": "FNFYVLnP+dhgJB2l9Yj+uQ=="
+        },
+        {
+          "name": "source-documents/dc266828f4e9b5b59fe4fdfcfac28fb176b9cd073091edbdf491732da7672049.pdf",
+          "generation": "1790648658662316",
+          "size": 263634,
+          "updated": "2026-09-29T02:24:19.175Z",
+          "md5Hash": "go4vjMZdumrawZ6batljcQ=="
+        },
+        {
+          "name": "source-documents/dc782d7a9ff14edcc8d73aab01d84cc27c55e7d7a1f3e7840f4ac0b694958f92.pdf",
+          "generation": "1790648736688797",
+          "size": 87187,
+          "updated": "2026-09-29T02:25:37.717Z",
+          "md5Hash": "MhrvSigbkILZ+E3Yx4PXMg=="
+        },
+        {
+          "name": "source-documents/df78932ca43b46dc12c861a5ffdbd1cb4b9b2426c7ec17cab3b4a116239ff25a.pdf",
+          "generation": "1790648766989939",
+          "size": 87219,
+          "updated": "2026-09-29T02:26:07.359Z",
+          "md5Hash": "YGV1vyQ/e9wAf2UR4wOZvA=="
+        },
+        {
+          "name": "source-documents/e7022266908fe49437d7f62e84b81a157257b0f106afce7ee76b192664c6a577.pdf",
+          "generation": "1790648567323557",
+          "size": 87209,
+          "updated": "2026-09-29T02:22:47.953Z",
+          "md5Hash": "YKHI5I+xn8eYdh1s8vNfpA=="
+        },
+        {
+          "name": "source-documents/e87808433531422e2d4ea22307cc961e4ca8cc8f6d35d98cfe794d817ad00436.pdf",
+          "generation": "1790648713957285",
+          "size": 87216,
+          "updated": "2026-09-29T02:25:14.321Z",
+          "md5Hash": "iji3YEKBMyyBjbeFDd2u6w=="
+        },
+        {
+          "name": "source-documents/e92a563ffe7bf79364b0fd9c46b56e42a35f1a4359eea6733458fba698e7eaf3.pdf",
+          "generation": "1790648710054427",
+          "size": 87207,
+          "updated": "2026-09-29T02:25:11.870Z",
+          "md5Hash": "pftoZ4VOXMk1PdBEoqorBg=="
+        },
+        {
+          "name": "source-documents/ed6d7c40f2733289cfd2e194d96205839f41e5c247e9d002b89b1bf1b640db9d.pdf",
+          "generation": "1790648774548229",
+          "size": 87236,
+          "updated": "2026-09-29T02:26:15.008Z",
+          "md5Hash": "E3qVFTwLaGpyLIFVO8buIw=="
+        },
+        {
+          "name": "source-documents/f04459f000eba62f1c830a1670162e79595d3b21c36387c9664e6d48a7e9c1be.pdf",
+          "generation": "1790648590600161",
+          "size": 87200,
+          "updated": "2026-09-29T02:23:11.007Z",
+          "md5Hash": "W94TKqTg73X+HDG+KBz1MQ=="
+        },
+        {
+          "name": "source-documents/f180541cb51009a082f63b1a61f872a502065696add9fb0f63b552a7ac0682c6.pdf",
+          "generation": "1790648793326632",
+          "size": 87228,
+          "updated": "2026-09-29T02:26:33.700Z",
+          "md5Hash": "L1+GnmZ0flCj8wfJAvLO7w=="
+        },
+        {
+          "name": "source-documents/f728341b2f5dd54baa1fd031853ed1adf163d1e5998162c36b64a5da3c352bbf.pdf",
+          "generation": "1790648723633880",
+          "size": 87195,
+          "updated": "2026-09-29T02:25:23.983Z",
+          "md5Hash": "BAtL478P9Nc2lZBYt7jyJw=="
+        },
+        {
+          "name": "source-documents/f89bd80ca46cd5b0beab395f2d75f2eda81e83b6460f28dcb4f52eacf44511c3.pdf",
+          "generation": "1790648801415806",
+          "size": 268519,
+          "updated": "2026-09-29T02:26:41.766Z",
+          "md5Hash": "8+UfBlxpMe3g5P1BzY3QmQ=="
+        },
+        {
+          "name": "source-documents/fb1c580ededd8d122b1f0550a97c97d80f35539b7a62965f760ef9b843f28b1d.pdf",
+          "generation": "1790648588043607",
+          "size": 87252,
+          "updated": "2026-09-29T02:23:08.762Z",
+          "md5Hash": "VWJxqYtS30DjvGZJipBQfA=="
+        },
+        {
+          "name": "source-documents/fee7a9c454d450b0b5e973b1d7fdf084555fa63cd675316651f34d21b901f221.pdf",
+          "generation": "1790648626831923",
+          "size": 87192,
+          "updated": "2026-09-29T02:23:47.493Z",
+          "md5Hash": "DsyYwFX5yjcl6Ubvt+r6FQ=="
+        },
+        {
+          "name": "source-documents/ff7329896823750deeebed78628666f7e65a03147f3bb6473d62187797636e18.pdf",
+          "generation": "1790648675170809",
+          "size": 87190,
+          "updated": "2026-09-29T02:24:35.548Z",
+          "md5Hash": "gEZzhscNtdPJLvm8NJcYKQ=="
+        }
+      ],
+      "firestoreDocuments": [
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/047ddf6dacd28c5995197ce8327cd3b61dd190122387c625e3bf92ff30311998",
+          "createTime": "2026-09-29T02:25:03.538188Z",
+          "updateTime": "2026-09-29T02:25:03.538188Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/04dd99bf3f6b02775cd8c59d06f19e78204d2fc41645d9bb76c291dcf2682563",
+          "createTime": "2026-09-29T02:26:18.833323Z",
+          "updateTime": "2026-09-29T02:26:18.833323Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/07ff36db6bd515e2c1d116338c3418feee1a521f47f8840abceeb2c9bc89a983",
+          "createTime": "2026-09-29T02:25:22.114710Z",
+          "updateTime": "2026-09-29T02:25:22.114710Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/08e711172087ba91a858ed4c6f3521f903fc70a5493f99fd523b708b75dc68ea",
+          "createTime": "2026-09-29T02:25:01.312502Z",
+          "updateTime": "2026-09-29T02:25:01.312502Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/094995013d620442f68d703678fe4092c4553b64036cdb5e0f13e4ad44ca0b9b",
+          "createTime": "2026-09-29T02:25:32.723243Z",
+          "updateTime": "2026-09-29T02:25:32.723243Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/0a2d3bf52c34b0daf9743f2b6de95f31c530dae39e6aa6286efe4dd69d87aa06",
+          "createTime": "2026-09-29T02:26:39.194210Z",
+          "updateTime": "2026-09-29T02:26:39.194210Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/0c2795d280bd93250697d72a7936883d4392d326d80174f68c996b494d889705",
+          "createTime": "2026-09-29T02:23:22.923601Z",
+          "updateTime": "2026-09-29T02:23:22.923601Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/0ef724676250df730e81125b0f9df8f4a8464d331cfc405270dce0b8dac19132",
+          "createTime": "2026-09-29T02:26:24.858053Z",
+          "updateTime": "2026-09-29T02:26:24.858053Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/0fb7475841cb44995459be364b8046c16c0ff5b217dbf7f27b63e5acb34cde16",
+          "createTime": "2026-09-29T02:23:27.371505Z",
+          "updateTime": "2026-09-29T02:23:27.371505Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/119a4e260a935c705556efa5dd24175f683455d1326ed89682f2f3bca941c7e2",
+          "createTime": "2026-09-29T02:24:57.509077Z",
+          "updateTime": "2026-09-29T02:24:57.509077Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/128af555e35eecd051ce3184fb0623a474de6ccc9fc6d9eaf0b691a332df3c49",
+          "createTime": "2026-09-29T02:22:39.915193Z",
+          "updateTime": "2026-09-29T02:22:39.915193Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/13f3e2f56aafac5934e28db86f67e33e8d79cb98b66715bfeade4a9f37188600",
+          "createTime": "2026-09-29T02:24:51.360824Z",
+          "updateTime": "2026-09-29T02:24:51.360824Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/1af9b133db490335b2c4f81247e5c02b2ceefa9914f333f863cb3144961e7899",
+          "createTime": "2026-09-29T02:25:26.281983Z",
+          "updateTime": "2026-09-29T02:25:26.281983Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/1e7bbfc75b087a7226ed6a1df817fed677385bab0e3a8da0bd865d5928e23627",
+          "createTime": "2026-09-29T02:22:24.488630Z",
+          "updateTime": "2026-09-29T02:22:24.488630Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/211aa5e97d35c6f1feaf0e63ff11f95087fe1e3a63d60dd6649b6016fd3a128d",
+          "createTime": "2026-09-29T02:25:40.883114Z",
+          "updateTime": "2026-09-29T02:25:40.883114Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/2217bad20d023978ae62c4fb728f979ed0a5f31672812cc3196e9595c1426d28",
+          "createTime": "2026-09-29T02:23:59.199915Z",
+          "updateTime": "2026-09-29T02:23:59.199915Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/25ee2fcbbf436e359afcb9a7f59a5a88f5f21a992443b336d677c7038ee4475c",
+          "createTime": "2026-09-29T02:23:34.519006Z",
+          "updateTime": "2026-09-29T02:23:34.519006Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/273c81976228b67a1cb6045ff14d0aae1e865b4435fc7f38b74f2975ab7593ef",
+          "createTime": "2026-09-29T02:25:43.104196Z",
+          "updateTime": "2026-09-29T02:25:43.104196Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/292db5b08f96ce05b448d4aa17c88918b4288e136bf5544b47a7a7bbde689d05",
+          "createTime": "2026-09-29T02:24:16.447246Z",
+          "updateTime": "2026-09-29T02:24:16.447246Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/2d8441e6b07531e24fc6c4a9fc6d1c229a0d1e024765d6d617b4c6c70b666445",
+          "createTime": "2026-09-29T02:23:36.755045Z",
+          "updateTime": "2026-09-29T02:23:36.755045Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/2fa26996eff26d0be6e9a6feea74550467500e25a343291062b73ca9e54fab3c",
+          "createTime": "2026-09-29T02:24:44.795977Z",
+          "updateTime": "2026-09-29T02:24:44.795977Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/2febfe5e7f27f934a8a5b4e34262c261d83371aef732cc89d0dd9f5672be82b3",
+          "createTime": "2026-09-29T02:24:06.627209Z",
+          "updateTime": "2026-09-29T02:24:06.627209Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/3173a50c822e6ef4efbe65ca056d1f3b6f3fd7c6a0444941531b6c7b491a6cfe",
+          "createTime": "2026-09-29T02:25:57.598675Z",
+          "updateTime": "2026-09-29T02:25:57.598675Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/325df39eeccf7b9942f20f5be668cc803fa7317262e8ee07f1c8e12ad32d1e87",
+          "createTime": "2026-09-29T02:24:25.134200Z",
+          "updateTime": "2026-09-29T02:24:25.134200Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/352d0a76831baa854672b51f966af71d1769d462999b1be0e4509f449cedd487",
+          "createTime": "2026-09-29T02:23:54.166410Z",
+          "updateTime": "2026-09-29T02:23:54.166410Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/3f66f9acb0a96490bde7e420397954982d261b30959fd6a0b6135470a2ef42d5",
+          "createTime": "2026-09-29T02:22:42.351364Z",
+          "updateTime": "2026-09-29T02:22:42.351364Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/415e0ac1d24bc6f737f315e747df0f8aa175065b68fa9839c4f5e585192d1f0b",
+          "createTime": "2026-09-29T02:24:54.429305Z",
+          "updateTime": "2026-09-29T02:24:54.429305Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/43a621b7e24780fd583911b45e01bb2d2cf7aa9efd084f7526ef28e12fd9824f",
+          "createTime": "2026-09-29T02:22:34.179427Z",
+          "updateTime": "2026-09-29T02:22:34.179427Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/45afadcf3bdc088cc992c7e15156700cd456cc33811325096c50ddc02a2918ba",
+          "createTime": "2026-09-29T02:23:01.924182Z",
+          "updateTime": "2026-09-29T02:23:01.924182Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/478dbd5fe0952a3ab8e7b26fadf427ac0c4a899de8fb7ccc99f680b6eafd4aa7",
+          "createTime": "2026-09-29T02:26:30.983712Z",
+          "updateTime": "2026-09-29T02:26:30.983712Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/4c855490f1aef2cf9e6bddc4c85b6a1e820f767c48cf6a6693ef7956ae1a43a0",
+          "createTime": "2026-09-29T02:26:27.716126Z",
+          "updateTime": "2026-09-29T02:26:27.716126Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/4e91e05ca73bf512e27a4ef43977a64d86fb772bb5055fc72f8ca80fbec5b2ac",
+          "createTime": "2026-09-29T02:23:29.736166Z",
+          "updateTime": "2026-09-29T02:23:29.736166Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/523df3d477cbc24a132d6b2d9e25ed228b90b3f4a45f3a87108a0d6fbdaa4370",
+          "createTime": "2026-09-29T02:26:10.809083Z",
+          "updateTime": "2026-09-29T02:26:10.809083Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/53695be7ae8b0093f992629372dd64babbcd7cfeb26b77e9e6e2b86daec33c03",
+          "createTime": "2026-09-29T02:26:22.415785Z",
+          "updateTime": "2026-09-29T02:26:22.415785Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/53b7589633519fecf7b68dac91a44e4970c71a82f9c8bf85da45351319e5eab7",
+          "createTime": "2026-09-29T02:24:48.503842Z",
+          "updateTime": "2026-09-29T02:24:48.503842Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/5b247e8d594f20f76378f8eb7e17dc69a6c69f71a9715a01638a81aba05d3a3c",
+          "createTime": "2026-09-29T02:25:55.101777Z",
+          "updateTime": "2026-09-29T02:25:55.101777Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/5db61150fc776794c5a79db820a98b5d12f24055b24b36c5ffb9f5420f6fc3a6",
+          "createTime": "2026-09-29T02:24:10.933092Z",
+          "updateTime": "2026-09-29T02:24:10.933092Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/5f19a6e12a7631ac39feca957e90d87ab8fa20b9e7bddc0ea1fb29955a634c7f",
+          "createTime": "2026-09-29T02:24:30.873456Z",
+          "updateTime": "2026-09-29T02:24:30.873456Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/60d3bcc61b5a23b57aef510b9b0b14467d4220f7585eec2462f31f4611b5bfec",
+          "createTime": "2026-09-29T02:23:32.274574Z",
+          "updateTime": "2026-09-29T02:23:32.274574Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/67bd4c8222548a7e9d6fdbe4a94dd692b76fa48836b8a1745c1e194983ff3fc6",
+          "createTime": "2026-09-29T02:22:45.797723Z",
+          "updateTime": "2026-09-29T02:22:45.797723Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/67c030636de44ced2042e56ee727614863f6a7489d59c5eb5c5997e45bd9d115",
+          "createTime": "2026-09-29T02:25:46.092346Z",
+          "updateTime": "2026-09-29T02:25:46.092346Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/6a8a15aa41be4bf8db53cdb9288bfc18cdc997ed2c8adb7c1313850df735fb28",
+          "createTime": "2026-09-29T02:22:16.841951Z",
+          "updateTime": "2026-09-29T02:22:16.841951Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/6a8fc1b10e8b42e84504ba92b9502245e24a0b99252c90239b4882c37ce19211",
+          "createTime": "2026-09-29T02:22:22.069808Z",
+          "updateTime": "2026-09-29T02:22:22.069808Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/6dec53f17869776bd70f1d8262b3d654bda41a02fe405cd7c3956cf422586c78",
+          "createTime": "2026-09-29T02:23:19.504873Z",
+          "updateTime": "2026-09-29T02:23:19.504873Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/71a1c0cf134e5820aaf09b4dd6fb60964a4b09672ecf3ad40bdd15312d434d7c",
+          "createTime": "2026-09-29T02:24:28.369917Z",
+          "updateTime": "2026-09-29T02:24:28.369917Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/76fb8fb7291d002df4644b0331fee1fa7bd8d1bf9c00c92426ac4cb946bb8eb7",
+          "createTime": "2026-09-29T02:22:28.248702Z",
+          "updateTime": "2026-09-29T02:22:28.248702Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/789c825baa2527e7e3b1caa30291f8f4255092213070652b0f820d5626e14957",
+          "createTime": "2026-09-29T02:24:22.825095Z",
+          "updateTime": "2026-09-29T02:24:22.825095Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/78db09d054675026aba6240c5a64db8eb9dcd711f7e184d8df3585e0df3db18c",
+          "createTime": "2026-09-29T02:26:02.460779Z",
+          "updateTime": "2026-09-29T02:26:02.460779Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/7f98d6edda4ed1126fb0b2475001a6a9ca9669a249051066404a1fda343148b5",
+          "createTime": "2026-09-29T02:25:19.973381Z",
+          "updateTime": "2026-09-29T02:25:19.973381Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/813a54a72b31e333cf1b7b5c10a714136a3bfcec85b182fea58531b80d111a95",
+          "createTime": "2026-09-29T02:22:19.540321Z",
+          "updateTime": "2026-09-29T02:22:19.540321Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/81d0f9da09bb660fe91dc86c4c8485faff2bcda8bd5570768e288b0938a29425",
+          "createTime": "2026-09-29T02:22:30.942526Z",
+          "updateTime": "2026-09-29T02:22:30.942526Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/83854dcc16b0432700149651a8b361047d9c316d4310fa934179589c6c726e05",
+          "createTime": "2026-09-29T02:24:42.664882Z",
+          "updateTime": "2026-09-29T02:24:42.664882Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/8816540acc033ec26d26a8c8b30d029f4ea445b68cc4deabea54b8eb1644a90b",
+          "createTime": "2026-09-29T02:22:37.534910Z",
+          "updateTime": "2026-09-29T02:22:37.534910Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/8b38eb97e7c00573a985ced2658b81db0dcb189423ba0f9ab56f5ee40f401efb",
+          "createTime": "2026-09-29T02:24:40.387072Z",
+          "updateTime": "2026-09-29T02:24:40.387072Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/8d3bd9e8beb9a5b550c3d0d16cc499039588bbc2ba72334a18d3ff6baa3a075f",
+          "createTime": "2026-09-29T02:23:51.219978Z",
+          "updateTime": "2026-09-29T02:23:51.219978Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/8e4b7314fb17a31d5f961e8ef61450d9589fc79ece3a71684edff6dfd10de031",
+          "createTime": "2026-09-29T02:22:56.250938Z",
+          "updateTime": "2026-09-29T02:22:56.250938Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/900e6e61cf6ca8ae51225a4714a7fd2d8a703b4e5004ae1f221746684bed63c5",
+          "createTime": "2026-09-29T02:23:25.075978Z",
+          "updateTime": "2026-09-29T02:23:25.075978Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/9111cb72d37948f34b98c1edfbbc34ee7acdd0eb02bf78acfab39a1f33abae10",
+          "createTime": "2026-09-29T02:23:41.946506Z",
+          "updateTime": "2026-09-29T02:23:41.946506Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/92f92d14fb267ae83bf084407aa3c10131d84553770759f0d5c68d7461b187fc",
+          "createTime": "2026-09-29T02:23:39.606153Z",
+          "updateTime": "2026-09-29T02:23:39.606153Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/93960883ff1af8f833b3e4965869a42c7e8dfb3b7a21c8a25b4a0ad88216f52c",
+          "createTime": "2026-09-29T02:24:04.372626Z",
+          "updateTime": "2026-09-29T02:24:04.372626Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/95ff2d8504e7f7741f0328d450581985763be1ab458e5379959c7a4333f66113",
+          "createTime": "2026-09-29T02:25:48.982973Z",
+          "updateTime": "2026-09-29T02:25:48.982973Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/96ad0159b9c3c06b02fd579c9e902b7ace3e9ff6d48d69fad5cfafcac03b8310",
+          "createTime": "2026-09-29T02:22:59.391346Z",
+          "updateTime": "2026-09-29T02:22:59.391346Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/9dab11082fedbbe2c14475c319f08cdb18d63ad653d288b98232ac79c0b6f5d4",
+          "createTime": "2026-09-29T02:23:16.421239Z",
+          "updateTime": "2026-09-29T02:23:16.421239Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/a146c6c0584d2ead526b3f9d625c436f17c67fa2bd8000a46993d7e99944d126",
+          "createTime": "2026-09-29T02:25:34.910678Z",
+          "updateTime": "2026-09-29T02:25:34.910678Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/a5fbef025b51e68340ff8f850ebd620ae9ba35022e79929a9f0fa6db14c07a9a",
+          "createTime": "2026-09-29T02:25:17.423956Z",
+          "updateTime": "2026-09-29T02:25:17.423956Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/ad861e3a1a9c4ffbd0b1707606e04f2ae3f378b5c2b6bd735e36f282f1f67aab",
+          "createTime": "2026-09-29T02:24:08.809712Z",
+          "updateTime": "2026-09-29T02:24:08.809712Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/adf26c5a1d786689cfd41ba90f38f9e23c2ce7b6587a92f446ebd4cf2210d6c6",
+          "createTime": "2026-09-29T02:26:13.013914Z",
+          "updateTime": "2026-09-29T02:26:13.013914Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/b7db3bceb2cb3d779ef88deafe5083915e8cbd926b7058ac2273fbab01ee7092",
+          "createTime": "2026-09-29T02:24:38.173903Z",
+          "updateTime": "2026-09-29T02:24:38.173903Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/b81fe918af6fee8eeb0ae1e42d1beba246c450e7fda77d36f077ba303cab1d8e",
+          "createTime": "2026-09-29T02:24:01.349743Z",
+          "updateTime": "2026-09-29T02:24:01.349743Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/b9fa7c2e4e57e74d78719dda36e9f52a5479c00aaeb81ffb8926122d911c8cac",
+          "createTime": "2026-09-29T02:25:07.154551Z",
+          "updateTime": "2026-09-29T02:25:07.154551Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/bc91f1d02ababc3b751099e654bc4d6bda54df96206fa85dc7d16afc17303f8e",
+          "createTime": "2026-09-29T02:24:13.910935Z",
+          "updateTime": "2026-09-29T02:24:13.910935Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/bfb1ce9f7f0f3228065cb8b215c167d833f1783fd6982743ce8a162345cf202c",
+          "createTime": "2026-09-29T02:23:45.312772Z",
+          "updateTime": "2026-09-29T02:23:45.312772Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/c0cae04fa735cd6ca4768f371e59a0f60759b707afb4a30c5405f21d217e458f",
+          "createTime": "2026-09-29T02:25:51.473900Z",
+          "updateTime": "2026-09-29T02:25:51.473900Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/c757b8fa2c76bfb64da787cd38e2a68052a40c9d4065beeb3d36730ec3977700",
+          "createTime": "2026-09-29T02:23:06.345064Z",
+          "updateTime": "2026-09-29T02:23:06.345064Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/c887c9a0d9c85f2f8020d8b168aebd7f815dc58c059da58823ab59e88360ed71",
+          "createTime": "2026-09-29T02:24:33.613827Z",
+          "updateTime": "2026-09-29T02:24:33.613827Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/ca6ee0d7eca8692f088485f73ba6e907326bf177002a9bfdbc39bb1f7df863ba",
+          "createTime": "2026-09-29T02:22:50.618320Z",
+          "updateTime": "2026-09-29T02:22:50.618320Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/cd9782b5a0d836de5701b8c588189d23b06bd3f8574f31cc6fb5dbdda71c681b",
+          "createTime": "2026-09-29T02:23:13.841199Z",
+          "updateTime": "2026-09-29T02:23:13.841199Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/cddb3d4d05c102b98f38050ac1ff297ad15bc442b12087c0505927f7bb1cf3dc",
+          "createTime": "2026-09-29T02:26:44.118153Z",
+          "updateTime": "2026-09-29T02:26:44.118153Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/cfb85517fd1bf8b39e7930c40db00d1bb7487a55c7c7dc3ebb42e098ff148efe",
+          "createTime": "2026-09-29T02:25:30.546132Z",
+          "updateTime": "2026-09-29T02:25:30.546132Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/d5495b551a01d30e82f7de90377933fcca166c15e9f267b419428477ea463010",
+          "createTime": "2026-09-29T02:25:59.973430Z",
+          "updateTime": "2026-09-29T02:25:59.973430Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/d62259ab3de4e69020571f70de1004d1d53e9b652a62c35bcb554d308a039b7b",
+          "createTime": "2026-09-29T02:22:53.561502Z",
+          "updateTime": "2026-09-29T02:22:53.561502Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/d64065a1f7c9fd62d36b6a329939bebaac0825b7f80672a8c219dd192c3853b7",
+          "createTime": "2026-09-29T02:26:05.496020Z",
+          "updateTime": "2026-09-29T02:26:05.496020Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/d9644e296bbecf591f6a69eefca99c0f005f94b736ffd76a33a4afba3e89c702",
+          "createTime": "2026-09-29T02:25:28.384363Z",
+          "updateTime": "2026-09-29T02:25:28.384363Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/da673e4cc3161dcda7b9108279acd55d91ff4edb7599b1f5687d9cde6f6362d3",
+          "createTime": "2026-09-29T02:23:56.332438Z",
+          "updateTime": "2026-09-29T02:23:56.332438Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/db2395432591415ba848377cdc5df6f4ccaf3a08b8a8d10e451cb1a902f454f8",
+          "createTime": "2026-09-29T02:23:04.085823Z",
+          "updateTime": "2026-09-29T02:23:04.085823Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/dbddb237a5c96d2b6a12ee87a9279ebb5db2bb42fc62d0805b78003dd30d211b",
+          "createTime": "2026-09-29T02:26:36.869522Z",
+          "updateTime": "2026-09-29T02:26:36.869522Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/dc266828f4e9b5b59fe4fdfcfac28fb176b9cd073091edbdf491732da7672049",
+          "createTime": "2026-09-29T02:24:19.461421Z",
+          "updateTime": "2026-09-29T02:24:19.461421Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/dc782d7a9ff14edcc8d73aab01d84cc27c55e7d7a1f3e7840f4ac0b694958f92",
+          "createTime": "2026-09-29T02:25:38.228571Z",
+          "updateTime": "2026-09-29T02:25:38.228571Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/df78932ca43b46dc12c861a5ffdbd1cb4b9b2426c7ec17cab3b4a116239ff25a",
+          "createTime": "2026-09-29T02:26:07.641479Z",
+          "updateTime": "2026-09-29T02:26:07.641479Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/e7022266908fe49437d7f62e84b81a157257b0f106afce7ee76b192664c6a577",
+          "createTime": "2026-09-29T02:22:48.386305Z",
+          "updateTime": "2026-09-29T02:22:48.386305Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/e87808433531422e2d4ea22307cc961e4ca8cc8f6d35d98cfe794d817ad00436",
+          "createTime": "2026-09-29T02:25:14.548367Z",
+          "updateTime": "2026-09-29T02:25:14.548367Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/e92a563ffe7bf79364b0fd9c46b56e42a35f1a4359eea6733458fba698e7eaf3",
+          "createTime": "2026-09-29T02:25:12.413518Z",
+          "updateTime": "2026-09-29T02:25:12.413518Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/ed6d7c40f2733289cfd2e194d96205839f41e5c247e9d002b89b1bf1b640db9d",
+          "createTime": "2026-09-29T02:26:15.290623Z",
+          "updateTime": "2026-09-29T02:26:15.290623Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/f04459f000eba62f1c830a1670162e79595d3b21c36387c9664e6d48a7e9c1be",
+          "createTime": "2026-09-29T02:23:11.576181Z",
+          "updateTime": "2026-09-29T02:23:11.576181Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/f180541cb51009a082f63b1a61f872a502065696add9fb0f63b552a7ac0682c6",
+          "createTime": "2026-09-29T02:26:33.995715Z",
+          "updateTime": "2026-09-29T02:26:33.995715Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/f728341b2f5dd54baa1fd031853ed1adf163d1e5998162c36b64a5da3c352bbf",
+          "createTime": "2026-09-29T02:25:24.194075Z",
+          "updateTime": "2026-09-29T02:25:24.194075Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/f89bd80ca46cd5b0beab395f2d75f2eda81e83b6460f28dcb4f52eacf44511c3",
+          "createTime": "2026-09-29T02:26:42.048026Z",
+          "updateTime": "2026-09-29T02:26:42.048026Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/fb1c580ededd8d122b1f0550a97c97d80f35539b7a62965f760ef9b843f28b1d",
+          "createTime": "2026-09-29T02:23:09.045330Z",
+          "updateTime": "2026-09-29T02:23:09.045330Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/fee7a9c454d450b0b5e973b1d7fdf084555fa63cd675316651f34d21b901f221",
+          "createTime": "2026-09-29T02:23:47.872348Z",
+          "updateTime": "2026-09-29T02:23:47.872348Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/ff7329896823750deeebed78628666f7e65a03147f3bb6473d62187797636e18",
+          "createTime": "2026-09-29T02:24:35.852817Z",
+          "updateTime": "2026-09-29T02:24:35.852817Z"
+        }
+      ]
+    },
+    "distinctPostAuditInventory": {
+      "scheduler": {
+        "name": "projects/kerala-lottery-intelligence/locations/asia-south1/jobs/prod-daily-lottery-ingestion",
+        "state": "PAUSED",
+        "userUpdateTime": "2026-09-29T02:33:32.611005Z"
+      },
+      "storageCount": 100,
+      "firestoreCount": 100,
+      "storageObjects": [
+        {
+          "name": "source-documents/047ddf6dacd28c5995197ce8327cd3b61dd190122387c625e3bf92ff30311998.pdf",
+          "generation": "1790648702890211",
+          "size": 87193,
+          "updated": "2026-09-29T02:25:03.248Z",
+          "md5Hash": "ZfTh+rdbmw8TFnpu+/RFxw=="
+        },
+        {
+          "name": "source-documents/04dd99bf3f6b02775cd8c59d06f19e78204d2fc41645d9bb76c291dcf2682563.pdf",
+          "generation": "1790648776928314",
+          "size": 87219,
+          "updated": "2026-09-29T02:26:17.730Z",
+          "md5Hash": "Owmr9PKNMB7rUIlHnUNV9w=="
+        },
+        {
+          "name": "source-documents/07ff36db6bd515e2c1d116338c3418feee1a521f47f8840abceeb2c9bc89a983.pdf",
+          "generation": "1790648721487667",
+          "size": 87172,
+          "updated": "2026-09-29T02:25:21.846Z",
+          "md5Hash": "EXP6R68pYwBQxuCag/gI8A=="
+        },
+        {
+          "name": "source-documents/08e711172087ba91a858ed4c6f3521f903fc70a5493f99fd523b708b75dc68ea.pdf",
+          "generation": "1790648699055948",
+          "size": 87182,
+          "updated": "2026-09-29T02:25:00.756Z",
+          "md5Hash": "SX+FC2qlzOa80oUUAxi4fw=="
+        },
+        {
+          "name": "source-documents/094995013d620442f68d703678fe4092c4553b64036cdb5e0f13e4ad44ca0b9b.pdf",
+          "generation": "1790648732112031",
+          "size": 87198,
+          "updated": "2026-09-29T02:25:32.469Z",
+          "md5Hash": "4G9doCGEzGu5BxXPYYNQxQ=="
+        },
+        {
+          "name": "source-documents/0a2d3bf52c34b0daf9743f2b6de95f31c530dae39e6aa6286efe4dd69d87aa06.pdf",
+          "generation": "1790648798463666",
+          "size": 90697,
+          "updated": "2026-09-29T02:26:38.896Z",
+          "md5Hash": "4JlOzSYzUd0M5EUstEZZPA=="
+        },
+        {
+          "name": "source-documents/0c2795d280bd93250697d72a7936883d4392d326d80174f68c996b494d889705.pdf",
+          "generation": "1790648602240788",
+          "size": 263660,
+          "updated": "2026-09-29T02:23:22.635Z",
+          "md5Hash": "s8JQtWKW8yKJrvzhtsou3g=="
+        },
+        {
+          "name": "source-documents/0ef724676250df730e81125b0f9df8f4a8464d331cfc405270dce0b8dac19132.pdf",
+          "generation": "1790648783921027",
+          "size": 87235,
+          "updated": "2026-09-29T02:26:24.289Z",
+          "md5Hash": "bLS7vA3MXNu6gMgEShQ+lA=="
+        },
+        {
+          "name": "source-documents/0fb7475841cb44995459be364b8046c16c0ff5b217dbf7f27b63e5acb34cde16.pdf",
+          "generation": "1790648606598970",
+          "size": 87201,
+          "updated": "2026-09-29T02:23:27.002Z",
+          "md5Hash": "R8NV2e765i33WlO/kIg18A=="
+        },
+        {
+          "name": "source-documents/119a4e260a935c705556efa5dd24175f683455d1326ed89682f2f3bca941c7e2.pdf",
+          "generation": "1790648696145350",
+          "size": 87193,
+          "updated": "2026-09-29T02:24:56.975Z",
+          "md5Hash": "wurtp0bTOI8JtOuICG9Muw=="
+        },
+        {
+          "name": "source-documents/128af555e35eecd051ce3184fb0623a474de6ccc9fc6d9eaf0b691a332df3c49.pdf",
+          "generation": "1790648559219017",
+          "size": 87147,
+          "updated": "2026-09-29T02:22:39.592Z",
+          "md5Hash": "B5Q/v/kMT3V1liKMfjcTBQ=="
+        },
+        {
+          "name": "source-documents/13f3e2f56aafac5934e28db86f67e33e8d79cb98b66715bfeade4a9f37188600.pdf",
+          "generation": "1790648690683761",
+          "size": 263579,
+          "updated": "2026-09-29T02:24:51.037Z",
+          "md5Hash": "vMrtbidEZn7GGUJVxIWI2A=="
+        },
+        {
+          "name": "source-documents/1af9b133db490335b2c4f81247e5c02b2ceefa9914f333f863cb3144961e7899.pdf",
+          "generation": "1790648725707417",
+          "size": 87175,
+          "updated": "2026-09-29T02:25:26.057Z",
+          "md5Hash": "jll6Ct5aaeEiLlWhzqdsnw=="
+        },
+        {
+          "name": "source-documents/1e7bbfc75b087a7226ed6a1df817fed677385bab0e3a8da0bd865d5928e23627.pdf",
+          "generation": "1790648543627170",
+          "size": 87183,
+          "updated": "2026-09-29T02:22:23.996Z",
+          "md5Hash": "9aKr4VJELkIRhRVVIp3QiQ=="
+        },
+        {
+          "name": "source-documents/211aa5e97d35c6f1feaf0e63ff11f95087fe1e3a63d60dd6649b6016fd3a128d.pdf",
+          "generation": "1790648740007515",
+          "size": 87184,
+          "updated": "2026-09-29T02:25:40.593Z",
+          "md5Hash": "QLZsDEfc6CMY4EDGB2bjCA=="
+        },
+        {
+          "name": "source-documents/2217bad20d023978ae62c4fb728f979ed0a5f31672812cc3196e9595c1426d28.pdf",
+          "generation": "1790648638521199",
+          "size": 263586,
+          "updated": "2026-09-29T02:23:58.890Z",
+          "md5Hash": "IKG3bYFvdXcQmrvuvEmgiQ=="
+        },
+        {
+          "name": "source-documents/25ee2fcbbf436e359afcb9a7f59a5a88f5f21a992443b336d677c7038ee4475c.pdf",
+          "generation": "1790648613793264",
+          "size": 87195,
+          "updated": "2026-09-29T02:23:34.176Z",
+          "md5Hash": "J+FYSNOJ4lcQs8aWSLpNfA=="
+        },
+        {
+          "name": "source-documents/273c81976228b67a1cb6045ff14d0aae1e865b4435fc7f38b74f2975ab7593ef.pdf",
+          "generation": "1790648742410494",
+          "size": 87148,
+          "updated": "2026-09-29T02:25:42.795Z",
+          "md5Hash": "OC/3vo6hqDYq52n+w59AeA=="
+        },
+        {
+          "name": "source-documents/292db5b08f96ce05b448d4aa17c88918b4288e136bf5544b47a7a7bbde689d05.pdf",
+          "generation": "1790648655785422",
+          "size": 87244,
+          "updated": "2026-09-29T02:24:16.148Z",
+          "md5Hash": "xEC1eQL2ASdrk5U4eYTjRg=="
+        },
+        {
+          "name": "source-documents/2d8441e6b07531e24fc6c4a9fc6d1c229a0d1e024765d6d617b4c6c70b666445.pdf",
+          "generation": "1790648616157354",
+          "size": 87175,
+          "updated": "2026-09-29T02:23:36.540Z",
+          "md5Hash": "30LAKW9zmFIYjvZIyVGmHQ=="
+        },
+        {
+          "name": "source-documents/2fa26996eff26d0be6e9a6feea74550467500e25a343291062b73ca9e54fab3c.pdf",
+          "generation": "1790648684186797",
+          "size": 87192,
+          "updated": "2026-09-29T02:24:44.559Z",
+          "md5Hash": "oBu/p7WtQ8WNmNm/OrGYeQ=="
+        },
+        {
+          "name": "source-documents/2febfe5e7f27f934a8a5b4e34262c261d83371aef732cc89d0dd9f5672be82b3.pdf",
+          "generation": "1790648645947754",
+          "size": 87223,
+          "updated": "2026-09-29T02:24:06.335Z",
+          "md5Hash": "8NbABa8I/PM3Ppin3ibzow=="
+        },
+        {
+          "name": "source-documents/3173a50c822e6ef4efbe65ca056d1f3b6f3fd7c6a0444941531b6c7b491a6cfe.pdf",
+          "generation": "1790648756708491",
+          "size": 87252,
+          "updated": "2026-09-29T02:25:57.100Z",
+          "md5Hash": "MYOAWKklH7tl6Xic0+ChZA=="
+        },
+        {
+          "name": "source-documents/325df39eeccf7b9942f20f5be668cc803fa7317262e8ee07f1c8e12ad32d1e87.pdf",
+          "generation": "1790648664442662",
+          "size": 87217,
+          "updated": "2026-09-29T02:24:24.833Z",
+          "md5Hash": "s4WxBON3OAnB3YR6rT9JQA=="
+        },
+        {
+          "name": "source-documents/352d0a76831baa854672b51f966af71d1769d462999b1be0e4509f449cedd487.pdf",
+          "generation": "1790648633461153",
+          "size": 263687,
+          "updated": "2026-09-29T02:23:53.852Z",
+          "md5Hash": "ExQoH+bvFDSpkRgRouiEvA=="
+        },
+        {
+          "name": "source-documents/3f66f9acb0a96490bde7e420397954982d261b30959fd6a0b6135470a2ef42d5.pdf",
+          "generation": "1790648561416143",
+          "size": 87150,
+          "updated": "2026-09-29T02:22:41.789Z",
+          "md5Hash": "UL1dfUE4QaBpbqhXBHWokg=="
+        },
+        {
+          "name": "source-documents/415e0ac1d24bc6f737f315e747df0f8aa175065b68fa9839c4f5e585192d1f0b.pdf",
+          "generation": "1790648693802162",
+          "size": 263608,
+          "updated": "2026-09-29T02:24:54.154Z",
+          "md5Hash": "RvQkl/oLzRenld2pWqiWvQ=="
+        },
+        {
+          "name": "source-documents/43a621b7e24780fd583911b45e01bb2d2cf7aa9efd084f7526ef28e12fd9824f.pdf",
+          "generation": "1790648553228912",
+          "size": 263623,
+          "updated": "2026-09-29T02:22:33.833Z",
+          "md5Hash": "moyNyG8oeDYuSngEMK/CtA=="
+        },
+        {
+          "name": "source-documents/45afadcf3bdc088cc992c7e15156700cd456cc33811325096c50ddc02a2918ba.pdf",
+          "generation": "1790648581231750",
+          "size": 87214,
+          "updated": "2026-09-29T02:23:01.615Z",
+          "md5Hash": "kxfX+sRRmDwQlKvdkCfG0Q=="
+        },
+        {
+          "name": "source-documents/478dbd5fe0952a3ab8e7b26fadf427ac0c4a899de8fb7ccc99f680b6eafd4aa7.pdf",
+          "generation": "1790648789459708",
+          "size": 87230,
+          "updated": "2026-09-29T02:26:30.560Z",
+          "md5Hash": "nHBQN6bJb5opjbG9VQFEEQ=="
+        },
+        {
+          "name": "source-documents/4c855490f1aef2cf9e6bddc4c85b6a1e820f767c48cf6a6693ef7956ae1a43a0.pdf",
+          "generation": "1790648787068282",
+          "size": 263641,
+          "updated": "2026-09-29T02:26:27.432Z",
+          "md5Hash": "p7Qoxr6u06cgkdyyOUPjig=="
+        },
+        {
+          "name": "source-documents/4e91e05ca73bf512e27a4ef43977a64d86fb772bb5055fc72f8ca80fbec5b2ac.pdf",
+          "generation": "1790648609026294",
+          "size": 87208,
+          "updated": "2026-09-29T02:23:29.420Z",
+          "md5Hash": "+vI3rKAfvAR5GUlr4so9MQ=="
+        },
+        {
+          "name": "source-documents/523df3d477cbc24a132d6b2d9e25ed228b90b3f4a45f3a87108a0d6fbdaa4370.pdf",
+          "generation": "1790648770089913",
+          "size": 263626,
+          "updated": "2026-09-29T02:26:10.459Z",
+          "md5Hash": "L9E/LMx4NG+n6igKTPCi7A=="
+        },
+        {
+          "name": "source-documents/53695be7ae8b0093f992629372dd64babbcd7cfeb26b77e9e6e2b86daec33c03.pdf",
+          "generation": "1790648781318543",
+          "size": 87195,
+          "updated": "2026-09-29T02:26:21.963Z",
+          "md5Hash": "6SA4wJhC08jtJ+K019zN3w=="
+        },
+        {
+          "name": "source-documents/53b7589633519fecf7b68dac91a44e4970c71a82f9c8bf85da45351319e5eab7.pdf",
+          "generation": "1790648687839835",
+          "size": 263655,
+          "updated": "2026-09-29T02:24:48.200Z",
+          "md5Hash": "sWbIta101TVLq9fc9C3cJw=="
+        },
+        {
+          "name": "source-documents/5b247e8d594f20f76378f8eb7e17dc69a6c69f71a9715a01638a81aba05d3a3c.pdf",
+          "generation": "1790648753758563",
+          "size": 263623,
+          "updated": "2026-09-29T02:25:54.197Z",
+          "md5Hash": "Ttd4eAZLur5s+MbCcTsfRw=="
+        },
+        {
+          "name": "source-documents/5db61150fc776794c5a79db820a98b5d12f24055b24b36c5ffb9f5420f6fc3a6.pdf",
+          "generation": "1790648650340881",
+          "size": 87250,
+          "updated": "2026-09-29T02:24:10.709Z",
+          "md5Hash": "At5AYBzAjU4vUlRwyGILSw=="
+        },
+        {
+          "name": "source-documents/5f19a6e12a7631ac39feca957e90d87ab8fa20b9e7bddc0ea1fb29955a634c7f.pdf",
+          "generation": "1790648670209487",
+          "size": 87176,
+          "updated": "2026-09-29T02:24:30.568Z",
+          "md5Hash": "KD6nD4DdTl7w3Fig25d0gA=="
+        },
+        {
+          "name": "source-documents/60d3bcc61b5a23b57aef510b9b0b14467d4220f7585eec2462f31f4611b5bfec.pdf",
+          "generation": "1790648611577427",
+          "size": 87163,
+          "updated": "2026-09-29T02:23:31.951Z",
+          "md5Hash": "5N/+J6VvXwTo4ihUjxQh0w=="
+        },
+        {
+          "name": "source-documents/67bd4c8222548a7e9d6fdbe4a94dd692b76fa48836b8a1745c1e194983ff3fc6.pdf",
+          "generation": "1790648564589290",
+          "size": 263627,
+          "updated": "2026-09-29T02:22:45.288Z",
+          "md5Hash": "RAQgwGgF3iUq867qV4NiGg=="
+        },
+        {
+          "name": "source-documents/67c030636de44ced2042e56ee727614863f6a7489d59c5eb5c5997e45bd9d115.pdf",
+          "generation": "1790648745504318",
+          "size": 263682,
+          "updated": "2026-09-29T02:25:45.859Z",
+          "md5Hash": "zwSMepkxRifn+2mxAlCw1A=="
+        },
+        {
+          "name": "source-documents/6a8a15aa41be4bf8db53cdb9288bfc18cdc997ed2c8adb7c1313850df735fb28.pdf",
+          "generation": "1790648533900467",
+          "size": 87196,
+          "updated": "2026-09-29T02:22:15.713Z",
+          "md5Hash": "5zrVlI1ZVqZM5OLgheo3uQ=="
+        },
+        {
+          "name": "source-documents/6a8fc1b10e8b42e84504ba92b9502245e24a0b99252c90239b4882c37ce19211.pdf",
+          "generation": "1790648541250896",
+          "size": 87213,
+          "updated": "2026-09-29T02:22:21.614Z",
+          "md5Hash": "UX7JN0Qp6DbB5kFBBUXXpA=="
+        },
+        {
+          "name": "source-documents/6dec53f17869776bd70f1d8262b3d654bda41a02fe405cd7c3956cf422586c78.pdf",
+          "generation": "1790648598636067",
+          "size": 263664,
+          "updated": "2026-09-29T02:23:18.997Z",
+          "md5Hash": "FgrjsE3bmMRzAQjoSfRSYA=="
+        },
+        {
+          "name": "source-documents/71a1c0cf134e5820aaf09b4dd6fb60964a4b09672ecf3ad40bdd15312d434d7c.pdf",
+          "generation": "1790648666663050",
+          "size": 87221,
+          "updated": "2026-09-29T02:24:27.269Z",
+          "md5Hash": "0PjXJmCgATo16kzaNPacrQ=="
+        },
+        {
+          "name": "source-documents/76fb8fb7291d002df4644b0331fee1fa7bd8d1bf9c00c92426ac4cb946bb8eb7.pdf",
+          "generation": "1790648547210740",
+          "size": 263602,
+          "updated": "2026-09-29T02:22:27.726Z",
+          "md5Hash": "DE6SL70v+2kgxWukX7eLkA=="
+        },
+        {
+          "name": "source-documents/789c825baa2527e7e3b1caa30291f8f4255092213070652b0f820d5626e14957.pdf",
+          "generation": "1790648661810647",
+          "size": 263693,
+          "updated": "2026-09-29T02:24:22.357Z",
+          "md5Hash": "PWf+IWw+hZS0BkjP3TCG/w=="
+        },
+        {
+          "name": "source-documents/78db09d054675026aba6240c5a64db8eb9dcd711f7e184d8df3585e0df3db18c.pdf",
+          "generation": "1790648761554276",
+          "size": 87232,
+          "updated": "2026-09-29T02:26:01.935Z",
+          "md5Hash": "Iw3EcNkfmjP7hsEaCkDPHA=="
+        },
+        {
+          "name": "source-documents/7f98d6edda4ed1126fb0b2475001a6a9ca9669a249051066404a1fda343148b5.pdf",
+          "generation": "1790648719272344",
+          "size": 87184,
+          "updated": "2026-09-29T02:25:19.750Z",
+          "md5Hash": "gGL9JxbQ6uYAgtsmy1gi/A=="
+        },
+        {
+          "name": "source-documents/813a54a72b31e333cf1b7b5c10a714136a3bfcec85b182fea58531b80d111a95.pdf",
+          "generation": "1790648538561374",
+          "size": 87208,
+          "updated": "2026-09-29T02:22:18.932Z",
+          "md5Hash": "aBw2w0ge/wG4wAUkxCGvkg=="
+        },
+        {
+          "name": "source-documents/81d0f9da09bb660fe91dc86c4c8485faff2bcda8bd5570768e288b0938a29425.pdf",
+          "generation": "1790648549926467",
+          "size": 87237,
+          "updated": "2026-09-29T02:22:30.380Z",
+          "md5Hash": "NOEXWSh/JuFncXPsNcW7IA=="
+        },
+        {
+          "name": "source-documents/83854dcc16b0432700149651a8b361047d9c316d4310fa934179589c6c726e05.pdf",
+          "generation": "1790648682001553",
+          "size": 87181,
+          "updated": "2026-09-29T02:24:42.373Z",
+          "md5Hash": "fUub2olHu706WiWMDnKADQ=="
+        },
+        {
+          "name": "source-documents/8816540acc033ec26d26a8c8b30d029f4ea445b68cc4deabea54b8eb1644a90b.pdf",
+          "generation": "1790648556418595",
+          "size": 263585,
+          "updated": "2026-09-29T02:22:37.231Z",
+          "md5Hash": "9vtss6za0rxzK8V3iLOJMw=="
+        },
+        {
+          "name": "source-documents/8b38eb97e7c00573a985ced2658b81db0dcb189423ba0f9ab56f5ee40f401efb.pdf",
+          "generation": "1790648679713202",
+          "size": 87202,
+          "updated": "2026-09-29T02:24:40.082Z",
+          "md5Hash": "ucAR7Sbi7WAn+873FQ1h4g=="
+        },
+        {
+          "name": "source-documents/8d3bd9e8beb9a5b550c3d0d16cc499039588bbc2ba72334a18d3ff6baa3a075f.pdf",
+          "generation": "1790648629924800",
+          "size": 87174,
+          "updated": "2026-09-29T02:23:50.922Z",
+          "md5Hash": "QfNP8x7MH10jHcIye0sKLg=="
+        },
+        {
+          "name": "source-documents/8e4b7314fb17a31d5f961e8ef61450d9589fc79ece3a71684edff6dfd10de031.pdf",
+          "generation": "1790648575162042",
+          "size": 87188,
+          "updated": "2026-09-29T02:22:55.662Z",
+          "md5Hash": "Bjzo/dEiNZkpVbwkLs/o9A=="
+        },
+        {
+          "name": "source-documents/900e6e61cf6ca8ae51225a4714a7fd2d8a703b4e5004ae1f221746684bed63c5.pdf",
+          "generation": "1790648604436691",
+          "size": 87260,
+          "updated": "2026-09-29T02:23:24.794Z",
+          "md5Hash": "aPVlZH0JTe92qj4AQ7Effg=="
+        },
+        {
+          "name": "source-documents/9111cb72d37948f34b98c1edfbbc34ee7acdd0eb02bf78acfab39a1f33abae10.pdf",
+          "generation": "1790648621164441",
+          "size": 87158,
+          "updated": "2026-09-29T02:23:41.528Z",
+          "md5Hash": "VTseWCeqKxR6DRq1UNjY8A=="
+        },
+        {
+          "name": "source-documents/92f92d14fb267ae83bf084407aa3c10131d84553770759f0d5c68d7461b187fc.pdf",
+          "generation": "1790648618962842",
+          "size": 263633,
+          "updated": "2026-09-29T02:23:39.326Z",
+          "md5Hash": "/GCM7m5RrXeGTL+2Op+51Q=="
+        },
+        {
+          "name": "source-documents/93960883ff1af8f833b3e4965869a42c7e8dfb3b7a21c8a25b4a0ad88216f52c.pdf",
+          "generation": "1790648643719964",
+          "size": 263645,
+          "updated": "2026-09-29T02:24:04.086Z",
+          "md5Hash": "tvpeOLKVEUu1AcdVdtLgag=="
+        },
+        {
+          "name": "source-documents/95ff2d8504e7f7741f0328d450581985763be1ab458e5379959c7a4333f66113.pdf",
+          "generation": "1790648748311211",
+          "size": 263679,
+          "updated": "2026-09-29T02:25:48.699Z",
+          "md5Hash": "tGvdMfrTxXqab+dQYNw7PQ=="
+        },
+        {
+          "name": "source-documents/96ad0159b9c3c06b02fd579c9e902b7ace3e9ff6d48d69fad5cfafcac03b8310.pdf",
+          "generation": "1790648577767381",
+          "size": 87214,
+          "updated": "2026-09-29T02:22:58.429Z",
+          "md5Hash": "wkssax/iEwcR4is9XZKnAg=="
+        },
+        {
+          "name": "source-documents/9dab11082fedbbe2c14475c319f08cdb18d63ad653d288b98232ac79c0b6f5d4.pdf",
+          "generation": "1790648595646505",
+          "size": 87222,
+          "updated": "2026-09-29T02:23:16.123Z",
+          "md5Hash": "N5804psoRl6KE4rhDZS53g=="
+        },
+        {
+          "name": "source-documents/a146c6c0584d2ead526b3f9d625c436f17c67fa2bd8000a46993d7e99944d126.pdf",
+          "generation": "1790648734317936",
+          "size": 87186,
+          "updated": "2026-09-29T02:25:34.695Z",
+          "md5Hash": "VI32950wCsEB1YFyWMtxsg=="
+        },
+        {
+          "name": "source-documents/a5fbef025b51e68340ff8f850ebd620ae9ba35022e79929a9f0fa6db14c07a9a.pdf",
+          "generation": "1790648716779122",
+          "size": 263744,
+          "updated": "2026-09-29T02:25:17.133Z",
+          "md5Hash": "2bU8pg9WKZiRpytnIx4Lpg=="
+        },
+        {
+          "name": "source-documents/ad861e3a1a9c4ffbd0b1707606e04f2ae3f378b5c2b6bd735e36f282f1f67aab.pdf",
+          "generation": "1790648648174510",
+          "size": 87196,
+          "updated": "2026-09-29T02:24:08.559Z",
+          "md5Hash": "IwAsKL6nUF/s0d34cOJBOA=="
+        },
+        {
+          "name": "source-documents/adf26c5a1d786689cfd41ba90f38f9e23c2ce7b6587a92f446ebd4cf2210d6c6.pdf",
+          "generation": "1790648772318921",
+          "size": 87229,
+          "updated": "2026-09-29T02:26:12.684Z",
+          "md5Hash": "4+TW8K2fZ8A+hmQGosKH0w=="
+        },
+        {
+          "name": "source-documents/b7db3bceb2cb3d779ef88deafe5083915e8cbd926b7058ac2273fbab01ee7092.pdf",
+          "generation": "1790648677493339",
+          "size": 87206,
+          "updated": "2026-09-29T02:24:37.859Z",
+          "md5Hash": "Px7pkv7CfoLHkKrqOmshDw=="
+        },
+        {
+          "name": "source-documents/b81fe918af6fee8eeb0ae1e42d1beba246c450e7fda77d36f077ba303cab1d8e.pdf",
+          "generation": "1790648640688807",
+          "size": 87192,
+          "updated": "2026-09-29T02:24:01.056Z",
+          "md5Hash": "RiLW71yt10Adjjn6nDNY/g=="
+        },
+        {
+          "name": "source-documents/b9fa7c2e4e57e74d78719dda36e9f52a5479c00aaeb81ffb8926122d911c8cac.pdf",
+          "generation": "1790648705079952",
+          "size": 87199,
+          "updated": "2026-09-29T02:25:05.821Z",
+          "md5Hash": "GxnDS5QmXe1KkA53dM+4IA=="
+        },
+        {
+          "name": "source-documents/bc91f1d02ababc3b751099e654bc4d6bda54df96206fa85dc7d16afc17303f8e.pdf",
+          "generation": "1790648653225723",
+          "size": 263580,
+          "updated": "2026-09-29T02:24:13.614Z",
+          "md5Hash": "uiqeZ+sv6tuPprTgt1LACg=="
+        },
+        {
+          "name": "source-documents/bfb1ce9f7f0f3228065cb8b215c167d833f1783fd6982743ce8a162345cf202c.pdf",
+          "generation": "1790648624165017",
+          "size": 263655,
+          "updated": "2026-09-29T02:23:44.657Z",
+          "md5Hash": "yQcWPlI27Jzso3+zoQ5BWg=="
+        },
+        {
+          "name": "source-documents/c0cae04fa735cd6ca4768f371e59a0f60759b707afb4a30c5405f21d217e458f.pdf",
+          "generation": "1790648750808307",
+          "size": 87201,
+          "updated": "2026-09-29T02:25:51.174Z",
+          "md5Hash": "dbDIAd/hX3CiaOotWx+X9A=="
+        },
+        {
+          "name": "source-documents/c757b8fa2c76bfb64da787cd38e2a68052a40c9d4065beeb3d36730ec3977700.pdf",
+          "generation": "1790648585685238",
+          "size": 87223,
+          "updated": "2026-09-29T02:23:06.043Z",
+          "md5Hash": "9m6oo39WaWW6VUu/nJAFZw=="
+        },
+        {
+          "name": "source-documents/c887c9a0d9c85f2f8020d8b168aebd7f815dc58c059da58823ab59e88360ed71.pdf",
+          "generation": "1790648672896102",
+          "size": 87211,
+          "updated": "2026-09-29T02:24:33.297Z",
+          "md5Hash": "pJU+eawckdmbvoDv7NNFgA=="
+        },
+        {
+          "name": "source-documents/ca6ee0d7eca8692f088485f73ba6e907326bf177002a9bfdbc39bb1f7df863ba.pdf",
+          "generation": "1790648569938806",
+          "size": 87185,
+          "updated": "2026-09-29T02:22:50.308Z",
+          "md5Hash": "Khdip0fFyXFJvcSiceDf+w=="
+        },
+        {
+          "name": "source-documents/cd9782b5a0d836de5701b8c588189d23b06bd3f8574f31cc6fb5dbdda71c681b.pdf",
+          "generation": "1790648593102802",
+          "size": 87248,
+          "updated": "2026-09-29T02:23:13.482Z",
+          "md5Hash": "Ij05ubJvt15Ew+WIoH4Xjg=="
+        },
+        {
+          "name": "source-documents/cddb3d4d05c102b98f38050ac1ff297ad15bc442b12087c0505927f7bb1cf3dc.pdf",
+          "generation": "1790648803318162",
+          "size": 87173,
+          "updated": "2026-09-29T02:26:43.827Z",
+          "md5Hash": "K79/ahD9ASZvB9pCPgsUdA=="
+        },
+        {
+          "name": "source-documents/cfb85517fd1bf8b39e7930c40db00d1bb7487a55c7c7dc3ebb42e098ff148efe.pdf",
+          "generation": "1790648729943270",
+          "size": 87192,
+          "updated": "2026-09-29T02:25:30.321Z",
+          "md5Hash": "9KxIAaJzrwWA4xbwn9tIaA=="
+        },
+        {
+          "name": "source-documents/d5495b551a01d30e82f7de90377933fcca166c15e9f267b419428477ea463010.pdf",
+          "generation": "1790648759169800",
+          "size": 87179,
+          "updated": "2026-09-29T02:25:59.677Z",
+          "md5Hash": "6Svop4NSnYiWumt+fwHipA=="
+        },
+        {
+          "name": "source-documents/d62259ab3de4e69020571f70de1004d1d53e9b652a62c35bcb554d308a039b7b.pdf",
+          "generation": "1790648572216729",
+          "size": 87210,
+          "updated": "2026-09-29T02:22:52.693Z",
+          "md5Hash": "v1lxp46CSaXI/075vMWUMw=="
+        },
+        {
+          "name": "source-documents/d64065a1f7c9fd62d36b6a329939bebaac0825b7f80672a8c219dd192c3853b7.pdf",
+          "generation": "1790648764819562",
+          "size": 87203,
+          "updated": "2026-09-29T02:26:05.197Z",
+          "md5Hash": "TXxrxDbrItySAZ3cFAEvZA=="
+        },
+        {
+          "name": "source-documents/d9644e296bbecf591f6a69eefca99c0f005f94b736ffd76a33a4afba3e89c702.pdf",
+          "generation": "1790648727800570",
+          "size": 87188,
+          "updated": "2026-09-29T02:25:28.154Z",
+          "md5Hash": "1us2gDQeCB26DHNwduXVOw=="
+        },
+        {
+          "name": "source-documents/da673e4cc3161dcda7b9108279acd55d91ff4edb7599b1f5687d9cde6f6362d3.pdf",
+          "generation": "1790648635678094",
+          "size": 87184,
+          "updated": "2026-09-29T02:23:56.038Z",
+          "md5Hash": "4U2O6FY6cbMzLXAtbIhNMQ=="
+        },
+        {
+          "name": "source-documents/db2395432591415ba848377cdc5df6f4ccaf3a08b8a8d10e451cb1a902f454f8.pdf",
+          "generation": "1790648583427058",
+          "size": 87204,
+          "updated": "2026-09-29T02:23:03.795Z",
+          "md5Hash": "8N+RVQs8+4S6XH7YhoYzUw=="
+        },
+        {
+          "name": "source-documents/dbddb237a5c96d2b6a12ee87a9279ebb5db2bb42fc62d0805b78003dd30d211b.pdf",
+          "generation": "1790648796217788",
+          "size": 263782,
+          "updated": "2026-09-29T02:26:36.578Z",
+          "md5Hash": "FNFYVLnP+dhgJB2l9Yj+uQ=="
+        },
+        {
+          "name": "source-documents/dc266828f4e9b5b59fe4fdfcfac28fb176b9cd073091edbdf491732da7672049.pdf",
+          "generation": "1790648658662316",
+          "size": 263634,
+          "updated": "2026-09-29T02:24:19.175Z",
+          "md5Hash": "go4vjMZdumrawZ6batljcQ=="
+        },
+        {
+          "name": "source-documents/dc782d7a9ff14edcc8d73aab01d84cc27c55e7d7a1f3e7840f4ac0b694958f92.pdf",
+          "generation": "1790648736688797",
+          "size": 87187,
+          "updated": "2026-09-29T02:25:37.717Z",
+          "md5Hash": "MhrvSigbkILZ+E3Yx4PXMg=="
+        },
+        {
+          "name": "source-documents/df78932ca43b46dc12c861a5ffdbd1cb4b9b2426c7ec17cab3b4a116239ff25a.pdf",
+          "generation": "1790648766989939",
+          "size": 87219,
+          "updated": "2026-09-29T02:26:07.359Z",
+          "md5Hash": "YGV1vyQ/e9wAf2UR4wOZvA=="
+        },
+        {
+          "name": "source-documents/e7022266908fe49437d7f62e84b81a157257b0f106afce7ee76b192664c6a577.pdf",
+          "generation": "1790648567323557",
+          "size": 87209,
+          "updated": "2026-09-29T02:22:47.953Z",
+          "md5Hash": "YKHI5I+xn8eYdh1s8vNfpA=="
+        },
+        {
+          "name": "source-documents/e87808433531422e2d4ea22307cc961e4ca8cc8f6d35d98cfe794d817ad00436.pdf",
+          "generation": "1790648713957285",
+          "size": 87216,
+          "updated": "2026-09-29T02:25:14.321Z",
+          "md5Hash": "iji3YEKBMyyBjbeFDd2u6w=="
+        },
+        {
+          "name": "source-documents/e92a563ffe7bf79364b0fd9c46b56e42a35f1a4359eea6733458fba698e7eaf3.pdf",
+          "generation": "1790648710054427",
+          "size": 87207,
+          "updated": "2026-09-29T02:25:11.870Z",
+          "md5Hash": "pftoZ4VOXMk1PdBEoqorBg=="
+        },
+        {
+          "name": "source-documents/ed6d7c40f2733289cfd2e194d96205839f41e5c247e9d002b89b1bf1b640db9d.pdf",
+          "generation": "1790648774548229",
+          "size": 87236,
+          "updated": "2026-09-29T02:26:15.008Z",
+          "md5Hash": "E3qVFTwLaGpyLIFVO8buIw=="
+        },
+        {
+          "name": "source-documents/f04459f000eba62f1c830a1670162e79595d3b21c36387c9664e6d48a7e9c1be.pdf",
+          "generation": "1790648590600161",
+          "size": 87200,
+          "updated": "2026-09-29T02:23:11.007Z",
+          "md5Hash": "W94TKqTg73X+HDG+KBz1MQ=="
+        },
+        {
+          "name": "source-documents/f180541cb51009a082f63b1a61f872a502065696add9fb0f63b552a7ac0682c6.pdf",
+          "generation": "1790648793326632",
+          "size": 87228,
+          "updated": "2026-09-29T02:26:33.700Z",
+          "md5Hash": "L1+GnmZ0flCj8wfJAvLO7w=="
+        },
+        {
+          "name": "source-documents/f728341b2f5dd54baa1fd031853ed1adf163d1e5998162c36b64a5da3c352bbf.pdf",
+          "generation": "1790648723633880",
+          "size": 87195,
+          "updated": "2026-09-29T02:25:23.983Z",
+          "md5Hash": "BAtL478P9Nc2lZBYt7jyJw=="
+        },
+        {
+          "name": "source-documents/f89bd80ca46cd5b0beab395f2d75f2eda81e83b6460f28dcb4f52eacf44511c3.pdf",
+          "generation": "1790648801415806",
+          "size": 268519,
+          "updated": "2026-09-29T02:26:41.766Z",
+          "md5Hash": "8+UfBlxpMe3g5P1BzY3QmQ=="
+        },
+        {
+          "name": "source-documents/fb1c580ededd8d122b1f0550a97c97d80f35539b7a62965f760ef9b843f28b1d.pdf",
+          "generation": "1790648588043607",
+          "size": 87252,
+          "updated": "2026-09-29T02:23:08.762Z",
+          "md5Hash": "VWJxqYtS30DjvGZJipBQfA=="
+        },
+        {
+          "name": "source-documents/fee7a9c454d450b0b5e973b1d7fdf084555fa63cd675316651f34d21b901f221.pdf",
+          "generation": "1790648626831923",
+          "size": 87192,
+          "updated": "2026-09-29T02:23:47.493Z",
+          "md5Hash": "DsyYwFX5yjcl6Ubvt+r6FQ=="
+        },
+        {
+          "name": "source-documents/ff7329896823750deeebed78628666f7e65a03147f3bb6473d62187797636e18.pdf",
+          "generation": "1790648675170809",
+          "size": 87190,
+          "updated": "2026-09-29T02:24:35.548Z",
+          "md5Hash": "gEZzhscNtdPJLvm8NJcYKQ=="
+        }
+      ],
+      "firestoreDocuments": [
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/047ddf6dacd28c5995197ce8327cd3b61dd190122387c625e3bf92ff30311998",
+          "createTime": "2026-09-29T02:25:03.538188Z",
+          "updateTime": "2026-09-29T02:25:03.538188Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/04dd99bf3f6b02775cd8c59d06f19e78204d2fc41645d9bb76c291dcf2682563",
+          "createTime": "2026-09-29T02:26:18.833323Z",
+          "updateTime": "2026-09-29T02:26:18.833323Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/07ff36db6bd515e2c1d116338c3418feee1a521f47f8840abceeb2c9bc89a983",
+          "createTime": "2026-09-29T02:25:22.114710Z",
+          "updateTime": "2026-09-29T02:25:22.114710Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/08e711172087ba91a858ed4c6f3521f903fc70a5493f99fd523b708b75dc68ea",
+          "createTime": "2026-09-29T02:25:01.312502Z",
+          "updateTime": "2026-09-29T02:25:01.312502Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/094995013d620442f68d703678fe4092c4553b64036cdb5e0f13e4ad44ca0b9b",
+          "createTime": "2026-09-29T02:25:32.723243Z",
+          "updateTime": "2026-09-29T02:25:32.723243Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/0a2d3bf52c34b0daf9743f2b6de95f31c530dae39e6aa6286efe4dd69d87aa06",
+          "createTime": "2026-09-29T02:26:39.194210Z",
+          "updateTime": "2026-09-29T02:26:39.194210Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/0c2795d280bd93250697d72a7936883d4392d326d80174f68c996b494d889705",
+          "createTime": "2026-09-29T02:23:22.923601Z",
+          "updateTime": "2026-09-29T02:23:22.923601Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/0ef724676250df730e81125b0f9df8f4a8464d331cfc405270dce0b8dac19132",
+          "createTime": "2026-09-29T02:26:24.858053Z",
+          "updateTime": "2026-09-29T02:26:24.858053Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/0fb7475841cb44995459be364b8046c16c0ff5b217dbf7f27b63e5acb34cde16",
+          "createTime": "2026-09-29T02:23:27.371505Z",
+          "updateTime": "2026-09-29T02:23:27.371505Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/119a4e260a935c705556efa5dd24175f683455d1326ed89682f2f3bca941c7e2",
+          "createTime": "2026-09-29T02:24:57.509077Z",
+          "updateTime": "2026-09-29T02:24:57.509077Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/128af555e35eecd051ce3184fb0623a474de6ccc9fc6d9eaf0b691a332df3c49",
+          "createTime": "2026-09-29T02:22:39.915193Z",
+          "updateTime": "2026-09-29T02:22:39.915193Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/13f3e2f56aafac5934e28db86f67e33e8d79cb98b66715bfeade4a9f37188600",
+          "createTime": "2026-09-29T02:24:51.360824Z",
+          "updateTime": "2026-09-29T02:24:51.360824Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/1af9b133db490335b2c4f81247e5c02b2ceefa9914f333f863cb3144961e7899",
+          "createTime": "2026-09-29T02:25:26.281983Z",
+          "updateTime": "2026-09-29T02:25:26.281983Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/1e7bbfc75b087a7226ed6a1df817fed677385bab0e3a8da0bd865d5928e23627",
+          "createTime": "2026-09-29T02:22:24.488630Z",
+          "updateTime": "2026-09-29T02:22:24.488630Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/211aa5e97d35c6f1feaf0e63ff11f95087fe1e3a63d60dd6649b6016fd3a128d",
+          "createTime": "2026-09-29T02:25:40.883114Z",
+          "updateTime": "2026-09-29T02:25:40.883114Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/2217bad20d023978ae62c4fb728f979ed0a5f31672812cc3196e9595c1426d28",
+          "createTime": "2026-09-29T02:23:59.199915Z",
+          "updateTime": "2026-09-29T02:23:59.199915Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/25ee2fcbbf436e359afcb9a7f59a5a88f5f21a992443b336d677c7038ee4475c",
+          "createTime": "2026-09-29T02:23:34.519006Z",
+          "updateTime": "2026-09-29T02:23:34.519006Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/273c81976228b67a1cb6045ff14d0aae1e865b4435fc7f38b74f2975ab7593ef",
+          "createTime": "2026-09-29T02:25:43.104196Z",
+          "updateTime": "2026-09-29T02:25:43.104196Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/292db5b08f96ce05b448d4aa17c88918b4288e136bf5544b47a7a7bbde689d05",
+          "createTime": "2026-09-29T02:24:16.447246Z",
+          "updateTime": "2026-09-29T02:24:16.447246Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/2d8441e6b07531e24fc6c4a9fc6d1c229a0d1e024765d6d617b4c6c70b666445",
+          "createTime": "2026-09-29T02:23:36.755045Z",
+          "updateTime": "2026-09-29T02:23:36.755045Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/2fa26996eff26d0be6e9a6feea74550467500e25a343291062b73ca9e54fab3c",
+          "createTime": "2026-09-29T02:24:44.795977Z",
+          "updateTime": "2026-09-29T02:24:44.795977Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/2febfe5e7f27f934a8a5b4e34262c261d83371aef732cc89d0dd9f5672be82b3",
+          "createTime": "2026-09-29T02:24:06.627209Z",
+          "updateTime": "2026-09-29T02:24:06.627209Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/3173a50c822e6ef4efbe65ca056d1f3b6f3fd7c6a0444941531b6c7b491a6cfe",
+          "createTime": "2026-09-29T02:25:57.598675Z",
+          "updateTime": "2026-09-29T02:25:57.598675Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/325df39eeccf7b9942f20f5be668cc803fa7317262e8ee07f1c8e12ad32d1e87",
+          "createTime": "2026-09-29T02:24:25.134200Z",
+          "updateTime": "2026-09-29T02:24:25.134200Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/352d0a76831baa854672b51f966af71d1769d462999b1be0e4509f449cedd487",
+          "createTime": "2026-09-29T02:23:54.166410Z",
+          "updateTime": "2026-09-29T02:23:54.166410Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/3f66f9acb0a96490bde7e420397954982d261b30959fd6a0b6135470a2ef42d5",
+          "createTime": "2026-09-29T02:22:42.351364Z",
+          "updateTime": "2026-09-29T02:22:42.351364Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/415e0ac1d24bc6f737f315e747df0f8aa175065b68fa9839c4f5e585192d1f0b",
+          "createTime": "2026-09-29T02:24:54.429305Z",
+          "updateTime": "2026-09-29T02:24:54.429305Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/43a621b7e24780fd583911b45e01bb2d2cf7aa9efd084f7526ef28e12fd9824f",
+          "createTime": "2026-09-29T02:22:34.179427Z",
+          "updateTime": "2026-09-29T02:22:34.179427Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/45afadcf3bdc088cc992c7e15156700cd456cc33811325096c50ddc02a2918ba",
+          "createTime": "2026-09-29T02:23:01.924182Z",
+          "updateTime": "2026-09-29T02:23:01.924182Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/478dbd5fe0952a3ab8e7b26fadf427ac0c4a899de8fb7ccc99f680b6eafd4aa7",
+          "createTime": "2026-09-29T02:26:30.983712Z",
+          "updateTime": "2026-09-29T02:26:30.983712Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/4c855490f1aef2cf9e6bddc4c85b6a1e820f767c48cf6a6693ef7956ae1a43a0",
+          "createTime": "2026-09-29T02:26:27.716126Z",
+          "updateTime": "2026-09-29T02:26:27.716126Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/4e91e05ca73bf512e27a4ef43977a64d86fb772bb5055fc72f8ca80fbec5b2ac",
+          "createTime": "2026-09-29T02:23:29.736166Z",
+          "updateTime": "2026-09-29T02:23:29.736166Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/523df3d477cbc24a132d6b2d9e25ed228b90b3f4a45f3a87108a0d6fbdaa4370",
+          "createTime": "2026-09-29T02:26:10.809083Z",
+          "updateTime": "2026-09-29T02:26:10.809083Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/53695be7ae8b0093f992629372dd64babbcd7cfeb26b77e9e6e2b86daec33c03",
+          "createTime": "2026-09-29T02:26:22.415785Z",
+          "updateTime": "2026-09-29T02:26:22.415785Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/53b7589633519fecf7b68dac91a44e4970c71a82f9c8bf85da45351319e5eab7",
+          "createTime": "2026-09-29T02:24:48.503842Z",
+          "updateTime": "2026-09-29T02:24:48.503842Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/5b247e8d594f20f76378f8eb7e17dc69a6c69f71a9715a01638a81aba05d3a3c",
+          "createTime": "2026-09-29T02:25:55.101777Z",
+          "updateTime": "2026-09-29T02:25:55.101777Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/5db61150fc776794c5a79db820a98b5d12f24055b24b36c5ffb9f5420f6fc3a6",
+          "createTime": "2026-09-29T02:24:10.933092Z",
+          "updateTime": "2026-09-29T02:24:10.933092Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/5f19a6e12a7631ac39feca957e90d87ab8fa20b9e7bddc0ea1fb29955a634c7f",
+          "createTime": "2026-09-29T02:24:30.873456Z",
+          "updateTime": "2026-09-29T02:24:30.873456Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/60d3bcc61b5a23b57aef510b9b0b14467d4220f7585eec2462f31f4611b5bfec",
+          "createTime": "2026-09-29T02:23:32.274574Z",
+          "updateTime": "2026-09-29T02:23:32.274574Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/67bd4c8222548a7e9d6fdbe4a94dd692b76fa48836b8a1745c1e194983ff3fc6",
+          "createTime": "2026-09-29T02:22:45.797723Z",
+          "updateTime": "2026-09-29T02:22:45.797723Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/67c030636de44ced2042e56ee727614863f6a7489d59c5eb5c5997e45bd9d115",
+          "createTime": "2026-09-29T02:25:46.092346Z",
+          "updateTime": "2026-09-29T02:25:46.092346Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/6a8a15aa41be4bf8db53cdb9288bfc18cdc997ed2c8adb7c1313850df735fb28",
+          "createTime": "2026-09-29T02:22:16.841951Z",
+          "updateTime": "2026-09-29T02:22:16.841951Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/6a8fc1b10e8b42e84504ba92b9502245e24a0b99252c90239b4882c37ce19211",
+          "createTime": "2026-09-29T02:22:22.069808Z",
+          "updateTime": "2026-09-29T02:22:22.069808Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/6dec53f17869776bd70f1d8262b3d654bda41a02fe405cd7c3956cf422586c78",
+          "createTime": "2026-09-29T02:23:19.504873Z",
+          "updateTime": "2026-09-29T02:23:19.504873Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/71a1c0cf134e5820aaf09b4dd6fb60964a4b09672ecf3ad40bdd15312d434d7c",
+          "createTime": "2026-09-29T02:24:28.369917Z",
+          "updateTime": "2026-09-29T02:24:28.369917Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/76fb8fb7291d002df4644b0331fee1fa7bd8d1bf9c00c92426ac4cb946bb8eb7",
+          "createTime": "2026-09-29T02:22:28.248702Z",
+          "updateTime": "2026-09-29T02:22:28.248702Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/789c825baa2527e7e3b1caa30291f8f4255092213070652b0f820d5626e14957",
+          "createTime": "2026-09-29T02:24:22.825095Z",
+          "updateTime": "2026-09-29T02:24:22.825095Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/78db09d054675026aba6240c5a64db8eb9dcd711f7e184d8df3585e0df3db18c",
+          "createTime": "2026-09-29T02:26:02.460779Z",
+          "updateTime": "2026-09-29T02:26:02.460779Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/7f98d6edda4ed1126fb0b2475001a6a9ca9669a249051066404a1fda343148b5",
+          "createTime": "2026-09-29T02:25:19.973381Z",
+          "updateTime": "2026-09-29T02:25:19.973381Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/813a54a72b31e333cf1b7b5c10a714136a3bfcec85b182fea58531b80d111a95",
+          "createTime": "2026-09-29T02:22:19.540321Z",
+          "updateTime": "2026-09-29T02:22:19.540321Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/81d0f9da09bb660fe91dc86c4c8485faff2bcda8bd5570768e288b0938a29425",
+          "createTime": "2026-09-29T02:22:30.942526Z",
+          "updateTime": "2026-09-29T02:22:30.942526Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/83854dcc16b0432700149651a8b361047d9c316d4310fa934179589c6c726e05",
+          "createTime": "2026-09-29T02:24:42.664882Z",
+          "updateTime": "2026-09-29T02:24:42.664882Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/8816540acc033ec26d26a8c8b30d029f4ea445b68cc4deabea54b8eb1644a90b",
+          "createTime": "2026-09-29T02:22:37.534910Z",
+          "updateTime": "2026-09-29T02:22:37.534910Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/8b38eb97e7c00573a985ced2658b81db0dcb189423ba0f9ab56f5ee40f401efb",
+          "createTime": "2026-09-29T02:24:40.387072Z",
+          "updateTime": "2026-09-29T02:24:40.387072Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/8d3bd9e8beb9a5b550c3d0d16cc499039588bbc2ba72334a18d3ff6baa3a075f",
+          "createTime": "2026-09-29T02:23:51.219978Z",
+          "updateTime": "2026-09-29T02:23:51.219978Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/8e4b7314fb17a31d5f961e8ef61450d9589fc79ece3a71684edff6dfd10de031",
+          "createTime": "2026-09-29T02:22:56.250938Z",
+          "updateTime": "2026-09-29T02:22:56.250938Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/900e6e61cf6ca8ae51225a4714a7fd2d8a703b4e5004ae1f221746684bed63c5",
+          "createTime": "2026-09-29T02:23:25.075978Z",
+          "updateTime": "2026-09-29T02:23:25.075978Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/9111cb72d37948f34b98c1edfbbc34ee7acdd0eb02bf78acfab39a1f33abae10",
+          "createTime": "2026-09-29T02:23:41.946506Z",
+          "updateTime": "2026-09-29T02:23:41.946506Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/92f92d14fb267ae83bf084407aa3c10131d84553770759f0d5c68d7461b187fc",
+          "createTime": "2026-09-29T02:23:39.606153Z",
+          "updateTime": "2026-09-29T02:23:39.606153Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/93960883ff1af8f833b3e4965869a42c7e8dfb3b7a21c8a25b4a0ad88216f52c",
+          "createTime": "2026-09-29T02:24:04.372626Z",
+          "updateTime": "2026-09-29T02:24:04.372626Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/95ff2d8504e7f7741f0328d450581985763be1ab458e5379959c7a4333f66113",
+          "createTime": "2026-09-29T02:25:48.982973Z",
+          "updateTime": "2026-09-29T02:25:48.982973Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/96ad0159b9c3c06b02fd579c9e902b7ace3e9ff6d48d69fad5cfafcac03b8310",
+          "createTime": "2026-09-29T02:22:59.391346Z",
+          "updateTime": "2026-09-29T02:22:59.391346Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/9dab11082fedbbe2c14475c319f08cdb18d63ad653d288b98232ac79c0b6f5d4",
+          "createTime": "2026-09-29T02:23:16.421239Z",
+          "updateTime": "2026-09-29T02:23:16.421239Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/a146c6c0584d2ead526b3f9d625c436f17c67fa2bd8000a46993d7e99944d126",
+          "createTime": "2026-09-29T02:25:34.910678Z",
+          "updateTime": "2026-09-29T02:25:34.910678Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/a5fbef025b51e68340ff8f850ebd620ae9ba35022e79929a9f0fa6db14c07a9a",
+          "createTime": "2026-09-29T02:25:17.423956Z",
+          "updateTime": "2026-09-29T02:25:17.423956Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/ad861e3a1a9c4ffbd0b1707606e04f2ae3f378b5c2b6bd735e36f282f1f67aab",
+          "createTime": "2026-09-29T02:24:08.809712Z",
+          "updateTime": "2026-09-29T02:24:08.809712Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/adf26c5a1d786689cfd41ba90f38f9e23c2ce7b6587a92f446ebd4cf2210d6c6",
+          "createTime": "2026-09-29T02:26:13.013914Z",
+          "updateTime": "2026-09-29T02:26:13.013914Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/b7db3bceb2cb3d779ef88deafe5083915e8cbd926b7058ac2273fbab01ee7092",
+          "createTime": "2026-09-29T02:24:38.173903Z",
+          "updateTime": "2026-09-29T02:24:38.173903Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/b81fe918af6fee8eeb0ae1e42d1beba246c450e7fda77d36f077ba303cab1d8e",
+          "createTime": "2026-09-29T02:24:01.349743Z",
+          "updateTime": "2026-09-29T02:24:01.349743Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/b9fa7c2e4e57e74d78719dda36e9f52a5479c00aaeb81ffb8926122d911c8cac",
+          "createTime": "2026-09-29T02:25:07.154551Z",
+          "updateTime": "2026-09-29T02:25:07.154551Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/bc91f1d02ababc3b751099e654bc4d6bda54df96206fa85dc7d16afc17303f8e",
+          "createTime": "2026-09-29T02:24:13.910935Z",
+          "updateTime": "2026-09-29T02:24:13.910935Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/bfb1ce9f7f0f3228065cb8b215c167d833f1783fd6982743ce8a162345cf202c",
+          "createTime": "2026-09-29T02:23:45.312772Z",
+          "updateTime": "2026-09-29T02:23:45.312772Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/c0cae04fa735cd6ca4768f371e59a0f60759b707afb4a30c5405f21d217e458f",
+          "createTime": "2026-09-29T02:25:51.473900Z",
+          "updateTime": "2026-09-29T02:25:51.473900Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/c757b8fa2c76bfb64da787cd38e2a68052a40c9d4065beeb3d36730ec3977700",
+          "createTime": "2026-09-29T02:23:06.345064Z",
+          "updateTime": "2026-09-29T02:23:06.345064Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/c887c9a0d9c85f2f8020d8b168aebd7f815dc58c059da58823ab59e88360ed71",
+          "createTime": "2026-09-29T02:24:33.613827Z",
+          "updateTime": "2026-09-29T02:24:33.613827Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/ca6ee0d7eca8692f088485f73ba6e907326bf177002a9bfdbc39bb1f7df863ba",
+          "createTime": "2026-09-29T02:22:50.618320Z",
+          "updateTime": "2026-09-29T02:22:50.618320Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/cd9782b5a0d836de5701b8c588189d23b06bd3f8574f31cc6fb5dbdda71c681b",
+          "createTime": "2026-09-29T02:23:13.841199Z",
+          "updateTime": "2026-09-29T02:23:13.841199Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/cddb3d4d05c102b98f38050ac1ff297ad15bc442b12087c0505927f7bb1cf3dc",
+          "createTime": "2026-09-29T02:26:44.118153Z",
+          "updateTime": "2026-09-29T02:26:44.118153Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/cfb85517fd1bf8b39e7930c40db00d1bb7487a55c7c7dc3ebb42e098ff148efe",
+          "createTime": "2026-09-29T02:25:30.546132Z",
+          "updateTime": "2026-09-29T02:25:30.546132Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/d5495b551a01d30e82f7de90377933fcca166c15e9f267b419428477ea463010",
+          "createTime": "2026-09-29T02:25:59.973430Z",
+          "updateTime": "2026-09-29T02:25:59.973430Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/d62259ab3de4e69020571f70de1004d1d53e9b652a62c35bcb554d308a039b7b",
+          "createTime": "2026-09-29T02:22:53.561502Z",
+          "updateTime": "2026-09-29T02:22:53.561502Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/d64065a1f7c9fd62d36b6a329939bebaac0825b7f80672a8c219dd192c3853b7",
+          "createTime": "2026-09-29T02:26:05.496020Z",
+          "updateTime": "2026-09-29T02:26:05.496020Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/d9644e296bbecf591f6a69eefca99c0f005f94b736ffd76a33a4afba3e89c702",
+          "createTime": "2026-09-29T02:25:28.384363Z",
+          "updateTime": "2026-09-29T02:25:28.384363Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/da673e4cc3161dcda7b9108279acd55d91ff4edb7599b1f5687d9cde6f6362d3",
+          "createTime": "2026-09-29T02:23:56.332438Z",
+          "updateTime": "2026-09-29T02:23:56.332438Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/db2395432591415ba848377cdc5df6f4ccaf3a08b8a8d10e451cb1a902f454f8",
+          "createTime": "2026-09-29T02:23:04.085823Z",
+          "updateTime": "2026-09-29T02:23:04.085823Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/dbddb237a5c96d2b6a12ee87a9279ebb5db2bb42fc62d0805b78003dd30d211b",
+          "createTime": "2026-09-29T02:26:36.869522Z",
+          "updateTime": "2026-09-29T02:26:36.869522Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/dc266828f4e9b5b59fe4fdfcfac28fb176b9cd073091edbdf491732da7672049",
+          "createTime": "2026-09-29T02:24:19.461421Z",
+          "updateTime": "2026-09-29T02:24:19.461421Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/dc782d7a9ff14edcc8d73aab01d84cc27c55e7d7a1f3e7840f4ac0b694958f92",
+          "createTime": "2026-09-29T02:25:38.228571Z",
+          "updateTime": "2026-09-29T02:25:38.228571Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/df78932ca43b46dc12c861a5ffdbd1cb4b9b2426c7ec17cab3b4a116239ff25a",
+          "createTime": "2026-09-29T02:26:07.641479Z",
+          "updateTime": "2026-09-29T02:26:07.641479Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/e7022266908fe49437d7f62e84b81a157257b0f106afce7ee76b192664c6a577",
+          "createTime": "2026-09-29T02:22:48.386305Z",
+          "updateTime": "2026-09-29T02:22:48.386305Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/e87808433531422e2d4ea22307cc961e4ca8cc8f6d35d98cfe794d817ad00436",
+          "createTime": "2026-09-29T02:25:14.548367Z",
+          "updateTime": "2026-09-29T02:25:14.548367Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/e92a563ffe7bf79364b0fd9c46b56e42a35f1a4359eea6733458fba698e7eaf3",
+          "createTime": "2026-09-29T02:25:12.413518Z",
+          "updateTime": "2026-09-29T02:25:12.413518Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/ed6d7c40f2733289cfd2e194d96205839f41e5c247e9d002b89b1bf1b640db9d",
+          "createTime": "2026-09-29T02:26:15.290623Z",
+          "updateTime": "2026-09-29T02:26:15.290623Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/f04459f000eba62f1c830a1670162e79595d3b21c36387c9664e6d48a7e9c1be",
+          "createTime": "2026-09-29T02:23:11.576181Z",
+          "updateTime": "2026-09-29T02:23:11.576181Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/f180541cb51009a082f63b1a61f872a502065696add9fb0f63b552a7ac0682c6",
+          "createTime": "2026-09-29T02:26:33.995715Z",
+          "updateTime": "2026-09-29T02:26:33.995715Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/f728341b2f5dd54baa1fd031853ed1adf163d1e5998162c36b64a5da3c352bbf",
+          "createTime": "2026-09-29T02:25:24.194075Z",
+          "updateTime": "2026-09-29T02:25:24.194075Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/f89bd80ca46cd5b0beab395f2d75f2eda81e83b6460f28dcb4f52eacf44511c3",
+          "createTime": "2026-09-29T02:26:42.048026Z",
+          "updateTime": "2026-09-29T02:26:42.048026Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/fb1c580ededd8d122b1f0550a97c97d80f35539b7a62965f760ef9b843f28b1d",
+          "createTime": "2026-09-29T02:23:09.045330Z",
+          "updateTime": "2026-09-29T02:23:09.045330Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/fee7a9c454d450b0b5e973b1d7fdf084555fa63cd675316651f34d21b901f221",
+          "createTime": "2026-09-29T02:23:47.872348Z",
+          "updateTime": "2026-09-29T02:23:47.872348Z"
+        },
+        {
+          "name": "projects/kerala-lottery-intelligence/databases/(default)/documents/documents/ff7329896823750deeebed78628666f7e65a03147f3bb6473d62187797636e18",
+          "createTime": "2026-09-29T02:24:35.852817Z",
+          "updateTime": "2026-09-29T02:24:35.852817Z"
+        }
+      ]
+    }
+  },
+  "livePreconditionEvidence": {
+    "gcsOverwriteGuard": {
+      "test": "GCS Overwrite Guard (ifGenerationMatch=0)",
+      "expectedStatus": 412,
+      "actualStatus": 412,
+      "responseBody": {
+        "error": {
+          "code": 412,
+          "message": "At least one of the pre-conditions you specified did not hold.",
+          "errors": [
+            {
+              "message": "At least one of the pre-conditions you specified did not hold.",
+              "domain": "global",
+              "reason": "conditionNotMet",
+              "locationType": "header",
+              "location": "If-Match"
+            }
+          ]
+        }
+      }
+    },
+    "firestoreDuplicateGuard": {
+      "test": "Firestore Duplicate Guard (createDocument with existing documentId)",
+      "expectedStatus": 409,
+      "actualStatus": 409,
+      "responseBody": {
+        "error": {
+          "code": 409,
+          "message": "Document already exists: projects/kerala-lottery-intel-dev/databases/(default)/documents/documents/3a0ea2c300e39acaa4205374988c46d54b5050446fd0082071495715cecb68b8",
+          "errors": [
+            {
+              "message": "Document already exists: projects/kerala-lottery-intel-dev/databases/(default)/documents/documents/3a0ea2c300e39acaa4205374988c46d54b5050446fd0082071495715cecb68b8",
+              "domain": "global",
+              "reason": "alreadyExists"
+            }
+          ],
+          "status": "ALREADY_EXISTS"
+        }
+      }
+    }
+  },
+  "reconciliationTable": [
+    {
+      "drawIdentity": "SM-75th",
+      "serial": 75398,
+      "drawDate": "04/10/2026",
+      "lotteryName": "SAMRUDHI",
+      "requestUrl": "https://result.keralalotteries.com/viewlotisresult.php?drawserial=75398",
+      "officialResponseFilename": "SM-75.pdf",
+      "canonicalLocalFilename": "SM-75.pdf",
+      "exactBytes": 87253,
+      "localSha256": "3a0ea2c300e39acaa4205374988c46d54b5050446fd0082071495715cecb68b8",
+      "remoteSha256": "3a0ea2c300e39acaa4205374988c46d54b5050446fd0082071495715cecb68b8",
+      "cloudStorageSha256": "3a0ea2c300e39acaa4205374988c46d54b5050446fd0082071495715cecb68b8",
+      "cloudStorageGeneration": "1791950394175611",
+      "firestoreDocumentId": "documents/3a0ea2c300e39acaa4205374988c46d54b5050446fd0082071495715cecb68b8",
+      "graphIdentity": "778 nodes, 804 edges (3a0ea2c300e39acaa4205374988c46d54b5050446fd0082071495715cecb68b8.json)",
+      "resultCount": 382,
+      "layerResults": {
+        "networkPass": true,
+        "byteShaPass": true,
+        "byteLengthPass": true,
+        "pdfParsePass": true,
+        "gcsByteShaPass": true,
+        "firestoreMetadataPass": true,
+        "graphManifestPass": true
+      },
+      "overallVerdict": "PASS"
+    },
+    {
+      "drawIdentity": "BT-74th",
+      "serial": 75399,
+      "drawDate": "05/10/2026",
+      "lotteryName": "BHAGYATHARA",
+      "requestUrl": "https://result.keralalotteries.com/viewlotisresult.php?drawserial=75399",
+      "officialResponseFilename": "BT-74.pdf",
+      "canonicalLocalFilename": "BT-74.pdf",
+      "exactBytes": 87202,
+      "localSha256": "e3cd85ae7393ec339532fa0d17bce0aeeaf3cb76532d83dbac261f16d56a2fd0",
+      "remoteSha256": "e3cd85ae7393ec339532fa0d17bce0aeeaf3cb76532d83dbac261f16d56a2fd0",
+      "cloudStorageSha256": "e3cd85ae7393ec339532fa0d17bce0aeeaf3cb76532d83dbac261f16d56a2fd0",
+      "cloudStorageGeneration": "1791950414036340",
+      "firestoreDocumentId": "documents/e3cd85ae7393ec339532fa0d17bce0aeeaf3cb76532d83dbac261f16d56a2fd0",
+      "graphIdentity": "770 nodes, 796 edges (e3cd85ae7393ec339532fa0d17bce0aeeaf3cb76532d83dbac261f16d56a2fd0.json)",
+      "resultCount": 378,
+      "layerResults": {
+        "networkPass": true,
+        "byteShaPass": true,
+        "byteLengthPass": true,
+        "pdfParsePass": true,
+        "gcsByteShaPass": true,
+        "firestoreMetadataPass": true,
+        "graphManifestPass": true
+      },
+      "overallVerdict": "PASS"
+    },
+    {
+      "drawIdentity": "SS-540th",
+      "serial": 75400,
+      "drawDate": "06/10/2026",
+      "lotteryName": "STHREE-SAKTHI",
+      "requestUrl": "https://result.keralalotteries.com/viewlotisresult.php?drawserial=75400",
+      "officialResponseFilename": "SS-540.pdf",
+      "canonicalLocalFilename": "SS-540.pdf",
+      "exactBytes": 87253,
+      "localSha256": "74dadb9c67dd3f7ee3f67ef8184155308535681f7c320a2733187c3dc9066c93",
+      "remoteSha256": "74dadb9c67dd3f7ee3f67ef8184155308535681f7c320a2733187c3dc9066c93",
+      "cloudStorageSha256": "74dadb9c67dd3f7ee3f67ef8184155308535681f7c320a2733187c3dc9066c93",
+      "cloudStorageGeneration": "1791950428334080",
+      "firestoreDocumentId": "documents/74dadb9c67dd3f7ee3f67ef8184155308535681f7c320a2733187c3dc9066c93",
+      "graphIdentity": "774 nodes, 800 edges (74dadb9c67dd3f7ee3f67ef8184155308535681f7c320a2733187c3dc9066c93.json)",
+      "resultCount": 380,
+      "layerResults": {
+        "networkPass": true,
+        "byteShaPass": true,
+        "byteLengthPass": true,
+        "pdfParsePass": true,
+        "gcsByteShaPass": true,
+        "firestoreMetadataPass": true,
+        "graphManifestPass": true
+      },
+      "overallVerdict": "PASS"
+    },
+    {
+      "drawIdentity": "DL-72nd",
+      "serial": 75401,
+      "drawDate": "07/10/2026",
+      "lotteryName": "DHANALEKSHMI",
+      "requestUrl": "https://result.keralalotteries.com/viewlotisresult.php?drawserial=75401",
+      "officialResponseFilename": "DL-72.pdf",
+      "canonicalLocalFilename": "DL-72.pdf",
+      "exactBytes": 87153,
+      "localSha256": "57b10c944bbbe2bd4374193e8c6886b18dc8d124d705d5518f1c62db2507fe19",
+      "remoteSha256": "57b10c944bbbe2bd4374193e8c6886b18dc8d124d705d5518f1c62db2507fe19",
+      "cloudStorageSha256": "57b10c944bbbe2bd4374193e8c6886b18dc8d124d705d5518f1c62db2507fe19",
+      "cloudStorageGeneration": "1791950432819655",
+      "firestoreDocumentId": "documents/57b10c944bbbe2bd4374193e8c6886b18dc8d124d705d5518f1c62db2507fe19",
+      "graphIdentity": "762 nodes, 788 edges (57b10c944bbbe2bd4374193e8c6886b18dc8d124d705d5518f1c62db2507fe19.json)",
+      "resultCount": 374,
+      "layerResults": {
+        "networkPass": true,
+        "byteShaPass": true,
+        "byteLengthPass": true,
+        "pdfParsePass": true,
+        "gcsByteShaPass": true,
+        "firestoreMetadataPass": true,
+        "graphManifestPass": true
+      },
+      "overallVerdict": "PASS"
+    },
+    {
+      "drawIdentity": "KN-644th",
+      "serial": 75402,
+      "drawDate": "08/10/2026",
+      "lotteryName": "KARUNYA PLUS",
+      "requestUrl": "https://result.keralalotteries.com/viewlotisresult.php?drawserial=75402",
+      "officialResponseFilename": "KN-644.pdf",
+      "canonicalLocalFilename": "KN-644.pdf",
+      "exactBytes": 87214,
+      "localSha256": "6ba7fbb6b607ef47e1b517f378075f632ceffb1cf5e54c54b67a869d21dc3c28",
+      "remoteSha256": "6ba7fbb6b607ef47e1b517f378075f632ceffb1cf5e54c54b67a869d21dc3c28",
+      "cloudStorageSha256": "6ba7fbb6b607ef47e1b517f378075f632ceffb1cf5e54c54b67a869d21dc3c28",
+      "cloudStorageGeneration": "1791950434747995",
+      "firestoreDocumentId": "documents/6ba7fbb6b607ef47e1b517f378075f632ceffb1cf5e54c54b67a869d21dc3c28",
+      "graphIdentity": "774 nodes, 800 edges (6ba7fbb6b607ef47e1b517f378075f632ceffb1cf5e54c54b67a869d21dc3c28.json)",
+      "resultCount": 380,
+      "layerResults": {
+        "networkPass": true,
+        "byteShaPass": true,
+        "byteLengthPass": true,
+        "pdfParsePass": true,
+        "gcsByteShaPass": true,
+        "firestoreMetadataPass": true,
+        "graphManifestPass": true
+      },
+      "overallVerdict": "PASS"
+    },
+    {
+      "drawIdentity": "SK-72nd",
+      "serial": 75403,
+      "drawDate": "09/10/2026",
+      "lotteryName": "SUVARNA KERALAM",
+      "requestUrl": "https://result.keralalotteries.com/viewlotisresult.php?drawserial=75403",
+      "officialResponseFilename": "SK-72.pdf",
+      "canonicalLocalFilename": "SK-72.pdf",
+      "exactBytes": 87206,
+      "localSha256": "3ee14f9f836bff7f6e7b67101f1fbd5c244d3409fbaa06208417cc2f3a533d8e",
+      "remoteSha256": "3ee14f9f836bff7f6e7b67101f1fbd5c244d3409fbaa06208417cc2f3a533d8e",
+      "cloudStorageSha256": "3ee14f9f836bff7f6e7b67101f1fbd5c244d3409fbaa06208417cc2f3a533d8e",
+      "cloudStorageGeneration": "1791950436782927",
+      "firestoreDocumentId": "documents/3ee14f9f836bff7f6e7b67101f1fbd5c244d3409fbaa06208417cc2f3a533d8e",
+      "graphIdentity": "766 nodes, 792 edges (3ee14f9f836bff7f6e7b67101f1fbd5c244d3409fbaa06208417cc2f3a533d8e.json)",
+      "resultCount": 376,
+      "layerResults": {
+        "networkPass": true,
+        "byteShaPass": true,
+        "byteLengthPass": true,
+        "pdfParsePass": true,
+        "gcsByteShaPass": true,
+        "firestoreMetadataPass": true,
+        "graphManifestPass": true
+      },
+      "overallVerdict": "PASS"
+    },
+    {
+      "drawIdentity": "KR-771st",
+      "serial": 75404,
+      "drawDate": "10/10/2026",
+      "lotteryName": "KARUNYA",
+      "requestUrl": "https://result.keralalotteries.com/viewlotisresult.php?drawserial=75404",
+      "officialResponseFilename": "KR-771.pdf",
+      "canonicalLocalFilename": "KR-771.pdf",
+      "exactBytes": 87164,
+      "localSha256": "8547c750a04f79272fa16dbadd6ac4eaca0b0795cc609259701f2cfccf1fb0e4",
+      "remoteSha256": "8547c750a04f79272fa16dbadd6ac4eaca0b0795cc609259701f2cfccf1fb0e4",
+      "cloudStorageSha256": "8547c750a04f79272fa16dbadd6ac4eaca0b0795cc609259701f2cfccf1fb0e4",
+      "cloudStorageGeneration": "1791950438664029",
+      "firestoreDocumentId": "documents/8547c750a04f79272fa16dbadd6ac4eaca0b0795cc609259701f2cfccf1fb0e4",
+      "graphIdentity": "766 nodes, 792 edges (8547c750a04f79272fa16dbadd6ac4eaca0b0795cc609259701f2cfccf1fb0e4.json)",
+      "resultCount": 376,
+      "layerResults": {
+        "networkPass": true,
+        "byteShaPass": true,
+        "byteLengthPass": true,
+        "pdfParsePass": true,
+        "gcsByteShaPass": true,
+        "firestoreMetadataPass": true,
+        "graphManifestPass": true
+      },
+      "overallVerdict": "PASS"
+    },
+    {
+      "drawIdentity": "SM-76th",
+      "serial": 75405,
+      "drawDate": "11/10/2026",
+      "lotteryName": "SAMRUDHI",
+      "requestUrl": "https://result.keralalotteries.com/viewlotisresult.php?drawserial=75405",
+      "officialResponseFilename": "SM-76.pdf",
+      "canonicalLocalFilename": "SM-76.pdf",
+      "exactBytes": 87220,
+      "localSha256": "bda05e8318125fd83cf518f2daf89a4a3550a561912efdd5b6b52afd955bbe7b",
+      "remoteSha256": "bda05e8318125fd83cf518f2daf89a4a3550a561912efdd5b6b52afd955bbe7b",
+      "cloudStorageSha256": "bda05e8318125fd83cf518f2daf89a4a3550a561912efdd5b6b52afd955bbe7b",
+      "cloudStorageGeneration": "1791950440462037",
+      "firestoreDocumentId": "documents/bda05e8318125fd83cf518f2daf89a4a3550a561912efdd5b6b52afd955bbe7b",
+      "graphIdentity": "778 nodes, 804 edges (bda05e8318125fd83cf518f2daf89a4a3550a561912efdd5b6b52afd955bbe7b.json)",
+      "resultCount": 382,
+      "layerResults": {
+        "networkPass": true,
+        "byteShaPass": true,
+        "byteLengthPass": true,
+        "pdfParsePass": true,
+        "gcsByteShaPass": true,
+        "firestoreMetadataPass": true,
+        "graphManifestPass": true
+      },
+      "overallVerdict": "PASS"
+    },
+    {
+      "drawIdentity": "BT-75th",
+      "serial": 75406,
+      "drawDate": "12/10/2026",
+      "lotteryName": "BHAGYATHARA",
+      "requestUrl": "https://result.keralalotteries.com/viewlotisresult.php?drawserial=75406",
+      "officialResponseFilename": "BT-75.pdf",
+      "canonicalLocalFilename": "BT-75.pdf",
+      "exactBytes": 87202,
+      "localSha256": "1b82c0acc76398fe72c759f2092b3fa653559c23b51de883ea99ed6c0620ccf4",
+      "remoteSha256": "1b82c0acc76398fe72c759f2092b3fa653559c23b51de883ea99ed6c0620ccf4",
+      "cloudStorageSha256": "1b82c0acc76398fe72c759f2092b3fa653559c23b51de883ea99ed6c0620ccf4",
+      "cloudStorageGeneration": "1791950442662195",
+      "firestoreDocumentId": "documents/1b82c0acc76398fe72c759f2092b3fa653559c23b51de883ea99ed6c0620ccf4",
+      "graphIdentity": "770 nodes, 796 edges (1b82c0acc76398fe72c759f2092b3fa653559c23b51de883ea99ed6c0620ccf4.json)",
+      "resultCount": 378,
+      "layerResults": {
+        "networkPass": true,
+        "byteShaPass": true,
+        "byteLengthPass": true,
+        "pdfParsePass": true,
+        "gcsByteShaPass": true,
+        "firestoreMetadataPass": true,
+        "graphManifestPass": true
+      },
+      "overallVerdict": "PASS"
+    },
+    {
+      "drawIdentity": "SS-541st",
+      "serial": 75407,
+      "drawDate": "13/10/2026",
+      "lotteryName": "STHREE-SAKTHI",
+      "requestUrl": "https://result.keralalotteries.com/viewlotisresult.php?drawserial=75407",
+      "officialResponseFilename": "SS-541.pdf",
+      "canonicalLocalFilename": "SS-541.pdf",
+      "exactBytes": 87240,
+      "localSha256": "4ef34cc25df8fa54ad3c815ff26625b34d63ae2d17833232017dcb9afe16ae1d",
+      "remoteSha256": "4ef34cc25df8fa54ad3c815ff26625b34d63ae2d17833232017dcb9afe16ae1d",
+      "cloudStorageSha256": "4ef34cc25df8fa54ad3c815ff26625b34d63ae2d17833232017dcb9afe16ae1d",
+      "cloudStorageGeneration": "1791950447558843",
+      "firestoreDocumentId": "documents/4ef34cc25df8fa54ad3c815ff26625b34d63ae2d17833232017dcb9afe16ae1d",
+      "graphIdentity": "774 nodes, 800 edges (4ef34cc25df8fa54ad3c815ff26625b34d63ae2d17833232017dcb9afe16ae1d.json)",
+      "resultCount": 380,
+      "layerResults": {
+        "networkPass": true,
+        "byteShaPass": true,
+        "byteLengthPass": true,
+        "pdfParsePass": true,
+        "gcsByteShaPass": true,
+        "firestoreMetadataPass": true,
+        "graphManifestPass": true
+      },
+      "overallVerdict": "PASS"
+    }
+  ]
+}

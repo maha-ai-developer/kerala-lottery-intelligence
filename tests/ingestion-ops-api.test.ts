@@ -14,7 +14,7 @@
  * 9. Operational Runs History: GET /api/ops/ingestion/runs returns sanitized audit records.
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
@@ -24,6 +24,7 @@ import { POST as downloadPost, GET as downloadGet } from "../apps/web/app/api/op
 import { POST as uploadPost, GET as uploadGet } from "../apps/web/app/api/ops/ingestion/upload/route";
 import { GET as runsGet, POST as runsPost } from "../apps/web/app/api/ops/ingestion/runs/route";
 import { GET as integrityGet, POST as integrityPost } from "../apps/web/app/api/ops/ingestion/storage-integrity/route";
+import { setStorageIntegrityDependenciesForTesting } from "../apps/web/lib/storage-integrity";
 import {
   GET as v1RunsGet,
   POST as v1RunsPost,
@@ -45,6 +46,10 @@ describe("Operational Ingestion Console: API & Security Boundary Tests", () => {
       samplePdfBuffer = readFileSync(samplePdfPath);
       sampleSha = computeSha256(new Uint8Array(samplePdfBuffer));
     }
+  });
+
+  afterEach(() => {
+    setStorageIntegrityDependenciesForTesting(null);
   });
 
   // ==========================================================================
@@ -300,8 +305,12 @@ describe("Operational Ingestion Console: API & Security Boundary Tests", () => {
   // 7. Storage Integrity & Local ↔ Cloud Reconciliation
   // ==========================================================================
   describe("7. Storage Integrity & Reconciliation", () => {
-    it("GET /api/ops/ingestion/storage-integrity returns valid count metadata", async () => {
-      const req = new NextRequest("http://localhost:3000/api/ops/ingestion/storage-integrity", { method: "GET" });
+    it("GET /api/ops/ingestion/storage-integrity returns valid local count metadata and explicit UNVERIFIED when cloud is unconfigured", async () => {
+      setStorageIntegrityDependenciesForTesting({
+        isCloudConfigured: () => false
+      });
+
+      const req = new NextRequest("http://localhost:3000/api/ops/ingestion/storage-integrity?verify=true", { method: "GET" });
       const res = await integrityGet(req);
       expect(res.status).toBe(200);
       const json = await res.json();
@@ -311,24 +320,248 @@ describe("Operational Ingestion Console: API & Security Boundary Tests", () => {
       expect(json.counts.localDocumentCount).toBe(114);
       expect(json.counts.localGraphCount).toBe(114);
       expect(json.counts.localManifestCount).toBe(114);
+      expect(json.counts.cloudStorageDocumentCount).toBeNull();
+      expect(json.counts.firestoreDocumentCount).toBeNull();
       expect(json.counts.researchDrawCount).toBe(114);
       expect(json.counts.prodDrawCount).toBe(100);
       expect(json.operationalGuards.schedulerState).toBe("PAUSED");
       expect(json.operationalGuards.mutationState).toBe("PROD_LOCKED_DEV_ALLOWED");
+      expect(json.verification).toBeDefined();
+      expect(json.verification.integrityStatus).toBe("UNVERIFIED");
+      expect(json.verification.matchedCount).toBe(0);
+      expect(json.verification.unverifiedCount).toBe(114);
     });
 
-    it("GET /api/ops/ingestion/storage-integrity?verify=true reconciles SHA-256 and draw identities", async () => {
+    it("GET /api/ops/ingestion/storage-integrity?verify=true calculates Storage and Firestore counts independently and returns VERIFIED when all 114 match", async () => {
+      const manifestRaw = JSON.parse(
+        readFileSync(join(process.cwd(), "data/processed-cache/manifest.json"), "utf-8")
+      );
+      const allShas = Object.keys(manifestRaw.documents || {});
+      expect(allShas.length).toBe(114);
+
+      setStorageIntegrityDependenciesForTesting({
+        isCloudConfigured: () => true,
+        listCloudStorageObjectShas: async () => new Set(allShas),
+        listFirestoreDocumentShas: async () => new Set(allShas)
+      });
+
       const req = new NextRequest("http://localhost:3000/api/ops/ingestion/storage-integrity?verify=true", { method: "GET" });
       const res = await integrityGet(req);
       expect(res.status).toBe(200);
       const json = await res.json();
 
+      expect(json.counts.cloudStorageDocumentCount).toBe(114);
+      expect(json.counts.firestoreDocumentCount).toBe(114);
       expect(json.verification).toBeDefined();
       expect(json.verification.integrityStatus).toBe("VERIFIED");
       expect(json.verification.matchedCount).toBe(114);
       expect(json.verification.mismatchCount).toBe(0);
       expect(json.verification.items.length).toBeGreaterThan(0);
       expect(json.verification.reconciliationBasis).toContain("SHA-256");
+    });
+
+    it("GET /api/ops/ingestion/storage-integrity?verify=true reports DISCREPANCY_DETECTED and distinct counts when Cloud Storage and Firestore diverge", async () => {
+      const manifestRaw = JSON.parse(
+        readFileSync(join(process.cwd(), "data/processed-cache/manifest.json"), "utf-8")
+      );
+      const allShas = Object.keys(manifestRaw.documents || {});
+      const missingStorageSha = allShas[0]!;
+      const storageSubset = new Set(allShas.slice(1)); // 113 in Storage
+      const firestoreFull = new Set(allShas); // 114 in Firestore
+
+      setStorageIntegrityDependenciesForTesting({
+        isCloudConfigured: () => true,
+        listCloudStorageObjectShas: async () => storageSubset,
+        listFirestoreDocumentShas: async () => firestoreFull
+      });
+
+      const req = new NextRequest("http://localhost:3000/api/ops/ingestion/storage-integrity?verify=true", { method: "GET" });
+      const res = await integrityGet(req);
+      expect(res.status).toBe(200);
+      const json = await res.json();
+
+      // Prove Cloud Storage count is NOT copied from Firestore count
+      expect(json.counts.cloudStorageDocumentCount).toBe(113);
+      expect(json.counts.firestoreDocumentCount).toBe(114);
+      expect(json.verification.integrityStatus).toBe("DISCREPANCY_DETECTED");
+      expect(json.verification.matchedCount).toBe(113);
+      expect(json.verification.mismatchCount).toBe(1);
+
+      const discrepancyItem = json.verification.items.find(
+        (item: { sha256: string }) => item.sha256 === missingStorageSha
+      );
+      expect(discrepancyItem).toBeDefined();
+      expect(discrepancyItem.inCloudStore).toBe(false);
+      expect(discrepancyItem.inFirestore).toBe(true);
+      expect(discrepancyItem.residencyCategory).toBe("CLOUD_PARITY_MISMATCH");
+      expect(discrepancyItem.identityVerified).toBe(false);
+    });
+
+    it("accurately classifies the actual DEV cloud inventory (100 PROD baseline outside DEV, 11 DEV catch-up, 3 local-only catch-up, 2 additional DEV test items) and returns DISCREPANCY_DETECTED", async () => {
+      const manifestRaw = JSON.parse(
+        readFileSync(join(process.cwd(), "data/processed-cache/manifest.json"), "utf-8")
+      );
+      const docs = Object.values<any>(manifestRaw.documents || {});
+      expect(docs.length).toBe(114);
+
+      const localOnlyThreeShas = [
+        "351176188dbb5264f22715eef8cab489e584d67455125c36e8778edc6aff431e", // SS-539th (29/09/2026)
+        "37e35a7760e98eecc7062e10c9512070f8809d759e72963d5857374ea28a09fc", // KN-643rd (01/10/2026)
+        "8670c8a0cdb9174d81c57a21b38e279c969088b4dc5020a16ef3f5a59e787174"  // DL-71st  (30/09/2026)
+      ].sort();
+
+      const milestoneTestExtraShas = [
+        "2b8ed894e0e6da419e81b54d760322c574cf88a61f8d892bd309ad9148fc3acf", // Milestone 3A synthetic fixture
+        "9bc76b6017edb26d3c13d415cd96280f4a2f066d24c41ce7a82b39b44dee557c"  // Milestone 3B Feb 2026 sample draw
+      ].sort();
+
+      const devCatchup11Shas = docs
+        .filter((d) => {
+          const [dd, mm, yyyy] = String(d.drawDate).split("/");
+          const iso = `${yyyy}-${mm}-${dd}`;
+          return iso > "2026-09-28" && !localOnlyThreeShas.includes(d.sha256);
+        })
+        .map((d) => String(d.sha256));
+      expect(devCatchup11Shas.length).toBe(11);
+
+      const actualDev13Shas = new Set([...devCatchup11Shas, ...milestoneTestExtraShas]);
+      expect(actualDev13Shas.size).toBe(13);
+
+      setStorageIntegrityDependenciesForTesting({
+        isCloudConfigured: () => true,
+        listCloudStorageObjectShas: async () => actualDev13Shas,
+        listFirestoreDocumentShas: async () => actualDev13Shas
+      });
+
+      const req = new NextRequest(
+        "http://localhost:3000/api/ops/ingestion/storage-integrity?verify=true",
+        { method: "GET" }
+      );
+      const res = await integrityGet(req);
+      expect(res.status).toBe(200);
+      const json = await res.json();
+
+      expect(json.counts.localManifestCount).toBe(114);
+      expect(json.counts.prodBaselineManifestCount).toBe(100);
+      expect(json.counts.devCatchupManifestCount).toBe(14);
+      expect(json.counts.cloudStorageDocumentCount).toBe(13);
+      expect(json.counts.firestoreDocumentCount).toBe(13);
+
+      expect(json.verification.totalAudited).toBe(116);
+      expect(json.verification.matchedCount).toBe(11);
+      expect(json.verification.mismatchCount).toBe(105);
+      expect(json.verification.integrityStatus).toBe("DISCREPANCY_DETECTED");
+
+      const breakdown = json.verification.residencyBreakdown;
+      expect(breakdown).toBeDefined();
+      expect(breakdown.prodBaselineManifestCount).toBe(100);
+      expect(breakdown.devCatchupManifestCount).toBe(14);
+      expect(breakdown.environmentOwnedProdCount).toBe(0);
+      expect(breakdown.prodBaselineOutsideDevCount).toBe(100);
+      expect(breakdown.environmentOwnedDevCount).toBe(11);
+      expect(breakdown.localOnlyMissingDevCount).toBe(3);
+      expect(breakdown.localOnlyCatchupShas).toEqual(localOnlyThreeShas);
+      expect(breakdown.additionalCloudOutsideManifestCount).toBe(2);
+      expect(breakdown.additionalCloudOutsideManifestShas).toEqual(milestoneTestExtraShas);
+      expect(breakdown.cloudParityMismatchCount).toBe(0);
+      expect(breakdown.localArtifactMismatchCount).toBe(0);
+    });
+
+    it("evaluates split PROD (100 baseline) + DEV (11 catch-up + 2 test items) cloud inventories and never returns VERIFIED while local-only or non-manifest cloud records exist", async () => {
+      const manifestRaw = JSON.parse(
+        readFileSync(join(process.cwd(), "data/processed-cache/manifest.json"), "utf-8")
+      );
+      const docs = Object.values<any>(manifestRaw.documents || {});
+
+      const localOnlyThreeShas = [
+        "351176188dbb5264f22715eef8cab489e584d67455125c36e8778edc6aff431e",
+        "37e35a7760e98eecc7062e10c9512070f8809d759e72963d5857374ea28a09fc",
+        "8670c8a0cdb9174d81c57a21b38e279c969088b4dc5020a16ef3f5a59e787174"
+      ].sort();
+
+      const milestoneTestExtraShas = [
+        "2b8ed894e0e6da419e81b54d760322c574cf88a61f8d892bd309ad9148fc3acf",
+        "9bc76b6017edb26d3c13d415cd96280f4a2f066d24c41ce7a82b39b44dee557c"
+      ].sort();
+
+      const prod100Shas = new Set(
+        docs
+          .filter((d) => {
+            const [dd, mm, yyyy] = String(d.drawDate).split("/");
+            return `${yyyy}-${mm}-${dd}` <= "2026-09-28";
+          })
+          .map((d) => String(d.sha256))
+      );
+      expect(prod100Shas.size).toBe(100);
+
+      const dev14CatchupShas = docs
+        .filter((d) => {
+          const [dd, mm, yyyy] = String(d.drawDate).split("/");
+          return `${yyyy}-${mm}-${dd}` > "2026-09-28";
+        })
+        .map((d) => String(d.sha256));
+      expect(dev14CatchupShas.length).toBe(14);
+
+      const actualDev13Shas = new Set([
+        ...dev14CatchupShas.filter((sha) => !localOnlyThreeShas.includes(sha)),
+        ...milestoneTestExtraShas
+      ]);
+      expect(actualDev13Shas.size).toBe(13);
+
+      // 1. Current split state: 100 PROD + 13 DEV (11 catch-up + 2 test records, 3 local-only) -> DISCREPANCY_DETECTED
+      setStorageIntegrityDependenciesForTesting({
+        isCloudConfigured: () => true,
+        listCloudStorageObjectShas: async () => actualDev13Shas,
+        listFirestoreDocumentShas: async () => actualDev13Shas,
+        listProdCloudStorageObjectShas: async () => prod100Shas,
+        listProdFirestoreDocumentShas: async () => prod100Shas
+      });
+
+      const reqCurrent = new NextRequest(
+        "http://localhost:3000/api/ops/ingestion/storage-integrity?verify=true",
+        { method: "GET" }
+      );
+      const resCurrent = await integrityGet(reqCurrent);
+      const jsonCurrent = await resCurrent.json();
+
+      expect(jsonCurrent.counts.prodCloudStorageDocumentCount).toBe(100);
+      expect(jsonCurrent.counts.prodFirestoreDocumentCount).toBe(100);
+      expect(jsonCurrent.counts.cloudStorageDocumentCount).toBe(13);
+      expect(jsonCurrent.counts.firestoreDocumentCount).toBe(13);
+      expect(jsonCurrent.verification.totalAudited).toBe(116);
+      expect(jsonCurrent.verification.matchedCount).toBe(111);
+      expect(jsonCurrent.verification.mismatchCount).toBe(5);
+      expect(jsonCurrent.verification.residencyBreakdown.environmentOwnedProdCount).toBe(100);
+      expect(jsonCurrent.verification.residencyBreakdown.prodBaselineOutsideDevCount).toBe(0);
+      expect(jsonCurrent.verification.residencyBreakdown.environmentOwnedDevCount).toBe(11);
+      expect(jsonCurrent.verification.residencyBreakdown.localOnlyMissingDevCount).toBe(3);
+      expect(jsonCurrent.verification.residencyBreakdown.additionalCloudOutsideManifestCount).toBe(2);
+      expect(jsonCurrent.verification.integrityStatus).toBe("DISCREPANCY_DETECTED");
+
+      // 2. Clean split state: 100 PROD + 14 DEV catch-up + 0 extra records -> VERIFIED
+      setStorageIntegrityDependenciesForTesting({
+        isCloudConfigured: () => true,
+        listCloudStorageObjectShas: async () => new Set(dev14CatchupShas),
+        listFirestoreDocumentShas: async () => new Set(dev14CatchupShas),
+        listProdCloudStorageObjectShas: async () => prod100Shas,
+        listProdFirestoreDocumentShas: async () => prod100Shas
+      });
+
+      const reqReconciled = new NextRequest(
+        "http://localhost:3000/api/ops/ingestion/storage-integrity?verify=true",
+        { method: "GET" }
+      );
+      const resReconciled = await integrityGet(reqReconciled);
+      const jsonReconciled = await resReconciled.json();
+
+      expect(jsonReconciled.verification.totalAudited).toBe(114);
+      expect(jsonReconciled.verification.matchedCount).toBe(114);
+      expect(jsonReconciled.verification.mismatchCount).toBe(0);
+      expect(jsonReconciled.verification.residencyBreakdown.environmentOwnedProdCount).toBe(100);
+      expect(jsonReconciled.verification.residencyBreakdown.environmentOwnedDevCount).toBe(14);
+      expect(jsonReconciled.verification.residencyBreakdown.localOnlyMissingDevCount).toBe(0);
+      expect(jsonReconciled.verification.residencyBreakdown.additionalCloudOutsideManifestCount).toBe(0);
+      expect(jsonReconciled.verification.integrityStatus).toBe("VERIFIED");
     });
 
     it("rejects POST on /api/ops/ingestion/storage-integrity with 405 Method Not Allowed", async () => {

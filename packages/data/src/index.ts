@@ -129,6 +129,7 @@ export interface StorageObject {
   created: string;
   etag?: string;
   generation?: string;
+  customMetadata?: Record<string, string>;
 }
 
 export interface StorageService {
@@ -138,6 +139,7 @@ export interface StorageService {
     metadata: StorageMetadata
   ): Promise<StorageObject>;
   getObject?(path: string): Promise<Uint8Array | null>;
+  getObjectMetadata?(path: string): Promise<StorageObject | null>;
 }
 
 // ============================================================================
@@ -148,6 +150,17 @@ export class DocumentAlreadyExistsError extends Error {
   constructor(message: string, public readonly documentId?: string) {
     super(message);
     this.name = "DocumentAlreadyExistsError";
+  }
+}
+
+export class DocumentIntegrityError extends Error {
+  constructor(
+    message: string,
+    public readonly documentId?: string,
+    public readonly code: string = "DOCUMENT_INTEGRITY_ERROR"
+  ) {
+    super(message);
+    this.name = "DocumentIntegrityError";
   }
 }
 
@@ -162,6 +175,17 @@ export class StorageAlreadyExistsError extends Error {
   constructor(message: string, public readonly existingObject?: StorageObject) {
     super(message);
     this.name = "StorageAlreadyExistsError";
+  }
+}
+
+export class StorageIntegrityError extends Error {
+  constructor(
+    message: string,
+    public readonly storagePath?: string,
+    public readonly code: string = "STORAGE_INTEGRITY_ERROR"
+  ) {
+    super(message);
+    this.name = "StorageIntegrityError";
   }
 }
 
@@ -291,7 +315,10 @@ export class InMemoryStorageService implements StorageService {
           size: existing.data.byteLength,
           sha256: existing.metadata.sha256,
           contentType: existing.metadata.contentType || "application/pdf",
-          created: existing.created
+          created: existing.created,
+          customMetadata: existing.metadata.customMetadata
+            ? { ...existing.metadata.customMetadata }
+            : undefined
         }
       );
     }
@@ -299,7 +326,12 @@ export class InMemoryStorageService implements StorageService {
     const created = new Date().toISOString();
     this.objects.set(normalizedPath, {
       data: new Uint8Array(data),
-      metadata: { ...metadata },
+      metadata: {
+        ...metadata,
+        customMetadata: metadata.customMetadata
+          ? { ...metadata.customMetadata }
+          : undefined
+      },
       created
     });
 
@@ -308,7 +340,10 @@ export class InMemoryStorageService implements StorageService {
       size: data.byteLength,
       sha256: metadata.sha256,
       contentType: metadata.contentType || "application/pdf",
-      created
+      created,
+      customMetadata: metadata.customMetadata
+        ? { ...metadata.customMetadata }
+        : undefined
     };
   }
 
@@ -316,6 +351,22 @@ export class InMemoryStorageService implements StorageService {
     const normalizedPath = path.replace(/^\/+/, "");
     const obj = this.objects.get(normalizedPath);
     return obj ? new Uint8Array(obj.data) : null;
+  }
+
+  async getObjectMetadata(path: string): Promise<StorageObject | null> {
+    const normalizedPath = path.replace(/^\/+/, "");
+    const obj = this.objects.get(normalizedPath);
+    if (!obj) return null;
+    return {
+      path: normalizedPath,
+      size: obj.data.byteLength,
+      sha256: obj.metadata.sha256,
+      contentType: obj.metadata.contentType || "application/pdf",
+      created: obj.created,
+      customMetadata: obj.metadata.customMetadata
+        ? { ...obj.metadata.customMetadata }
+        : undefined
+    };
   }
 
   has(path: string): boolean {
@@ -480,15 +531,45 @@ export class FirebaseStorageService implements StorageService {
     });
 
     if (response.status === 412) {
-      // 412 Precondition Failed: Object already exists with generation > 0
+      // 412 Precondition Failed: Object already exists with generation > 0.
+      // Retrieve actual existing object metadata rather than echoing caller input.
+      const existingMeta = await this.getObjectMetadata(cleanPath).catch(() => null);
+      if (existingMeta) {
+        if (existingMeta.size >= 0 && existingMeta.size !== data.byteLength) {
+          throw new StorageIntegrityError(
+            `Existing storage object at '${cleanPath}' has size ${existingMeta.size}, expected ${data.byteLength}.`,
+            cleanPath,
+            "STORAGE_SIZE_MISMATCH"
+          );
+        }
+        if (
+          existingMeta.sha256 &&
+          existingMeta.sha256.toLowerCase() !== metadata.sha256.toLowerCase()
+        ) {
+          throw new StorageIntegrityError(
+            `Existing storage object at '${cleanPath}' has metadata SHA-256 '${existingMeta.sha256}', expected '${metadata.sha256}'.`,
+            cleanPath,
+            "STORAGE_SHA256_MISMATCH"
+          );
+        }
+        const expectedDrawId = metadata.customMetadata?.drawId;
+        const actualDrawId = existingMeta.customMetadata?.drawId;
+        if (expectedDrawId && actualDrawId && actualDrawId !== expectedDrawId) {
+          throw new StorageIntegrityError(
+            `Existing storage object at '${cleanPath}' drawId '${actualDrawId}' does not match expected '${expectedDrawId}'.`,
+            cleanPath,
+            "STORAGE_DRAW_ID_MISMATCH"
+          );
+        }
+      }
       throw new StorageAlreadyExistsError(
         `Storage object already exists at '${cleanPath}'`,
-        {
+        existingMeta ?? {
           path: cleanPath,
-          size: data.byteLength,
-          sha256: metadata.sha256,
-          contentType: metadata.contentType || "application/pdf",
-          created: new Date().toISOString()
+          size: -1,
+          sha256: "",
+          contentType: "application/octet-stream",
+          created: ""
         }
       );
     }
@@ -538,7 +619,56 @@ export class FirebaseStorageService implements StorageService {
       contentType: metadata.contentType || "application/pdf",
       created: result.timeCreated || new Date().toISOString(),
       etag: result.etag,
-      generation: result.generation
+      generation: result.generation,
+      customMetadata: metadata.customMetadata
+        ? { ...metadata.customMetadata }
+        : undefined
+    };
+  }
+
+  async getObjectMetadata(path: string): Promise<StorageObject | null> {
+    const cleanPath = path.replace(/^\/+/, "");
+    const token = this.getAccessToken
+      ? await this.getAccessToken()
+      : undefined;
+
+    const url = `https://storage.googleapis.com/storage/v1/b/${this.bucket}/o/${encodeURIComponent(cleanPath)}`;
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(url, { headers });
+    if (response.status === 404) {
+      return null;
+    }
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new StorageError(
+        `Failed to get storage object metadata from '${cleanPath}' (HTTP ${response.status}): ${errText}`
+      );
+    }
+
+    const data = (await response.json()) as {
+      name?: string;
+      size?: string;
+      contentType?: string;
+      timeCreated?: string;
+      etag?: string;
+      generation?: string;
+      metadata?: Record<string, string>;
+    };
+
+    const customMetadata = data.metadata ? { ...data.metadata } : undefined;
+    return {
+      path: data.name || cleanPath,
+      size: data.size !== undefined ? parseInt(data.size, 10) : 0,
+      sha256: data.metadata?.sha256 || "",
+      contentType: data.contentType || "application/pdf",
+      created: data.timeCreated || "",
+      etag: data.etag,
+      generation: data.generation,
+      customMetadata
     };
   }
 
@@ -1359,6 +1489,96 @@ export class FirestoreRestDocumentSegmentationRepository implements DocumentSegm
 // Milestone 3E: Validated Lottery Entity Repositories
 // ============================================================================
 
+export function verifyExistingPrizeTierMatches(
+  existing: PrizeTier,
+  expected: PrizeTier
+): void {
+  const mismatches: string[] = [];
+  if (existing.id !== expected.id) {
+    mismatches.push(`id ('${existing.id}' !== '${expected.id}')`);
+  }
+  if (existing.documentSha256 !== expected.documentSha256) {
+    mismatches.push(`documentSha256 ('${existing.documentSha256}' !== '${expected.documentSha256}')`);
+  }
+  if (existing.rank !== expected.rank) {
+    mismatches.push(`rank (${existing.rank} !== ${expected.rank})`);
+  }
+  if (existing.name !== expected.name) {
+    mismatches.push(`name ('${existing.name}' !== '${expected.name}')`);
+  }
+  if (existing.tierType !== expected.tierType) {
+    mismatches.push(`tierType ('${existing.tierType}' !== '${expected.tierType}')`);
+  }
+  if (existing.amount !== expected.amount) {
+    mismatches.push(`amount (${String(existing.amount)} !== ${String(expected.amount)})`);
+  }
+  if (existing.isSuffix !== expected.isSuffix) {
+    mismatches.push(`isSuffix (${existing.isSuffix} !== ${expected.isSuffix})`);
+  }
+  if (existing.expectedLength !== expected.expectedLength) {
+    mismatches.push(`expectedLength (${existing.expectedLength} !== ${expected.expectedLength})`);
+  }
+
+  if (mismatches.length > 0) {
+    throw new DocumentIntegrityError(
+      `Existing PrizeTier '${existing.id}' fails integrity verification (${mismatches.join(", ")}); refusing to accept or overwrite corrupted record.`,
+      existing.id,
+      "PRIZE_TIER_CONTENT_MISMATCH"
+    );
+  }
+}
+
+export function verifyExistingWinningResultMatches(
+  existing: WinningResult,
+  expected: WinningResult
+): void {
+  const mismatches: string[] = [];
+  if (existing.id !== expected.id) {
+    mismatches.push(`id ('${existing.id}' !== '${expected.id}')`);
+  }
+  if (existing.documentSha256 !== expected.documentSha256) {
+    mismatches.push(`documentSha256 ('${existing.documentSha256}' !== '${expected.documentSha256}')`);
+  }
+  if ((existing.drawId ?? undefined) !== (expected.drawId ?? undefined)) {
+    mismatches.push(`drawId ('${String(existing.drawId)}' !== '${String(expected.drawId)}')`);
+  }
+  if (existing.prizeTierId !== expected.prizeTierId) {
+    mismatches.push(`prizeTierId ('${existing.prizeTierId}' !== '${expected.prizeTierId}')`);
+  }
+  if (existing.prizeTierName !== expected.prizeTierName) {
+    mismatches.push(`prizeTierName ('${existing.prizeTierName}' !== '${expected.prizeTierName}')`);
+  }
+  if (existing.rank !== expected.rank) {
+    mismatches.push(`rank (${existing.rank} !== ${expected.rank})`);
+  }
+  if ((existing.amount ?? undefined) !== (expected.amount ?? undefined)) {
+    mismatches.push(`amount (${String(existing.amount)} !== ${String(expected.amount)})`);
+  }
+  if ((existing.series ?? undefined) !== (expected.series ?? undefined)) {
+    mismatches.push(`series ('${String(existing.series)}' !== '${String(expected.series)}')`);
+  }
+  if (existing.canonicalNumber !== expected.canonicalNumber) {
+    mismatches.push(`canonicalNumber ('${existing.canonicalNumber}' !== '${expected.canonicalNumber}')`);
+  }
+  if (existing.numberLength !== expected.numberLength) {
+    mismatches.push(`numberLength (${existing.numberLength} !== ${expected.numberLength})`);
+  }
+  if (existing.isSuffix !== expected.isSuffix) {
+    mismatches.push(`isSuffix (${existing.isSuffix} !== ${expected.isSuffix})`);
+  }
+  if ((existing.location ?? undefined) !== (expected.location ?? undefined)) {
+    mismatches.push(`location ('${String(existing.location)}' !== '${String(expected.location)}')`);
+  }
+
+  if (mismatches.length > 0) {
+    throw new DocumentIntegrityError(
+      `Existing WinningResult '${existing.id}' fails integrity verification (${mismatches.join(", ")}); refusing to accept or overwrite corrupted record.`,
+      existing.id,
+      "WINNING_RESULT_CONTENT_MISMATCH"
+    );
+  }
+}
+
 export class InMemoryPrizeTierRepository implements PrizeTierRepository {
   private readonly storage = new Map<string, PrizeTier>();
 
@@ -1380,6 +1600,11 @@ export class InMemoryPrizeTierRepository implements PrizeTierRepository {
 
   async save(tier: PrizeTier): Promise<void> {
     validatePrizeTier(tier);
+    const existing = this.storage.get(tier.id);
+    if (existing) {
+      verifyExistingPrizeTierMatches(existing, tier);
+      return;
+    }
     this.storage.set(tier.id, { ...tier });
   }
 
@@ -1425,6 +1650,11 @@ export class InMemoryWinningResultRepository implements WinningResultRepository 
 
   async save(result: WinningResult): Promise<void> {
     validateWinningResult(result);
+    const existing = this.storage.get(result.id);
+    if (existing) {
+      verifyExistingWinningResultMatches(existing, result);
+      return;
+    }
     this.storage.set(result.id, { ...result });
   }
 
@@ -1520,19 +1750,33 @@ export class FirestoreRestPrizeTierRepository implements PrizeTierRepository {
 
   async save(tier: PrizeTier): Promise<void> {
     validatePrizeTier(tier);
-    const url = `${this.baseUrl}/${this.collectionName}/${encodeURIComponent(tier.id)}`;
+    const existing = await this.getById(tier.id);
+    if (existing) {
+      verifyExistingPrizeTierMatches(existing, tier);
+      return;
+    }
+
+    const url = `${this.baseUrl}/${this.collectionName}?documentId=${encodeURIComponent(tier.id)}`;
     const headers = await this.getHeaders();
     const body = JSON.stringify({ fields: this.toFirestoreFields(tier) });
 
     const res = await fetch(url, {
-      method: "PATCH",
+      method: "POST",
       headers,
       body
     });
 
+    if (res.status === 409) {
+      const concurrentExisting = await this.getById(tier.id);
+      if (concurrentExisting) {
+        verifyExistingPrizeTierMatches(concurrentExisting, tier);
+        return;
+      }
+    }
+
     if (!res.ok) {
       const errText = await res.text();
-      throw new Error(`Firestore REST PATCH failed (${res.status}): ${errText}`);
+      throw new Error(`Firestore REST POST failed (${res.status}): ${errText}`);
     }
   }
 
@@ -1737,19 +1981,33 @@ export class FirestoreRestWinningResultRepository implements WinningResultReposi
 
   async save(result: WinningResult): Promise<void> {
     validateWinningResult(result);
-    const url = `${this.baseUrl}/${this.collectionName}/${encodeURIComponent(result.id)}`;
+    const existing = await this.getById(result.id);
+    if (existing) {
+      verifyExistingWinningResultMatches(existing, result);
+      return;
+    }
+
+    const url = `${this.baseUrl}/${this.collectionName}?documentId=${encodeURIComponent(result.id)}`;
     const headers = await this.getHeaders();
     const body = JSON.stringify({ fields: this.toFirestoreFields(result) });
 
     const res = await fetch(url, {
-      method: "PATCH",
+      method: "POST",
       headers,
       body
     });
 
+    if (res.status === 409) {
+      const concurrentExisting = await this.getById(result.id);
+      if (concurrentExisting) {
+        verifyExistingWinningResultMatches(concurrentExisting, result);
+        return;
+      }
+    }
+
     if (!res.ok) {
       const errText = await res.text();
-      throw new Error(`Firestore REST PATCH failed (${res.status}): ${errText}`);
+      throw new Error(`Firestore REST POST failed (${res.status}): ${errText}`);
     }
   }
 

@@ -11,3 +11,4 @@ export * from "./run-repository";
 export * from "./health";
 export * from "./scheduled-ingestion-orchestrator";
 export * from "./prod-bootstrap";
+export * from "./reconciliation-verifier";

@@ -30,8 +30,8 @@ interface StorageIntegrityData {
     localDocumentCount: number;
     localGraphCount: number;
     localManifestCount: number;
-    cloudStorageDocumentCount: number;
-    firestoreDocumentCount: number;
+    cloudStorageDocumentCount: number | null;
+    firestoreDocumentCount: number | null;
     researchDrawCount: number;
     prodDrawCount: number;
   };
@@ -40,12 +40,14 @@ interface StorageIntegrityData {
     mutationState: string;
     singleFlightLock: { status: string; owner?: string };
     cloudConnectionStatus: string;
+    verificationError?: string;
   };
   verification?: {
     verifiedAt: string;
     totalAudited: number;
     matchedCount: number;
     mismatchCount: number;
+    unverifiedCount?: number;
     integrityStatus: string;
     reconciliationBasis: string;
     items: Array<{
@@ -540,8 +542,12 @@ export default function IngestionConsolePage() {
 
           <div style={{ background: "rgba(30, 41, 59, 0.5)", padding: "1rem", borderRadius: "0.5rem", border: "1px solid var(--border-subtle)" }}>
             <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase" }}>Authoritative Cloud</div>
-            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--accent-emerald)", margin: "0.25rem 0" }}>
-              {integrityData ? `${integrityData.counts.cloudStorageDocumentCount} Artifacts` : "..."}
+            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: integrityData && integrityData.counts.cloudStorageDocumentCount !== null ? "var(--accent-emerald)" : "var(--accent-amber)", margin: "0.25rem 0" }}>
+              {integrityData
+                ? integrityData.counts.cloudStorageDocumentCount !== null
+                  ? `${integrityData.counts.cloudStorageDocumentCount} Artifacts`
+                  : "UNVERIFIED"
+                : "..."}
             </div>
             <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>
               Firebase Storage: source-documents/{`{sha256}`}.pdf
@@ -550,8 +556,12 @@ export default function IngestionConsolePage() {
 
           <div style={{ background: "rgba(30, 41, 59, 0.5)", padding: "1rem", borderRadius: "0.5rem", border: "1px solid var(--border-subtle)" }}>
             <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase" }}>Firestore Metadata</div>
-            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--accent-blue)", margin: "0.25rem 0" }}>
-              {integrityData ? `${integrityData.counts.firestoreDocumentCount} Docs` : "..."}
+            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: integrityData && integrityData.counts.firestoreDocumentCount !== null ? "var(--accent-blue)" : "var(--accent-amber)", margin: "0.25rem 0" }}>
+              {integrityData
+                ? integrityData.counts.firestoreDocumentCount !== null
+                  ? `${integrityData.counts.firestoreDocumentCount} Docs`
+                  : "UNVERIFIED"
+                : "..."}
             </div>
             <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>
               Firestore: documents/{`{sha256}`}
@@ -574,9 +584,11 @@ export default function IngestionConsolePage() {
           <div style={{ marginTop: "1rem", padding: "1rem", background: "rgba(15, 23, 42, 0.9)", border: "1px solid var(--border-medium)", borderRadius: "0.5rem" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <span className="badge badge-emerald">VERIFICATION COMPLETE</span>
+                <span className={`badge ${integrityData.verification.integrityStatus === "VERIFIED" ? "badge-emerald" : "badge-amber"}`}>
+                  {integrityData.verification.integrityStatus}
+                </span>
                 <span style={{ fontSize: "0.85rem", fontWeight: 600 }}>
-                  {integrityData.verification.matchedCount} of {integrityData.verification.totalAudited} Draws Reconciled 100%
+                  {integrityData.verification.matchedCount} of {integrityData.verification.totalAudited} Draws Reconciled
                 </span>
               </div>
               <button
@@ -611,8 +623,8 @@ export default function IngestionConsolePage() {
                         {item.sha256.substring(0, 16)}...
                       </td>
                       <td>
-                        <span className="badge badge-emerald" style={{ fontSize: "0.65rem" }}>
-                          VERIFIED RECONCILED
+                        <span className={`badge ${item.identityVerified ? "badge-emerald" : "badge-amber"}`} style={{ fontSize: "0.65rem" }}>
+                          {item.identityVerified ? "VERIFIED RECONCILED" : integrityData.verification?.integrityStatus || "UNVERIFIED"}
                         </span>
                       </td>
                     </tr>

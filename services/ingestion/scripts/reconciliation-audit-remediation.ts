@@ -14,8 +14,8 @@
  * 6. Coverage strictly capped at 13 October 2026 (114 draws).
  */
 
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
-import { join } from "node:path";
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
+import { join, dirname } from "node:path";
 import * as https from "node:https";
 import * as tls from "node:tls";
 import * as crypto from "node:crypto";
@@ -26,6 +26,14 @@ import {
   LotteryEntityExtractorService,
   computeSha256
 } from "@kerala-lottery/documents";
+import {
+  verifyDrawArtifactReconciliation,
+  compareProdInventories,
+  acquireGoogleCloudAccessToken,
+  sanitizeAuthError,
+  type AcquireAdcTokenOptions
+} from "../src/operations/reconciliation-verifier";
+
 
 // Target draws from SM-75 through SS-541
 interface TargetDrawSpec {
@@ -50,10 +58,17 @@ const TARGET_DRAWS: TargetDrawSpec[] = [
 ];
 
 // Documented GoogleAuth ADC Client Factory
-function createGoogleAuth() {
+export function createGoogleAuth() {
   return new GoogleAuth({
     scopes: ["https://www.googleapis.com/auth/cloud-platform"],
     projectId: "kerala-lottery-intel-dev"
+  });
+}
+
+export async function getAuditAccessToken(options?: AcquireAdcTokenOptions): Promise<string> {
+  return acquireGoogleCloudAccessToken({
+    projectId: "kerala-lottery-intel-dev",
+    ...options
   });
 }
 
@@ -241,19 +256,15 @@ async function main() {
     const localParsedDate = localEntities.drawMetadata?.drawDate?.value;
     const localResultsCount = localEntities.winningResults.length;
 
-    const byteShaPass = localSha === remote.sha256;
-    const byteLengthPass = localByteLength === remote.bytes.length;
-    const pdfParsePass = remoteParsedDrawNum === spec.drawId &&
-      remoteParsedDate === spec.expectedDate &&
-      remoteParsedLottery === spec.expectedLottery &&
-      localParsedLottery === remoteParsedLottery &&
-      localParsedDrawNum === remoteParsedDrawNum &&
-      localParsedDate === remoteParsedDate &&
-      localResultsCount === remoteResultsCount &&
-      remoteResultsCount > 0;
-
-    if (!byteShaPass || !byteLengthPass || !pdfParsePass) {
-      throw new Error(`Local vs Remote validation failed for ${spec.drawId}: shaMatch=${byteShaPass}, lenMatch=${byteLengthPass}, parseMatch=${pdfParsePass}`);
+    if (
+      remoteParsedDrawNum !== localParsedDrawNum ||
+      remoteParsedDate !== localParsedDate ||
+      remoteParsedLottery !== localParsedLottery ||
+      remoteResultsCount !== localResultsCount
+    ) {
+      throw new Error(
+        `Remote vs Local parsed entity mismatch for ${spec.drawId}: remote=${remoteParsedDrawNum}/${remoteParsedDate}/${remoteResultsCount}, local=${localParsedDrawNum}/${localParsedDate}/${localResultsCount}`
+      );
     }
 
     // Layer 4: Cloud Storage byte download and hash verification via GoogleAuth
@@ -274,7 +285,6 @@ async function main() {
     });
     const gcsBytes = Buffer.concat(gcsChunks);
     const gcsSha = crypto.createHash("sha256").update(gcsBytes).digest("hex");
-    const gcsByteLength = gcsBytes.length;
 
     // Fetch GCS object metadata for generation
     const gcsMetaRes = await auth.request<{ generation?: string }>({
@@ -283,11 +293,6 @@ async function main() {
       validateStatus: () => true
     });
     const gcsGeneration = String(gcsMetaRes.data?.generation || "");
-    const gcsByteShaPass = gcsSha === localSha && gcsByteLength === localByteLength && Boolean(gcsGeneration);
-
-    if (!gcsByteShaPass) {
-      throw new Error(`DEV Storage byte validation failed for ${spec.drawId}: gcsSha=${gcsSha}, localSha=${localSha}`);
-    }
 
     // Layer 5: Firestore document metadata verification
     const fsDocRes = await auth.request<{ fields?: Record<string, any> }>({
@@ -305,17 +310,6 @@ async function main() {
     const fsSourceUrl = fsFields.sourceUrl?.stringValue || "";
     const fsStatus = fsFields.status?.stringValue || "";
 
-    const simpleId = spec.localFilename.replace(".pdf", "");
-    const firestoreMetadataPass = fsSha === localSha &&
-      fsByteCount === localByteLength &&
-      fsTitle.includes(simpleId) &&
-      fsSourceUrl.includes(String(spec.serial)) &&
-      fsStatus === "UPLOADED";
-
-    if (!firestoreMetadataPass) {
-      throw new Error(`DEV Firestore metadata validation failed for ${spec.drawId}: fsSha=${fsSha}, fsTitle=${fsTitle}, fsBytes=${fsByteCount}`);
-    }
-
     // Layer 6: Knowledge graph & manifest verification
     const simpleDrawId = spec.drawId.replace(/(st|nd|rd|th)$/, "");
     const graphPath1 = join(process.cwd(), "data/processed-cache/graphs", `graph_${simpleDrawId}.json`);
@@ -327,45 +321,70 @@ async function main() {
     const graphData = JSON.parse(readFileSync(graphPath, "utf-8"));
     const graphNodesCount = graphData.nodes?.length || 0;
     const graphEdgesCount = graphData.edges?.length || 0;
-
     const manifestDoc = manifest.documents ? manifest.documents[localSha] : undefined;
-    const graphManifestPass = graphNodesCount > 0 &&
-      graphEdgesCount > 0 &&
-      Boolean(manifestDoc) &&
-      manifestDoc.sha256 === localSha &&
-      manifestDoc.drawDate === spec.expectedDate &&
-      manifestDoc.status === "VALID";
-
-    if (!graphManifestPass) {
-      throw new Error(`Graph/manifest validation failed for ${spec.drawId}: manifestFound=${Boolean(manifestDoc)}`);
+    if (!manifestDoc) {
+      throw new Error(`Manifest record missing for ${spec.drawId} (${localSha})`);
     }
 
+    const fullTicketCount = localEntities.winningResults.filter((r) => !r.isSuffix).length;
+    const suffixCount = localEntities.winningResults.filter((r) => r.isSuffix).length;
+
+    const verified = verifyDrawArtifactReconciliation({
+      expectedDrawId: spec.drawId,
+      expectedDate: spec.expectedDate,
+      expectedLottery: spec.expectedLottery,
+      expectedSerial: spec.serial,
+      localBytes: new Uint8Array(localBytes),
+      remoteBytes: new Uint8Array(remote.bytes),
+      cloudStorageBytes: new Uint8Array(gcsBytes),
+      cloudStorageGeneration: gcsGeneration,
+      parsedDrawId: localParsedDrawNum,
+      parsedDrawDate: localParsedDate,
+      parsedLotteryName: localParsedLottery,
+      parsedTotalResults: localResultsCount,
+      parsedFullTicketCount: fullTicketCount,
+      parsedSuffixCount: suffixCount,
+      manifestRecord: {
+        sha256: String(manifestDoc.sha256 || ""),
+        drawNumber: String(manifestDoc.drawNumber || ""),
+        drawDate: String(manifestDoc.drawDate || ""),
+        lotteryName: String(manifestDoc.lotteryName || ""),
+        status: String(manifestDoc.status || "")
+      },
+      firestoreRecord: {
+        sha256: fsSha,
+        fileSize: fsByteCount,
+        title: fsTitle,
+        sourceUrl: fsSourceUrl,
+        status: fsStatus
+      },
+      graphStats: {
+        nodesCount: graphNodesCount,
+        edgesCount: graphEdgesCount
+      }
+    });
+
     const row = {
-      drawIdentity: spec.drawId,
+      drawIdentity: verified.drawIdentity,
       serial: spec.serial,
-      drawDate: spec.expectedDate,
-      lotteryName: spec.expectedLottery,
+      drawDate: verified.drawDate,
+      lotteryName: verified.lotteryName,
       requestUrl: remote.finalUrl,
       officialResponseFilename: remote.responseFilename,
       canonicalLocalFilename: spec.localFilename,
-      exactBytes: localByteLength,
-      localSha256: localSha,
-      remoteSha256: remote.sha256,
+      exactBytes: verified.exactBytes,
+      localSha256: verified.localSha256,
+      remoteSha256: verified.remoteSha256,
       cloudStorageSha256: gcsSha,
       cloudStorageGeneration: gcsGeneration,
       firestoreDocumentId: `documents/${localSha}`,
       graphIdentity: `${graphNodesCount} nodes, ${graphEdgesCount} edges (${graphPath.split("/").pop()})`,
-      resultCount: localResultsCount,
+      resultCount: verified.resultCount,
       layerResults: {
         networkPass,
-        byteShaPass,
-        byteLengthPass,
-        pdfParsePass,
-        gcsByteShaPass,
-        firestoreMetadataPass,
-        graphManifestPass
+        ...verified.layerResults
       },
-      overallVerdict: "PASS"
+      overallVerdict: verified.overallVerdict
     };
 
     console.log(`✓ Draw ${spec.drawId}: All 7 layers verified PASS (Bytes=${localByteLength}, SHA=${localSha.slice(0, 16)}...)`);
@@ -427,108 +446,19 @@ async function main() {
   const prodStoragePost = await fetchProdStorageInventory(auth);
   const prodFirestorePost = await fetchProdFirestoreInventory(auth);
 
-  // Calculate explicit Storage Diff
-  const storageAdditions = prodStoragePost.filter(post => !prodStoragePre.some(pre => pre.name === post.name));
-  const storageDeletions = prodStoragePre.filter(pre => !prodStoragePost.some(post => post.name === pre.name));
-  const storageGenerationChanges = prodStoragePost.filter(post => {
-    const pre = prodStoragePre.find(p => p.name === post.name);
-    return pre && pre.generation !== post.generation;
-  });
-  const storageSizeChanges = prodStoragePost.filter(post => {
-    const pre = prodStoragePre.find(p => p.name === post.name);
-    return pre && pre.size !== post.size;
-  });
-  const storageTimestampChanges = prodStoragePost.filter(post => {
-    const pre = prodStoragePre.find(p => p.name === post.name);
-    return pre && pre.updated !== post.updated;
-  });
-
-  // Calculate explicit Firestore Diff
-  const firestoreAdditions = prodFirestorePost.filter(post => !prodFirestorePre.some(pre => pre.name === post.name));
-  const firestoreDeletions = prodFirestorePre.filter(pre => !prodFirestorePost.some(post => post.name === pre.name));
-  const firestoreUpdateChanges = prodFirestorePost.filter(post => {
-    const pre = prodFirestorePre.find(p => p.name === post.name);
-    return pre && pre.updateTime !== post.updateTime;
-  });
-
-  // Calculate explicit Scheduler Diff
-  const schedulerStateChanged = prodSchedulerPre.state !== prodSchedulerPost.state;
-  const schedulerTimeChanged = prodSchedulerPre.userUpdateTime !== prodSchedulerPost.userUpdateTime;
-
-  // Explicit fail-closed assertions for each difference category
-  if (storageAdditions.length !== 0) {
-    throw new Error(`FAIL-CLOSED: Storage additions detected: ${JSON.stringify(storageAdditions)}`);
-  }
-  if (storageDeletions.length !== 0) {
-    throw new Error(`FAIL-CLOSED: Storage deletions detected: ${JSON.stringify(storageDeletions)}`);
-  }
-  if (storageGenerationChanges.length !== 0) {
-    throw new Error(`FAIL-CLOSED: Storage generation changes detected: ${JSON.stringify(storageGenerationChanges)}`);
-  }
-  if (storageSizeChanges.length !== 0) {
-    throw new Error(`FAIL-CLOSED: Storage size changes detected: ${JSON.stringify(storageSizeChanges)}`);
-  }
-  if (storageTimestampChanges.length !== 0) {
-    throw new Error(`FAIL-CLOSED: Storage timestamp changes detected: ${JSON.stringify(storageTimestampChanges)}`);
-  }
-  if (firestoreAdditions.length !== 0) {
-    throw new Error(`FAIL-CLOSED: Firestore additions detected: ${JSON.stringify(firestoreAdditions)}`);
-  }
-  if (firestoreDeletions.length !== 0) {
-    throw new Error(`FAIL-CLOSED: Firestore deletions detected: ${JSON.stringify(firestoreDeletions)}`);
-  }
-  if (firestoreUpdateChanges.length !== 0) {
-    throw new Error(`FAIL-CLOSED: Firestore update timestamp changes detected: ${JSON.stringify(firestoreUpdateChanges)}`);
-  }
-  if (schedulerStateChanged) {
-    throw new Error(`FAIL-CLOSED: Scheduler state changed from ${prodSchedulerPre.state} to ${prodSchedulerPost.state}`);
-  }
-  if (schedulerTimeChanged) {
-    throw new Error(`FAIL-CLOSED: Scheduler updateTime changed from ${prodSchedulerPre.userUpdateTime} to ${prodSchedulerPost.userUpdateTime}`);
-  }
-  if (prodSchedulerPost.state !== "PAUSED") {
-    throw new Error(`FAIL-CLOSED: Scheduler is not PAUSED: ${prodSchedulerPost.state}`);
-  }
-
-  const comparisonResult = {
-    verdict: "zero net state changes observed between the captured inventories",
-    storage: {
-      preCount: prodStoragePre.length,
-      postCount: prodStoragePost.length,
-      additionsCount: storageAdditions.length,
-      deletionsCount: storageDeletions.length,
-      changedGenerationsCount: storageGenerationChanges.length,
-      changedSizesCount: storageSizeChanges.length,
-      changedTimestampsCount: storageTimestampChanges.length,
-      additionsList: storageAdditions,
-      deletionsList: storageDeletions,
-      changedGenerationsList: storageGenerationChanges,
-      changedSizesList: storageSizeChanges,
-      changedTimestampsList: storageTimestampChanges,
-      isIdentical: true
+  const comparisonResult = compareProdInventories(
+    {
+      scheduler: prodSchedulerPre,
+      storageObjects: prodStoragePre,
+      firestoreDocuments: prodFirestorePre
     },
-    firestore: {
-      preCount: prodFirestorePre.length,
-      postCount: prodFirestorePost.length,
-      additionsCount: firestoreAdditions.length,
-      deletionsCount: firestoreDeletions.length,
-      changedUpdateTimesCount: firestoreUpdateChanges.length,
-      additionsList: firestoreAdditions,
-      deletionsList: firestoreDeletions,
-      changedUpdateTimesList: firestoreUpdateChanges,
-      isIdentical: true
+    {
+      scheduler: prodSchedulerPost,
+      storageObjects: prodStoragePost,
+      firestoreDocuments: prodFirestorePost
     },
-    scheduler: {
-      preState: prodSchedulerPre.state,
-      postState: prodSchedulerPost.state,
-      preUpdateTime: prodSchedulerPre.userUpdateTime,
-      postUpdateTime: prodSchedulerPost.userUpdateTime,
-      stateChanged: false,
-      updateTimeChanged: false,
-      isIdentical: true
-    },
-    overallProdZeroMutation: true
-  };
+    { expectedBaselineCount: 100 }
+  );
 
   console.log("✓ PROD Post-Audit Comparison: 100/100 Storage objects and 100/100 Firestore documents identical. Zero net state changes observed between the captured inventories. Scheduler unchanged.");
 
@@ -600,18 +530,30 @@ async function main() {
     reconciliationTable: auditRows
   };
 
-  const outputPath1 = join(process.cwd(), "data/processed-cache/reconciliation-audit-raw.json");
-  const outputPath2 = "/home/pi/.gemini/antigravity-ide/brain/86aa6227-4ac1-484e-a826-87384cf373a3/reconciliation-audit-raw.json";
-  writeFileSync(outputPath1, JSON.stringify(fullReport, null, 2));
-  writeFileSync(outputPath2, JSON.stringify(fullReport, null, 2));
+  const durableEvidencePath = join(process.cwd(), "docs/evidence/reconciliation-audit-raw.json");
+  const cacheOutputPath = join(process.cwd(), "data/processed-cache/reconciliation-audit-raw.json");
+  const customOutputPath = process.env.AUDIT_ARTIFACT_OUTPUT_PATH?.trim();
 
-  console.log(`\n✓ Raw machine-readable audit report saved to:\n  - ${outputPath1}\n  - ${outputPath2}`);
+  const outputTargets = [durableEvidencePath, cacheOutputPath];
+  if (customOutputPath) {
+    outputTargets.push(customOutputPath);
+  }
+
+  const serializedReport = JSON.stringify(fullReport, null, 2);
+  for (const target of outputTargets) {
+    mkdirSync(dirname(target), { recursive: true });
+    writeFileSync(target, serializedReport);
+  }
+
+  console.log(`\n✓ Raw machine-readable audit report saved to:\n${outputTargets.map((p) => `  - ${p}`).join("\n")}`);
   console.log("\n================================================================================");
   console.log("FINAL AUDIT REMEDIATION: ALL 10 DRAWS AND GUARDS VERIFIED PASS (FAIL-CLOSED)");
   console.log("================================================================================");
 }
 
-main().catch((err) => {
-  console.error("\n❌ AUDIT REMEDIATION FAILED:", err);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((err: unknown) => {
+    console.error("\n❌ AUDIT REMEDIATION FAILED:", sanitizeAuthError(err).message);
+    process.exit(1);
+  });
+}

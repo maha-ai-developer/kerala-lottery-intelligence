@@ -10,68 +10,22 @@
  *   npx tsx services/ingestion/scripts/prod-bootstrap.ts [--dry-run] [--verbose]
  */
 
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 import { executeProdBootstrap } from "../src/operations/prod-bootstrap";
 import { PROD_PROJECT_ID, PROD_STORAGE_BUCKET } from "../src/operations/environment-guard";
+import {
+  acquireGoogleCloudAccessToken,
+  sanitizeAuthError,
+  type AcquireAdcTokenOptions
+} from "../src/operations/reconciliation-verifier";
 
 const SCIENTIFIC_BENCHMARKING_NOTICE =
   "SCIENTIFIC BENCHMARKING NOTICE: This daily lottery ingestion framework discovers, acquires, ingests, and promotes historical Kerala lottery records for descriptive research only. It contains NO winning-number predictions, betting advice, gambling strategy, or future probability claims. Historical model evaluation measures observed patterns in historical data only.";
 
-async function getGcpAccessToken(): Promise<string> {
-  if (process.env.GOOGLE_OAUTH_ACCESS_TOKEN) {
-    return process.env.GOOGLE_OAUTH_ACCESS_TOKEN;
-  }
-  try {
-    const configPath = join(process.env.HOME || "", ".config/configstore/firebase-tools.json");
-    if (existsSync(configPath)) {
-      const config = JSON.parse(readFileSync(configPath, "utf8"));
-      if (config.tokens?.expires_at && config.tokens.expires_at > Date.now() + 60000 && config.tokens.access_token) {
-        return config.tokens.access_token;
-      }
-      if (config.tokens?.refresh_token) {
-        const postData = new URLSearchParams({
-          client_id: "563584335869-fgrhgmd47bqnekij5i8b5pr03ho85qd6.apps.googleusercontent.com",
-          grant_type: "refresh_token",
-          refresh_token: config.tokens.refresh_token
-        }).toString();
-        const https = await import("node:https");
-        const refreshed = await new Promise<string | undefined>((resolve) => {
-          const req = https.request(
-            "https://oauth2.googleapis.com/token",
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/x-www-form-urlencoded" }
-            },
-            (res) => {
-              let data = "";
-              res.on("data", (chunk) => (data += chunk));
-              res.on("end", () => {
-                try {
-                  const json = JSON.parse(data);
-                  if (json.access_token) {
-                    resolve(json.access_token);
-                  } else {
-                    resolve(config.tokens?.access_token);
-                  }
-                } catch {
-                  resolve(config.tokens?.access_token);
-                }
-              });
-            }
-          );
-          req.on("error", () => resolve(config.tokens?.access_token));
-          req.write(postData);
-          req.end();
-        });
-        if (refreshed) return refreshed;
-      }
-      if (config.tokens?.access_token) return config.tokens.access_token;
-    }
-  } catch {
-    // Ignore
-  }
-  throw new Error("Unable to obtain Google Cloud OAuth access token for PROD bootstrap.");
+export async function getGcpAccessToken(options?: AcquireAdcTokenOptions): Promise<string> {
+  return acquireGoogleCloudAccessToken({
+    projectId: PROD_PROJECT_ID,
+    ...options
+  });
 }
 
 async function main() {
@@ -95,7 +49,7 @@ async function main() {
       environment: "PROD",
       dryRun,
       verbose,
-      getAccessToken: getGcpAccessToken
+      getAccessToken: () => getGcpAccessToken()
     });
 
     console.log("============================================================");
@@ -116,14 +70,14 @@ async function main() {
     console.log(`Target BT-73 SHA:      ${result.targetDrawVerified.sha256}`);
     console.log("============================================================\n");
   } catch (err: unknown) {
-    console.error("FATAL ERROR in PROD Bootstrap:", err instanceof Error ? err.message : String(err));
+    console.error("FATAL ERROR in PROD Bootstrap:", sanitizeAuthError(err).message);
     process.exit(1);
   }
 }
 
 if (require.main === module) {
   main().catch((err) => {
-    console.error(err);
+    console.error(sanitizeAuthError(err).message);
     process.exit(1);
   });
 }

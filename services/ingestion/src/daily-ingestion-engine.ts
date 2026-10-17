@@ -677,6 +677,47 @@ export class DailyIngestionEngine {
               errorDetails: record.quarantineReason || "Previously quarantined"
             });
           } else {
+            // Verify existing cached record and graph integrity before accepting as ALREADY_KNOWN
+            const cachedGraph = this.cacheManager.getGraph(sha256);
+            const graphCounts = cachedGraph ? DocumentCacheManager.deriveCountsFromGraph(cachedGraph) : null;
+            let existingIntegrityViolation: string | undefined;
+
+            if (!record) {
+              existingIntegrityViolation = `Existing cache record for SHA '${sha256}' is missing from manifest`;
+            } else if (record.sha256 !== sha256) {
+              existingIntegrityViolation = `Existing manifest record SHA '${record.sha256}' does not match expected '${sha256}'`;
+            } else if (record.fileSize !== uint8.byteLength) {
+              existingIntegrityViolation = `Existing manifest fileSize (${record.fileSize}) does not match PDF byteLength (${uint8.byteLength}) for SHA '${sha256}'`;
+            } else if (!cachedGraph) {
+              existingIntegrityViolation = `Existing cached graph for SHA '${sha256}' could not be loaded or is corrupted`;
+            } else if (cachedGraph.documentSha256 !== sha256) {
+              existingIntegrityViolation = `Existing cached graph documentSha256 '${cachedGraph.documentSha256}' does not match expected '${sha256}'`;
+            } else if (
+              graphCounts &&
+              (graphCounts.totalResults !== record.totalResults ||
+                graphCounts.fullTicketCount !== record.fullTicketCount ||
+                graphCounts.suffixCount !== record.suffixCount)
+            ) {
+              existingIntegrityViolation = `Existing cached graph result counts (${graphCounts.totalResults} total = ${graphCounts.fullTicketCount} full + ${graphCounts.suffixCount} suffix) do not match manifest counts (${record.totalResults} total = ${record.fullTicketCount} full + ${record.suffixCount} suffix) for SHA '${sha256}'`;
+            }
+
+            if (existingIntegrityViolation) {
+              conflictsCount++;
+              auditRecords.push({
+                sourceUrl: candidate.sourceUrl || record?.sourceUrl,
+                fileName: candidate.fileName,
+                sha256,
+                lottery: record?.lotteryName,
+                drawNumber: record?.drawNumber,
+                drawDate: record?.drawDate,
+                resultCount: record?.totalResults,
+                validationStatus: "CONFLICT",
+                actionTaken: "CONFLICT",
+                conflictDetails: existingIntegrityViolation
+              });
+              continue;
+            }
+
             alreadyIngested++;
             // Check metadata consistency if candidate provides explicit draw details
             let metadataWarning: string | undefined;
@@ -908,10 +949,34 @@ export class DailyIngestionEngine {
                 fileBuffer: uint8,
                 fileName: effectiveFileName,
                 sourceUrl: candidate.sourceUrl,
-                title: candidate.title
+                title: candidate.title,
+                expectedDrawId: drawNumber,
+                expectedResults: extraction.winningResults
               });
             } catch (ingErr: unknown) {
-              // If already exists in 3A storage, continue safely
+              if (
+                ingErr instanceof Error &&
+                (ingErr.name === "StorageIntegrityError" || ingErr.name === "DocumentIntegrityError")
+              ) {
+                conflictsCount++;
+                auditRecords.push({
+                  sourceUrl: candidate.sourceUrl,
+                  canonicalFilename,
+                  sourceResponseFilename,
+                  fileName: candidate.fileName,
+                  sha256,
+                  lottery: lotteryName,
+                  drawNumber,
+                  drawDate,
+                  schemeId: schemeRes.schemeVersion.id,
+                  schemeAuthorityLevel: schemeRes.authorityLevel,
+                  resultCount: totalResults,
+                  validationStatus: "CONFLICT",
+                  actionTaken: "CONFLICT",
+                  conflictDetails: ingErr.message
+                });
+                continue;
+              }
             }
           }
 

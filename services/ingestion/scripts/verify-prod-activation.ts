@@ -33,50 +33,20 @@ import {
   ScheduledIngestionOrchestrator,
   InMemoryIngestionLockManager,
   InMemoryIngestionRunRepository,
-  sanitizeOperationalRecord
+  sanitizeOperationalRecord,
+  acquireGoogleCloudAccessToken,
+  sanitizeAuthError,
+  type AcquireAdcTokenOptions
 } from "../src/operations/index";
 import { TARGET_BT73_SHA } from "../src/operations/prod-bootstrap";
 
-async function getAccessToken(): Promise<string> {
-  const configPath = join(process.env.HOME || "", ".config/configstore/firebase-tools.json");
-  if (!existsSync(configPath)) {
-    throw new Error("Missing firebase-tools.json configuration");
-  }
-  const conf = JSON.parse(readFileSync(configPath, "utf-8"));
-  if (conf.tokens?.expires_at > Date.now() + 60000 && conf.tokens?.access_token) {
-    return conf.tokens.access_token;
-  }
-  const postData = new URLSearchParams({
-    client_id: "563584335869-fgrhgmd47bqnekij5i8b5pr03ho85qd6.apps.googleusercontent.com",
-    grant_type: "refresh_token",
-    refresh_token: conf.tokens.refresh_token
-  }).toString();
-  return new Promise((resolve, reject) => {
-    const req = https.request(
-      "https://oauth2.googleapis.com/token",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" }
-      },
-      (res) => {
-        let data = "";
-        res.on("data", (chunk) => (data += chunk));
-        res.on("end", () => {
-          try {
-            const json = JSON.parse(data);
-            if (json.access_token) resolve(json.access_token);
-            else reject(new Error(data));
-          } catch (e) {
-            reject(e);
-          }
-        });
-      }
-    );
-    req.on("error", reject);
-    req.write(postData);
-    req.end();
+export async function getAccessToken(options?: AcquireAdcTokenOptions): Promise<string> {
+  return acquireGoogleCloudAccessToken({
+    projectId: PROD_PROJECT_ID,
+    ...options
   });
 }
+
 
 function httpsGet(url: string, token: string): Promise<{ status: number; data: any }> {
   return new Promise((resolve, reject) => {
@@ -380,7 +350,7 @@ async function runActivationVerification() {
 
   const createAuditRes = await httpsPost(auditDocUrl, token, { fields: firestoreFields });
   if (createAuditRes.status !== 200) {
-    throw new Error(`Failed to create Firestore audit record in live PROD: HTTP ${createAuditRes.status} ${JSON.stringify(createAuditRes.data)}`);
+    throw new Error(`Failed to create Firestore audit record in live PROD: HTTP ${createAuditRes.status}`);
   }
 
   // Read back audit record from live PROD Firestore
@@ -444,7 +414,9 @@ async function runActivationVerification() {
   console.log("============================================================\n");
 }
 
-runActivationVerification().catch((err) => {
-  console.error("\n❌ ACTIVATION VERIFICATION FAILED:", err);
-  process.exit(1);
-});
+if (require.main === module) {
+  runActivationVerification().catch((err) => {
+    console.error("\n❌ ACTIVATION VERIFICATION FAILED:", sanitizeAuthError(err).message);
+    process.exit(1);
+  });
+}
