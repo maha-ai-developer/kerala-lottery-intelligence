@@ -355,6 +355,16 @@ export interface DailyIngestionResult {
   };
 }
 
+export interface GraphCacheHydrationResult {
+  success: boolean;
+  expectedValidDocuments: number;
+  alreadyCachedCount: number;
+  hydratedCount: number;
+  verifiedGraphCount: number;
+  totalWinningResults: number;
+  durationMs: number;
+}
+
 // ============================================================================
 // 2. Daily Ingestion Engine Implementation
 // ============================================================================
@@ -390,6 +400,196 @@ export class DailyIngestionEngine {
     this.sourceIngestionService = options?.sourceIngestionService;
     this.enableRemoteDiscovery = options?.enableRemoteDiscovery ?? false;
     this.injectedCandidates = options?.injectedCandidates;
+  }
+
+  /**
+   * Deterministic offline cache hydration: rebuilds any missing local knowledge graph JSON
+   * files in `data/processed-cache/graphs/*.json` directly from the tracked source PDFs in
+   * `this.sourceDir` and the tracked `manifest.json` using the canonical extraction,
+   * prize-scheme validation, and knowledge-graph construction pipeline.
+   *
+   * Does NOT mutate `manifest.json` or any tracked file, and fails fast with a clear
+   * diagnostic if required inputs or hydrated graphs are missing or invalid.
+   */
+  public async hydrateGraphCache(options?: { force?: boolean }): Promise<GraphCacheHydrationResult> {
+    const startMs = Date.now();
+
+    if (!existsSync(this.sourceDir)) {
+      throw new Error(
+        `Graph cache hydration failed: required source PDF directory does not exist at '${this.sourceDir}'.`
+      );
+    }
+
+    const manifest = this.cacheManager.getManifest();
+    const validRecords = Object.values(manifest.documents)
+      .filter((d) => d.status === "VALID")
+      .sort((a, b) => a.sha256.localeCompare(b.sha256));
+
+    if (validRecords.length === 0) {
+      throw new Error(
+        `Graph cache hydration failed: manifest.json contains 0 VALID document records (expected tracked corpus manifest).`
+      );
+    }
+
+    const initialVerify = this.cacheManager.verifyHydratedGraphs();
+    if (!options?.force && initialVerify.valid) {
+      const validGraphs = this.cacheManager.getAllValidGraphs();
+      const batchReport = CrossDocumentValidator.validateBatch(validGraphs);
+      if (!batchReport.isValid) {
+        throw new Error(
+          `Graph cache hydration failed cross-document validation: ${batchReport.errors.map((e) => e.message).join("; ")}`
+        );
+      }
+      return {
+        success: true,
+        expectedValidDocuments: validRecords.length,
+        alreadyCachedCount: initialVerify.verifiedCount,
+        hydratedCount: 0,
+        verifiedGraphCount: initialVerify.verifiedCount,
+        totalWinningResults: batchReport.totalWinningResults,
+        durationMs: Date.now() - startMs
+      };
+    }
+
+    const needsHydrationSet = new Set<string>([
+      ...initialVerify.missingShas,
+      ...initialVerify.corruptedShas,
+      ...initialVerify.countMismatchShas
+    ]);
+
+    const extractor = new PdfPageExtractorService();
+    const segService = new DocumentSemanticSegmentationService();
+    const entityService = new LotteryEntityExtractorService();
+    const schemeRegistry = createAuthoritativePrizeSchemeRegistry();
+
+    let shaToPathFallback: Map<string, string> | undefined;
+    const resolvePdfPath = (record: (typeof validRecords)[number]): string => {
+      const candidates = [record.canonicalFilename, record.fileName].filter(
+        (name): name is string => Boolean(name)
+      );
+      for (const name of candidates) {
+        const candidatePath = join(this.sourceDir, name);
+        if (existsSync(candidatePath)) {
+          return candidatePath;
+        }
+      }
+
+      if (!shaToPathFallback) {
+        shaToPathFallback = new Map<string, string>();
+        for (const scanned of this.scanSourceDirectory()) {
+          shaToPathFallback.set(scanned.sha256, scanned.fullPath);
+        }
+      }
+
+      const bySha = shaToPathFallback.get(record.sha256);
+      if (bySha && existsSync(bySha)) {
+        return bySha;
+      }
+
+      throw new Error(
+        `Graph cache hydration failed: required source PDF '${record.canonicalFilename || record.fileName}' ` +
+          `(SHA-256: ${record.sha256}, draw: ${record.drawNumber}) is missing from '${this.sourceDir}'.`
+      );
+    };
+
+    let hydratedCount = 0;
+    let alreadyCachedCount = 0;
+
+    for (const record of validRecords) {
+      if (!options?.force && !needsHydrationSet.has(record.sha256)) {
+        alreadyCachedCount++;
+        continue;
+      }
+
+      const pdfPath = resolvePdfPath(record);
+      const uint8 = new Uint8Array(readFileSync(pdfPath));
+
+      if (uint8.byteLength !== record.fileSize) {
+        throw new Error(
+          `Graph cache hydration failed for '${record.fileName}' (${record.drawNumber}): ` +
+            `PDF byte length (${uint8.byteLength}) does not match manifest fileSize (${record.fileSize}).`
+        );
+      }
+
+      const actualSha = computeSha256(uint8);
+      if (actualSha !== record.sha256) {
+        throw new Error(
+          `Graph cache hydration failed for '${record.fileName}' (${record.drawNumber}): ` +
+            `computed SHA-256 '${actualSha}' does not match manifest SHA-256 '${record.sha256}'.`
+        );
+      }
+
+      validatePdfBuffer(uint8);
+      const extRes = await extractor.extractPages(uint8, record.sha256);
+      const seg = segService.segmentDocument(extRes.pages);
+      const extraction = entityService.extract(seg, extRes.pages);
+
+      if (extraction.winningResults.length === 0) {
+        throw new Error(
+          `Graph cache hydration failed for '${record.fileName}' (${record.drawNumber}): 0 winning results extracted.`
+        );
+      }
+
+      const lotteryName = extraction.drawMetadata?.lotteryName?.value || record.lotteryName;
+      const drawNumber = extraction.drawMetadata?.drawNumber?.value || record.drawNumber;
+      const drawDate = extraction.drawMetadata?.drawDate?.value || record.drawDate;
+
+      const schemeRes = schemeRegistry.resolveSchemeForDraw({ lotteryName, drawDate });
+      if (schemeRes.status !== "SCHEME_RESOLVED" || !schemeRes.schemeVersion) {
+        throw new Error(
+          `Graph cache hydration failed prize scheme resolution for '${record.fileName}' (${drawNumber}): ${schemeRes.resolutionEvidence}`
+        );
+      }
+
+      const schemeVal = validateDrawAgainstPrizeScheme(
+        {
+          id: drawNumber,
+          lotteryName,
+          drawDate,
+          prizeTiers: extraction.prizeTiers,
+          winningResults: extraction.winningResults
+        },
+        schemeRes.schemeVersion
+      );
+
+      if (!schemeVal.isValid) {
+        throw new Error(
+          `Graph cache hydration failed prize scheme validation for '${record.fileName}' (${drawNumber}): ${schemeVal.discrepancies.join("; ")}`
+        );
+      }
+
+      const graph = buildLotteryKnowledgeGraph(extraction, seg);
+      validateLotteryKnowledgeGraph(graph);
+      this.cacheManager.writeHydratedGraph(graph);
+      hydratedCount++;
+    }
+
+    const finalVerify = this.cacheManager.verifyHydratedGraphs();
+    if (!finalVerify.valid) {
+      throw new Error(
+        `Graph cache hydration verification failed: expected ${finalVerify.expectedCount} valid graphs, ` +
+          `verified ${finalVerify.verifiedCount} (missing: ${finalVerify.missingShas.length}, ` +
+          `corrupted: ${finalVerify.corruptedShas.length}, countMismatch: ${finalVerify.countMismatchShas.length}).`
+      );
+    }
+
+    const allValidGraphs = this.cacheManager.getAllValidGraphs();
+    const batchReport = CrossDocumentValidator.validateBatch(allValidGraphs);
+    if (!batchReport.isValid) {
+      throw new Error(
+        `Graph cache hydration failed cross-document validation: ${batchReport.errors.map((e) => e.message).join("; ")}`
+      );
+    }
+
+    return {
+      success: true,
+      expectedValidDocuments: validRecords.length,
+      alreadyCachedCount,
+      hydratedCount,
+      verifiedGraphCount: finalVerify.verifiedCount,
+      totalWinningResults: batchReport.totalWinningResults,
+      durationMs: Date.now() - startMs
+    };
   }
 
   /**

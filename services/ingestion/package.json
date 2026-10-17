@@ -13,6 +13,7 @@
     "@kerala-lottery/statistics": "*"
   },
   "scripts": {
+    "cache:hydrate": "npx tsx scripts/daily-ingestion.ts --hydrate-cache",
     "typecheck": "tsc --noEmit"
   }
 }

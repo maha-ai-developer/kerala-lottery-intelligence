@@ -46,11 +46,21 @@ export interface DocumentCacheOptions {
   cacheDir?: string;
 }
 
+export interface HydratedGraphsVerificationResult {
+  valid: boolean;
+  expectedCount: number;
+  verifiedCount: number;
+  missingShas: string[];
+  corruptedShas: string[];
+  countMismatchShas: string[];
+}
+
 export class DocumentCacheManager {
   private readonly baseDir: string;
   private readonly graphsDir: string;
   private readonly manifestPath: string;
   private manifest: IngestionManifest;
+  private readonly graphMemoryCache = new Map<string, LotteryKnowledgeGraph>();
 
   constructor(options?: DocumentCacheOptions) {
     this.baseDir = options?.cacheDir ?? join(process.cwd(), "data/processed-cache");
@@ -152,10 +162,19 @@ export class DocumentCacheManager {
 
   public getGraph(sha256: string): LotteryKnowledgeGraph | null {
     const graphFile = join(this.graphsDir, `${sha256}.json`);
-    if (!existsSync(graphFile)) return null;
+    if (!existsSync(graphFile)) {
+      this.graphMemoryCache.delete(sha256);
+      return null;
+    }
+    const cached = this.graphMemoryCache.get(sha256);
+    if (cached) {
+      return cached;
+    }
     try {
       const raw = readFileSync(graphFile, "utf-8");
-      return JSON.parse(raw) as LotteryKnowledgeGraph;
+      const parsed = JSON.parse(raw) as LotteryKnowledgeGraph;
+      this.graphMemoryCache.set(sha256, parsed);
+      return parsed;
     } catch {
       return null;
     }
@@ -169,6 +188,7 @@ export class DocumentCacheManager {
     const sha = graph.documentSha256;
     const graphFile = join(this.graphsDir, `${sha}.json`);
     writeFileSync(graphFile, JSON.stringify(graph, null, 2), "utf-8");
+    this.graphMemoryCache.set(sha, graph);
 
     // CRITICAL: Always derive authoritative counts from graph nodes directly
     const counts = DocumentCacheManager.deriveCountsFromGraph(graph);
@@ -182,6 +202,86 @@ export class DocumentCacheManager {
       status: "VALID"
     };
     this.persistManifest();
+  }
+
+  /**
+   * Writes a hydrated knowledge graph for an already-tracked VALID manifest entry
+   * without mutating or touching manifest.json on disk.
+   * Strictly verifies that derived result counts match the authoritative manifest record.
+   */
+  public writeHydratedGraph(graph: LotteryKnowledgeGraph): void {
+    const sha = graph.documentSha256;
+    const record = this.manifest.documents[sha];
+    if (!record || record.status !== "VALID") {
+      throw new Error(`Cannot hydrate graph for SHA '${sha}': no VALID record exists in manifest.json`);
+    }
+
+    const counts = DocumentCacheManager.deriveCountsFromGraph(graph);
+    if (
+      counts.totalResults !== record.totalResults ||
+      counts.fullTicketCount !== record.fullTicketCount ||
+      counts.suffixCount !== record.suffixCount
+    ) {
+      throw new Error(
+        `Hydrated graph count mismatch for SHA '${sha}' (${record.drawNumber}): ` +
+          `graph has ${counts.totalResults} (${counts.fullTicketCount} full + ${counts.suffixCount} suffix), ` +
+          `manifest expects ${record.totalResults} (${record.fullTicketCount} full + ${record.suffixCount} suffix)`
+      );
+    }
+
+    const graphFile = join(this.graphsDir, `${sha}.json`);
+    writeFileSync(graphFile, JSON.stringify(graph, null, 2), "utf-8");
+    this.graphMemoryCache.set(sha, graph);
+  }
+
+  /**
+   * Verifies that every VALID record in manifest.json has a corresponding, parseable,
+   * count-verified knowledge graph artifact on disk.
+   */
+  public verifyHydratedGraphs(): HydratedGraphsVerificationResult {
+    const validEntries = Object.values(this.manifest.documents).filter((d) => d.status === "VALID");
+    const expectedCount = validEntries.length;
+    let verifiedCount = 0;
+    const missingShas: string[] = [];
+    const corruptedShas: string[] = [];
+    const countMismatchShas: string[] = [];
+
+    for (const record of validEntries) {
+      const sha = record.sha256;
+      const graphFile = join(this.graphsDir, `${sha}.json`);
+      if (!existsSync(graphFile)) {
+        missingShas.push(sha);
+        continue;
+      }
+      const graph = this.getGraph(sha);
+      if (!graph || graph.documentSha256 !== sha) {
+        corruptedShas.push(sha);
+        continue;
+      }
+      const counts = DocumentCacheManager.deriveCountsFromGraph(graph);
+      if (
+        counts.totalResults !== record.totalResults ||
+        counts.fullTicketCount !== record.fullTicketCount ||
+        counts.suffixCount !== record.suffixCount
+      ) {
+        countMismatchShas.push(sha);
+        continue;
+      }
+      verifiedCount++;
+    }
+
+    return {
+      valid:
+        expectedCount > 0 &&
+        missingShas.length === 0 &&
+        corruptedShas.length === 0 &&
+        countMismatchShas.length === 0,
+      expectedCount,
+      verifiedCount,
+      missingShas,
+      corruptedShas,
+      countMismatchShas
+    };
   }
 
   public recordQuarantine(sha256: string, meta: { fileName: string; fileSize: number; reason: string }): void {

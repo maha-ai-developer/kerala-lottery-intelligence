@@ -11,6 +11,8 @@
   "scripts": {
     "dev": "npm run dev --workspace=apps/web",
     "build": "npm run build --workspaces --if-present",
+    "cache:hydrate": "npx tsx services/ingestion/scripts/daily-ingestion.ts --hydrate-cache",
+    "pretest": "npm run cache:hydrate",
     "test": "vitest run",
     "test:rules": "npx -y firebase-tools emulators:exec --only firestore \"vitest run tests/firestore-rules.test.ts\"",
     "test:watch": "vitest",

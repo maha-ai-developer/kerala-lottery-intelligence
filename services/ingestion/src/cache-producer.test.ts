@@ -11,10 +11,11 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { mkdtempSync, rmSync, cpSync, readFileSync } from "node:fs";
+import { mkdtempSync, rmSync, cpSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { DocumentCacheManager } from "./document-cache";
+import { DailyIngestionEngine } from "./daily-ingestion-engine";
 import type { LotteryKnowledgeGraph } from "@kerala-lottery/knowledge";
 
 describe("Cache Producer — Manifest Count Generation & Determinism", () => {
@@ -166,5 +167,85 @@ describe("Cache Producer — Manifest Count Generation & Determinism", () => {
     expect(manifest1.documents[BR111_SHA]!.fullTicketCount).toBe(70);
     expect(manifest1.documents[BR111_SHA]!.suffixCount).toBe(594);
     expect(manifest1.documents[BR111_SHA]!.totalResults).toBe(664);
+  });
+
+  it("hydrates missing graphs deterministically from tracked PDFs without mutating manifest.json", async () => {
+    const manifestBefore = readFileSync(join(testCacheDir, "manifest.json"), "utf-8");
+
+    // Simulate missing BR-110 and BR-111 graphs (as on a clean checkout)
+    rmSync(join(testCacheDir, "graphs", `${BR110_SHA}.json`), { force: true });
+    rmSync(join(testCacheDir, "graphs", `${BR111_SHA}.json`), { force: true });
+
+    const preVerify = new DocumentCacheManager({ cacheDir: testCacheDir }).verifyHydratedGraphs();
+    expect(preVerify.valid).toBe(false);
+    expect(preVerify.missingShas).toContain(BR110_SHA);
+    expect(preVerify.missingShas).toContain(BR111_SHA);
+
+    const engine = new DailyIngestionEngine({
+      cacheDir: testCacheDir,
+      silent: true,
+      dryRun: true
+    });
+
+    const hydration1 = await engine.hydrateGraphCache();
+    expect(hydration1.success).toBe(true);
+    expect(hydration1.hydratedCount).toBe(2);
+    expect(hydration1.verifiedGraphCount).toBe(hydration1.expectedValidDocuments);
+
+    // Repeat call when all graphs are already cached must short-circuit with 0 hydrations
+    const hydration2 = await engine.hydrateGraphCache();
+    expect(hydration2.success).toBe(true);
+    expect(hydration2.hydratedCount).toBe(0);
+    expect(hydration2.alreadyCachedCount).toBe(hydration2.expectedValidDocuments);
+
+    // Verify manifest.json is untouched bit-for-bit
+    const manifestAfter = readFileSync(join(testCacheDir, "manifest.json"), "utf-8");
+    expect(manifestAfter).toBe(manifestBefore);
+  });
+
+  it("fails fast with a clear diagnostic when required source PDFs or manifest records are missing", async () => {
+    const emptySourceDir = mkdtempSync(join(tmpdir(), "empty-source-dir-"));
+    try {
+      rmSync(join(testCacheDir, "graphs", `${BR110_SHA}.json`), { force: true });
+      const engineMissingPdf = new DailyIngestionEngine({
+        sourceDir: emptySourceDir,
+        cacheDir: testCacheDir,
+        silent: true
+      });
+      await expect(engineMissingPdf.hydrateGraphCache()).rejects.toThrow(
+        /Graph cache hydration failed: required source PDF/
+      );
+
+      const engineMissingDir = new DailyIngestionEngine({
+        sourceDir: join(emptySourceDir, "non-existent-subdir"),
+        cacheDir: testCacheDir,
+        silent: true
+      });
+      await expect(engineMissingDir.hydrateGraphCache()).rejects.toThrow(
+        /required source PDF directory does not exist/
+      );
+
+      writeFileSync(
+        join(testCacheDir, "manifest.json"),
+        JSON.stringify({
+          version: "v1.0.0-ingestion-manifest",
+          updatedAt: "2026-10-02T00:00:00.000Z",
+          totalDocuments: 0,
+          validDocuments: 0,
+          quarantinedDocuments: 0,
+          documents: {}
+        }),
+        "utf-8"
+      );
+      const engineEmptyManifest = new DailyIngestionEngine({
+        cacheDir: testCacheDir,
+        silent: true
+      });
+      await expect(engineEmptyManifest.hydrateGraphCache()).rejects.toThrow(
+        /manifest\.json contains 0 VALID document records/
+      );
+    } finally {
+      rmSync(emptySourceDir, { recursive: true, force: true });
+    }
   });
 });

@@ -31,8 +31,11 @@ jobs:
       - name: Run Monorepo Typecheck
         run: npm run typecheck
 
+      - name: Hydrate Local Knowledge Graph Cache
+        run: npm run cache:hydrate
+
       - name: Run Unit & Invariant Tests
-        run: npm run test
+        run: npx vitest run
 
       - name: Build Web Application & Services
         run: npm run build

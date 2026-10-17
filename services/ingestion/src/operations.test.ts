@@ -3,7 +3,7 @@
  * Milestone 8B — Operational Ingestion & Reliability Unit & Integration Tests
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import {
   ScheduledIngestionOrchestrator,
   InMemoryIngestionLockManager,
@@ -17,13 +17,76 @@ import {
   PROD_PROJECT_ID
 } from "./operations";
 import { DailyIngestionEngine } from "./daily-ingestion-engine";
-import { readFileSync, existsSync } from "fs";
+import { readFileSync, existsSync, mkdtempSync, rmSync, copyFileSync, writeFileSync } from "fs";
 import { join } from "path";
+import { tmpdir } from "os";
 
 describe("Milestone 8B: Scheduled Daily Operations & Reliability", () => {
+  const BT73_SHA = "cddb3d4d05c102b98f38050ac1ff297ad15bc442b12087c0505927f7bb1cf3dc";
+  let isolatedSourceDir: string;
+  let isolatedCacheDir: string;
   let lockManager: InMemoryIngestionLockManager;
   let runRepo: InMemoryIngestionRunRepository;
   let orchestrator: ScheduledIngestionOrchestrator;
+
+  beforeAll(async () => {
+    isolatedSourceDir = mkdtempSync(join(tmpdir(), "ops-8b-source-"));
+    isolatedCacheDir = mkdtempSync(join(tmpdir(), "ops-8b-cache-"));
+
+    try {
+      const realPdfPath = join(process.cwd(), "data/source-documents/lottery-results/271-2346-28-09-2026.pdf");
+      const realManifestPath = join(process.cwd(), "data/processed-cache/manifest.json");
+
+      if (!existsSync(realPdfPath)) {
+        throw new Error(`Required BT-73 test fixture PDF is missing: ${realPdfPath}`);
+      }
+      if (!existsSync(realManifestPath)) {
+        throw new Error(`Required test fixture manifest is missing: ${realManifestPath}`);
+      }
+
+      copyFileSync(realPdfPath, join(isolatedSourceDir, "271-2346-28-09-2026.pdf"));
+      const fullManifest = JSON.parse(readFileSync(realManifestPath, "utf-8"));
+      const bt73Record = fullManifest.documents?.[BT73_SHA];
+      if (!bt73Record) {
+        throw new Error(`Required BT-73 manifest record (${BT73_SHA}) is missing from ${realManifestPath}`);
+      }
+
+      writeFileSync(
+        join(isolatedCacheDir, "manifest.json"),
+        JSON.stringify(
+          {
+            version: fullManifest.version,
+            updatedAt: fullManifest.updatedAt,
+            totalDocuments: 1,
+            validDocuments: 1,
+            quarantinedDocuments: 0,
+            documents: {
+              [BT73_SHA]: bt73Record
+            }
+          },
+          null,
+          2
+        ) + "\n",
+        "utf-8"
+      );
+      const seedEngine = new DailyIngestionEngine({
+        sourceDir: isolatedSourceDir,
+        cacheDir: isolatedCacheDir,
+        silent: true,
+        dryRun: true
+      });
+      await seedEngine.hydrateGraphCache();
+    } catch (err) {
+      rmSync(isolatedSourceDir, { recursive: true, force: true });
+      rmSync(isolatedCacheDir, { recursive: true, force: true });
+      throw err;
+    }
+  });
+
+  afterAll(() => {
+    if (isolatedSourceDir) rmSync(isolatedSourceDir, { recursive: true, force: true });
+    if (isolatedCacheDir) rmSync(isolatedCacheDir, { recursive: true, force: true });
+  });
 
   beforeEach(() => {
     lockManager = new InMemoryIngestionLockManager();
@@ -33,6 +96,8 @@ describe("Milestone 8B: Scheduled Daily Operations & Reliability", () => {
       runRepository: runRepo,
       engineFactory: (opts) =>
         new DailyIngestionEngine({
+          sourceDir: isolatedSourceDir,
+          cacheDir: isolatedCacheDir,
           ...opts,
           silent: true,
           dryRun: true
@@ -431,6 +496,8 @@ describe("Milestone 8B: Scheduled Daily Operations & Reliability", () => {
         runRepository: runRepo,
         engineFactory: (opts) =>
           new DailyIngestionEngine({
+            sourceDir: isolatedSourceDir,
+            cacheDir: isolatedCacheDir,
             ...opts,
             silent: true,
             dryRun: true,

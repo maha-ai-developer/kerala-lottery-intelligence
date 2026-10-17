@@ -31,6 +31,9 @@ async function main() {
   const verbose = args.includes("--verbose");
   const offline = args.includes("--offline") || args.includes("--local-only");
 
+  const hydrateCache = args.includes("--hydrate-cache");
+  const forceHydrate = args.includes("--force");
+
   let limit: number | undefined;
   const limitIdx = args.indexOf("--limit");
   if (limitIdx !== -1 && args[limitIdx + 1]) {
@@ -48,10 +51,20 @@ async function main() {
     verbose,
     limit,
     since,
-    enableRemoteDiscovery: !offline
+    enableRemoteDiscovery: !offline && !hydrateCache
   });
 
   try {
+    if (hydrateCache) {
+      const hydration = await engine.hydrateGraphCache({ force: forceHydrate });
+      console.log(
+        `[CACHE HYDRATION] Verified ${hydration.verifiedGraphCount}/${hydration.expectedValidDocuments} local knowledge graphs ` +
+          `(hydrated: ${hydration.hydratedCount}, already cached: ${hydration.alreadyCachedCount}, ` +
+          `total results: ${hydration.totalWinningResults}) in ${hydration.durationMs}ms.`
+      );
+      process.exit(0);
+    }
+
     const result = await engine.execute();
     console.log(result.summaryText);
 
