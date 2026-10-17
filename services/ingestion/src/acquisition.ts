@@ -62,8 +62,9 @@ const DEFAULT_MAX_REDIRECTS = 5;
 export class DocumentAcquisitionService {
   private readonly fetch: typeof fetch;
 
-  constructor(deps?: DocumentAcquisitionServiceDependencies) {
-    this.fetch = deps?.fetchFn || globalThis.fetch.bind(globalThis);
+  constructor(deps?: DocumentAcquisitionServiceDependencies | typeof fetch) {
+    const fn = typeof deps === "function" ? deps : deps?.fetchFn;
+    this.fetch = fn || globalThis.fetch.bind(globalThis);
   }
 
   /**

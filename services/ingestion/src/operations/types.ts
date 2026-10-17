@@ -12,7 +12,7 @@ import type { CandidateAuditRecord, DailyIngestionResult } from "../daily-ingest
 // 1. Run Triggers & Execution Identifiers
 // ============================================================================
 
-export type ScheduledRunTrigger = "SCHEDULED" | "MANUAL" | "TEST";
+export type ScheduledRunTrigger = "SCHEDULED" | "MANUAL" | "TEST" | "DRY_RUN";
 
 export type RunStatus =
   | "QUEUED"
@@ -111,6 +111,7 @@ export interface IngestionRunRecord {
   // Failure metadata (if any)
   failureCategory?: FailureCategory;
   failureSummary?: string;
+  failureReason?: string;
 
   // Candidate Level Audit Breakdown
   candidates: CandidateAuditRecord[];

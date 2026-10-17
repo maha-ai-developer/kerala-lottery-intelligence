@@ -17,11 +17,15 @@ import {
   DocumentAcquisitionService,
   OfficialSourceDiscoveryService,
   SourceIngestionService,
+  AcquisitionSecurityError,
   resolveCanonicalAndResponseFilename
 } from "@kerala-lottery/service-ingestion";
 import {
   computeSha256,
   validatePdfBuffer,
+  DocumentValidationError,
+  DEFAULT_MAX_UPLOAD_BYTES,
+  validateSafeUrl,
   KERALA_STATE_LOTTERY_PORTAL
 } from "@kerala-lottery/documents";
 import {
@@ -32,7 +36,8 @@ import {
   verifyOpsAuthorization,
   validateOpsEnvironment,
   withOpsSingleFlightLock,
-  getOpsRunRepository
+  getOpsRunRepository,
+  getOpsIngestionCloudDependenciesForTesting
 } from "../../../../../lib/ops-guard";
 import { db, isFirebaseConfigured } from "../../../../../lib/firebase";
 
@@ -47,7 +52,11 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { candidate, environment: envRequested = "DEV" } = body;
+    const {
+      candidate,
+      environment: envRequested = "DEV",
+      confirm: explicitConfirm
+    } = body;
 
     // 2. Strict Environment Safety Guard (Mutating action - strictly rejects PROD with 403)
     const envCheck = validateOpsEnvironment(envRequested, true);
@@ -55,6 +64,18 @@ export async function POST(req: NextRequest) {
       return envCheck.errorResponse!;
     }
     const environment = envCheck.environment; // Guaranteed "DEV"
+
+    if (explicitConfirm === false) {
+      return NextResponse.json(
+        {
+          error: "CONFIRMATION_REQUIRED",
+          code: "CONFIRMATION_REQUIRED",
+          message: "Explicit operator confirmation (confirm: true) is required before ingesting a discovered document into DEV.",
+          statusCode: 400
+        },
+        { status: 400 }
+      );
+    }
 
     if (!candidate || !candidate.fileName) {
       return NextResponse.json(
@@ -78,9 +99,27 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (candidate.sourceUrl) {
+      try {
+        validateSafeUrl(candidate.sourceUrl, KERALA_STATE_LOTTERY_PORTAL.allowedDomains);
+      } catch (secErr: unknown) {
+        const msg = secErr instanceof Error ? secErr.message : String(secErr);
+        return NextResponse.json(
+          {
+            error: "SECURITY_VIOLATION",
+            code: "SECURITY_VIOLATION",
+            message: msg,
+            statusCode: 403
+          },
+          { status: 403 }
+        );
+      }
+    }
+
+    const testDeps = getOpsIngestionCloudDependenciesForTesting();
     const runId = `run_ops_download_${new Date().toISOString().replace(/[:.]/g, "-")}_${Math.random().toString(36).substring(2, 8)}`;
-    const acquisitionService = new DocumentAcquisitionService();
-    const discoveryService = new OfficialSourceDiscoveryService();
+    const acquisitionService = new DocumentAcquisitionService(testDeps?.acquisitionFetchOverride);
+    const discoveryService = new OfficialSourceDiscoveryService(testDeps?.acquisitionFetchOverride);
 
     // 4. Single-Flight Concurrency Lease Guard
     const lockResult = await withOpsSingleFlightLock(runId, environment, async () => {
@@ -102,6 +141,9 @@ export async function POST(req: NextRequest) {
           });
           fileBuffer = acq.fileBuffer;
         } catch (acqErr: unknown) {
+          if (acqErr instanceof AcquisitionSecurityError) {
+            throw acqErr;
+          }
           const acqMsg = acqErr instanceof Error ? acqErr.message : String(acqErr);
           throw new Error(`ACQUISITION_FAILED: ${acqMsg}`);
         }
@@ -111,8 +153,11 @@ export async function POST(req: NextRequest) {
         throw new Error("MISSING_SOURCE_PAYLOAD: Acquired file buffer is empty or unavailable.");
       }
 
-      // Validate narrow PDF format
-      validatePdfBuffer(fileBuffer);
+      // Validate narrow PDF format, max size (<= 10 MB), and EOF marker
+      validatePdfBuffer(fileBuffer, {
+        maxBytes: DEFAULT_MAX_UPLOAD_BYTES,
+        requireEofMarker: true
+      });
       const sha256 = computeSha256(fileBuffer);
 
       const resolved = resolveCanonicalAndResponseFilename(
@@ -139,32 +184,39 @@ export async function POST(req: NextRequest) {
       };
 
       // Fail-closed Firebase check: operational ingestion requires durable cloud persistence
-      if (!isFirebaseConfigured) {
+      if (!isFirebaseConfigured && !testDeps) {
         throw new Error(
           "FIREBASE_NOT_CONFIGURED: Authoritative Firebase backend is not configured. Operational ingestion requires durable cloud persistence and cannot proceed in-memory."
         );
       }
 
-      // Set up authoritative cloud persistence dependencies - fail closed
-      const docRepo = new FirestoreDocumentRepository(db);
-      const storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "kerala-lottery-intel-dev.firebasestorage.app";
-      const storageService = new FirebaseStorageService({ bucketName: storageBucket });
+      let sourceIngestionService: SourceIngestionService;
+      if (testDeps) {
+        sourceIngestionService = testDeps.sourceIngestionService;
+      } else {
+        const docRepo = new FirestoreDocumentRepository(db);
+        const storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "kerala-lottery-intel-dev.firebasestorage.app";
+        const storageService = new FirebaseStorageService({ bucketName: storageBucket });
 
-      const sourceIngestionService = new SourceIngestionService({
-        documentRepository: docRepo,
-        storageService
-      });
+        sourceIngestionService = new SourceIngestionService({
+          documentRepository: docRepo,
+          storageService
+        });
+      }
 
       // Execute daily ingestion pipeline
       const engine = new DailyIngestionEngine({
         dryRun: false,
         silent: true,
+        limit: 1,
         runId,
         injectedCandidates: [injectedCandidate],
         acquisitionService,
         discoveryService,
         sourceIngestionService,
-        environment
+        environment,
+        cacheDir: testDeps?.cacheDir,
+        sourceDir: testDeps?.sourceDir
       });
 
       const result = await engine.execute();
@@ -194,6 +246,7 @@ export async function POST(req: NextRequest) {
         errorCount: result.invalidDocuments,
         conflictCount: result.summary.conflicts,
         candidates: result.candidates,
+        failureReason: auditRecord?.conflictDetails || auditRecord?.errorDetails,
         metadata: {
           audit: {
             schedulerState: "PAUSED",
@@ -201,7 +254,9 @@ export async function POST(req: NextRequest) {
             zeroSecretsExposed: true
           },
           sha256,
-          canonicalFilename: resolved.canonicalFilename,
+          fileSize: fileBuffer.byteLength,
+          canonicalFilename: auditRecord?.canonicalFilename || resolved.canonicalFilename,
+          sourceResponseFilename: auditRecord?.sourceResponseFilename || resolved.sourceResponseFilename,
           drawNumber: auditRecord?.drawNumber || candidate.drawNumber,
           lottery: auditRecord?.lottery || candidate.lotteryCode,
           cloudStoragePath,
@@ -213,6 +268,10 @@ export async function POST(req: NextRequest) {
         runId,
         environment,
         success: result.success,
+        validationStatus: auditRecord?.validationStatus || "UNKNOWN",
+        actionTaken: auditRecord?.actionTaken || "UNKNOWN",
+        conflictDetails: auditRecord?.conflictDetails,
+        errorDetails: auditRecord?.errorDetails,
         candidateCount: 1,
         alreadyKnown: result.alreadyIngested,
         newDocuments: result.newDocuments,
@@ -223,15 +282,24 @@ export async function POST(req: NextRequest) {
         conflicts: result.summary.conflicts,
         errors: result.summary.errors,
         sha256,
-        canonicalFilename: resolved.canonicalFilename,
+        fileSize: fileBuffer.byteLength,
+        canonicalFilename: auditRecord?.canonicalFilename || resolved.canonicalFilename,
+        sourceResponseFilename: auditRecord?.sourceResponseFilename || resolved.sourceResponseFilename,
         drawIdentity: {
           lottery: auditRecord?.lottery || candidate.lotteryCode || "Unknown",
           drawNumber: auditRecord?.drawNumber || candidate.drawNumber || "Unknown",
           drawDate: auditRecord?.drawDate || candidate.drawDate || "Unknown"
         },
+        scheme: {
+          schemeId: auditRecord?.schemeId,
+          schemeAuthorityLevel: auditRecord?.schemeAuthorityLevel
+        },
         resultCount: auditRecord?.resultCount || (result.corpus ? result.corpus.results : 0),
-        fullTicketCount: result.corpus ? result.corpus.fullTicket : 0,
-        suffixCount: result.corpus ? result.corpus.suffix : 0,
+        fullTicketCount: auditRecord?.fullTicketCount ?? (result.corpus ? result.corpus.fullTicket : 0),
+        suffixCount: auditRecord?.suffixCount ?? (result.corpus ? result.corpus.suffix : 0),
+        prizeTierSummary: auditRecord?.prizeTierSummary || [],
+        leadingZeroCount: auditRecord?.leadingZeroCount ?? 0,
+        sampleLeadingZeroNumbers: auditRecord?.sampleLeadingZeroNumbers || [],
         cloudStoragePath,
         firestoreDocumentId,
         summaryText: result.summaryText
@@ -242,8 +310,46 @@ export async function POST(req: NextRequest) {
       return lockResult.errorResponse!;
     }
 
+    if (lockResult.data?.validationStatus === "CONFLICT" || (lockResult.data?.conflicts ?? 0) > 0) {
+      return NextResponse.json(
+        {
+          ...lockResult.data,
+          error: "INGESTION_CONFLICT",
+          code: "CONFLICT",
+          message: lockResult.data?.conflictDetails || "Candidate conflicts with existing corpus record or expected metadata.",
+          statusCode: 409
+        },
+        { status: 409 }
+      );
+    }
+
     return NextResponse.json(lockResult.data);
   } catch (err: unknown) {
+    if (err instanceof AcquisitionSecurityError) {
+      return NextResponse.json(
+        {
+          error: "SECURITY_VIOLATION",
+          code: "SECURITY_VIOLATION",
+          message: err.message,
+          statusCode: 403
+        },
+        { status: 403 }
+      );
+    }
+
+    if (err instanceof DocumentValidationError) {
+      const status = err.code === "FILE_TOO_LARGE" ? 413 : 400;
+      return NextResponse.json(
+        {
+          error: err.code === "FILE_TOO_LARGE" ? "FILE_TOO_LARGE" : "INVALID_PDF",
+          code: err.code,
+          message: `PDF format validation failed: ${err.message}`,
+          statusCode: status
+        },
+        { status }
+      );
+    }
+
     const rawMsg = err instanceof Error ? err.message : String(err);
     // Sanitize any potential credential or private info
     const sanitizedMsg = rawMsg

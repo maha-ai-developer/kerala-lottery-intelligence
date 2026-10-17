@@ -38,7 +38,9 @@ export const KERALA_STATE_LOTTERY_PORTAL: OfficialSource = {
   allowedDomains: [
     "statelottery.kerala.gov.in",
     "www.statelottery.kerala.gov.in",
-    "result.keralalotteries.com"
+    "result.keralalotteries.com",
+    "egazette.kerala.gov.in",
+    "www.egazette.kerala.gov.in"
   ],
   authorityEvidence: [
     "Domain registered under apex Government of Kerala namespace (.kerala.gov.in) managed by National Informatics Centre (NIC) and Government of India",
@@ -234,10 +236,23 @@ export function getSourceStoragePath(sha256: string): string {
 }
 
 /**
- * Validates raw PDF buffer prior to ingestion.
- * Ensures data is non-empty, of valid type, and starts with the standard '%PDF-' magic header.
+ * Default maximum allowed upload size for official Kerala Lottery PDF documents (10 MB).
  */
-export function validatePdfBuffer(data: unknown): void {
+export const DEFAULT_MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+
+export interface PdfBufferValidationOptions {
+  /** Maximum permitted size in bytes. Throws DocumentValidationError('FILE_TOO_LARGE') if exceeded. */
+  maxBytes?: number;
+  /** When true, requires the PDF trailer marker '%%EOF' near the end of the buffer. */
+  requireEofMarker?: boolean;
+}
+
+/**
+ * Validates raw PDF buffer prior to ingestion.
+ * Ensures data is non-empty, of valid type, within optional size bounds,
+ * starts with the standard '%PDF-' magic header, and optionally contains '%%EOF'.
+ */
+export function validatePdfBuffer(data: unknown, options?: PdfBufferValidationOptions): void {
   if (!(data instanceof Uint8Array)) {
     throw new DocumentValidationError(
       `Expected PDF data to be Uint8Array or Buffer, received ${typeof data}`,
@@ -246,6 +261,12 @@ export function validatePdfBuffer(data: unknown): void {
   }
   if (data.byteLength === 0) {
     throw new DocumentValidationError("PDF buffer cannot be empty (0 bytes)", "EMPTY_BUFFER");
+  }
+  if (options?.maxBytes !== undefined && data.byteLength > options.maxBytes) {
+    throw new DocumentValidationError(
+      `PDF file size (${data.byteLength} bytes) exceeds maximum allowed limit of ${options.maxBytes} bytes`,
+      "FILE_TOO_LARGE"
+    );
   }
   if (data.byteLength < 5) {
     throw new DocumentValidationError("Buffer is too small to be a valid PDF", "INVALID_PDF_HEADER");
@@ -258,6 +279,18 @@ export function validatePdfBuffer(data: unknown): void {
       `Invalid PDF magic header. Expected '%PDF-', received '${header}'`,
       "INVALID_PDF_HEADER"
     );
+  }
+
+  if (options?.requireEofMarker) {
+    const tailLength = Math.min(data.byteLength, 2048);
+    const tailOffset = data.byteOffset + (data.byteLength - tailLength);
+    const tailStr = Buffer.from(data.buffer, tailOffset, tailLength).toString("latin1");
+    if (!tailStr.includes("%%EOF")) {
+      throw new DocumentValidationError(
+        "Truncated or incomplete PDF buffer: missing '%%EOF' trailer marker",
+        "TRUNCATED_PDF"
+      );
+    }
   }
 }
 

@@ -15,9 +15,10 @@ import {
   FirestoreIngestionLockManager,
   FirestoreIngestionRunRepository,
   type IngestionLockManager,
-  type IngestionRunRepository
+  type IngestionRunRepository,
+  type SourceIngestionService
 } from "@kerala-lottery/service-ingestion";
-import { db } from "./firebase";
+import { db, isFirebaseConfigured } from "./firebase";
 
 export interface OpsAuthResult {
   authorized: boolean;
@@ -31,9 +32,41 @@ export interface EnvironmentValidationResult {
   errorResponse?: NextResponse;
 }
 
+export interface OpsCloudTestDependencies {
+  sourceIngestionService: SourceIngestionService;
+  cacheDir?: string;
+  sourceDir?: string;
+  acquisitionFetchOverride?: typeof fetch;
+}
+
+let cloudTestDeps: OpsCloudTestDependencies | null = null;
+let discoveryFetchOverride: typeof fetch | null = null;
+
+export function setOpsIngestionCloudDependenciesForTesting(
+  deps: OpsCloudTestDependencies | null
+): void {
+  cloudTestDeps = deps;
+}
+
+export function getOpsIngestionCloudDependenciesForTesting(): OpsCloudTestDependencies | null {
+  return cloudTestDeps;
+}
+
+export function setDiscoveryFetchOverrideForTesting(fn: typeof fetch | null): void {
+  discoveryFetchOverride = fn;
+}
+
+export function getDiscoveryFetchOverrideForTesting(): typeof fetch | null {
+  return discoveryFetchOverride;
+}
+
 // Global shared lock manager and run repository instances
-const globalLockManager: IngestionLockManager = new FirestoreIngestionLockManager({ db });
-const globalRunRepo: IngestionRunRepository = new FirestoreIngestionRunRepository({ db });
+const globalLockManager: IngestionLockManager = new FirestoreIngestionLockManager({
+  db: isFirebaseConfigured ? db : undefined
+});
+const globalRunRepo: IngestionRunRepository = new FirestoreIngestionRunRepository({
+  db: isFirebaseConfigured ? db : undefined
+});
 
 export function getOpsLockManager(): IngestionLockManager {
   return globalLockManager;

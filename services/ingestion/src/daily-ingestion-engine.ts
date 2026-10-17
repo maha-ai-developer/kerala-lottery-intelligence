@@ -234,11 +234,92 @@ export type DailyCandidateStatus =
   | "CONFLICT"
   | "ERROR";
 
+export interface CandidatePrizeTierSummary {
+  rank: number;
+  name: string;
+  amount: number;
+  count: number;
+  isSuffix: boolean;
+  sampleNumbers: string[];
+}
+
+export interface CandidatePreviewDetails {
+  fullTicketCount: number;
+  suffixCount: number;
+  prizeTierSummary: CandidatePrizeTierSummary[];
+  leadingZeroCount: number;
+  sampleLeadingZeroNumbers: string[];
+}
+
+export function extractGraphPreviewDetails(graph?: LotteryKnowledgeGraph | null): CandidatePreviewDetails | undefined {
+  if (!graph) return undefined;
+
+  let fullTicketCount = 0;
+  let suffixCount = 0;
+  let leadingZeroCount = 0;
+  const sampleLeadingZeroNumbers: string[] = [];
+  const tierGroups = new Map<
+    string,
+    { rank: number; name: string; amount: number; count: number; isSuffix: boolean; sampleNumbers: string[] }
+  >();
+
+  for (const node of graph.nodes) {
+    if (node.type === "WinningResult") {
+      const canonicalNumber = String(node.properties?.canonicalNumber ?? "");
+      const series =
+        typeof node.properties?.series === "string" && node.properties.series.trim()
+          ? node.properties.series.trim()
+          : undefined;
+      const isSuffix = Boolean(node.properties?.isSuffix);
+      const rank = typeof node.properties?.rank === "number" ? node.properties.rank : 99;
+      const name = String(node.properties?.prizeTierName ?? `Rank ${rank}`);
+      const amount = typeof node.properties?.amount === "number" ? node.properties.amount : 0;
+
+      if (isSuffix) {
+        suffixCount++;
+      } else {
+        fullTicketCount++;
+      }
+
+      if (canonicalNumber.startsWith("0")) {
+        leadingZeroCount++;
+        if (sampleLeadingZeroNumbers.length < 12) {
+          sampleLeadingZeroNumbers.push(canonicalNumber);
+        }
+      }
+
+      const key = `${rank}:${name}:${isSuffix ? "S" : "F"}`;
+      let group = tierGroups.get(key);
+      if (!group) {
+        group = { rank, name, amount, count: 0, isSuffix, sampleNumbers: [] };
+        tierGroups.set(key, group);
+      }
+      group.count++;
+      if (group.sampleNumbers.length < 5) {
+        group.sampleNumbers.push(series ? `${series} ${canonicalNumber}` : canonicalNumber);
+      }
+    }
+  }
+
+  const prizeTierSummary = Array.from(tierGroups.values()).sort(
+    (a, b) => a.rank - b.rank || a.name.localeCompare(b.name)
+  );
+
+  return {
+    fullTicketCount,
+    suffixCount,
+    prizeTierSummary,
+    leadingZeroCount,
+    sampleLeadingZeroNumbers
+  };
+}
+
 export interface CandidateAuditRecord {
   sourceUrl?: string;
   sourceResponseFilename?: string;
   canonicalFilename?: string;
   fileName: string;
+  fileSize?: number;
   sha256?: string;
   lottery?: string;
   drawNumber?: string;
@@ -246,6 +327,11 @@ export interface CandidateAuditRecord {
   schemeId?: string;
   schemeAuthorityLevel?: SchemeAuthorityLevel;
   resultCount?: number;
+  fullTicketCount?: number;
+  suffixCount?: number;
+  prizeTierSummary?: CandidatePrizeTierSummary[];
+  leadingZeroCount?: number;
+  sampleLeadingZeroNumbers?: string[];
   validationStatus: "VALID" | "INVALID" | "REJECTED" | "CONFLICT" | "SKIPPED" | "ALREADY_KNOWN";
   actionTaken: DailyCandidateStatus;
   errorDetails?: string;
@@ -918,12 +1004,43 @@ export class DailyIngestionEngine {
               continue;
             }
 
-            alreadyIngested++;
-            // Check metadata consistency if candidate provides explicit draw details
-            let metadataWarning: string | undefined;
-            if (candidate.drawNumber && record && candidate.drawNumber !== record.drawNumber) {
-              metadataWarning = `Metadata mismatch: Candidate draw '${candidate.drawNumber}' differs from cached '${record.drawNumber}' for same SHA`;
+            const cachedPreview = extractGraphPreviewDetails(cachedGraph);
+            const cleanCandDraw = (candidate.drawNumber || "").trim().replace(/(st|nd|rd|th)$/i, "").toUpperCase();
+            const cleanRecDraw = (record?.drawNumber || "").trim().replace(/(st|nd|rd|th)$/i, "").toUpperCase();
+            const candDateIso = candidate.drawDate ? normalizeDateToIso(candidate.drawDate) : undefined;
+            const recDateIso = record?.drawDate ? normalizeDateToIso(record.drawDate) : undefined;
+
+            if (
+              (cleanCandDraw && cleanRecDraw && cleanCandDraw !== cleanRecDraw) ||
+              (candDateIso && recDateIso && candDateIso !== recDateIso)
+            ) {
+              conflictsCount++;
+              const conflictMsg =
+                cleanCandDraw && cleanRecDraw && cleanCandDraw !== cleanRecDraw
+                  ? `Conflicting draw metadata: Candidate draw '${candidate.drawNumber}' differs from existing draw '${record?.drawNumber}' for SHA '${sha256}'.`
+                  : `Conflicting draw date: Candidate date '${candidate.drawDate}' differs from existing date '${record?.drawDate}' for SHA '${sha256}'.`;
+              auditRecords.push({
+                sourceUrl: candidate.sourceUrl || record?.sourceUrl,
+                fileName: candidate.fileName,
+                fileSize: uint8.byteLength,
+                sha256,
+                lottery: record?.lotteryName,
+                drawNumber: record?.drawNumber,
+                drawDate: record?.drawDate,
+                resultCount: record?.totalResults,
+                fullTicketCount: record?.fullTicketCount ?? cachedPreview?.fullTicketCount,
+                suffixCount: record?.suffixCount ?? cachedPreview?.suffixCount,
+                prizeTierSummary: cachedPreview?.prizeTierSummary,
+                leadingZeroCount: cachedPreview?.leadingZeroCount,
+                sampleLeadingZeroNumbers: cachedPreview?.sampleLeadingZeroNumbers,
+                validationStatus: "CONFLICT",
+                actionTaken: "CONFLICT",
+                conflictDetails: conflictMsg
+              });
+              continue;
             }
+
+            alreadyIngested++;
             const { canonicalFilename, sourceResponseFilename, conflict } = resolveCanonicalAndResponseFilename(
               candidate.fileName,
               sha256,
@@ -940,15 +1057,21 @@ export class DailyIngestionEngine {
               canonicalFilename,
               sourceResponseFilename,
               fileName: candidate.fileName,
+              fileSize: uint8.byteLength,
               sha256,
               lottery: record?.lotteryName,
               drawNumber: record?.drawNumber,
               drawDate: record?.drawDate,
               resultCount: record?.totalResults,
+              fullTicketCount: record?.fullTicketCount ?? cachedPreview?.fullTicketCount,
+              suffixCount: record?.suffixCount ?? cachedPreview?.suffixCount,
+              prizeTierSummary: cachedPreview?.prizeTierSummary,
+              leadingZeroCount: cachedPreview?.leadingZeroCount,
+              sampleLeadingZeroNumbers: cachedPreview?.sampleLeadingZeroNumbers,
               validationStatus: "ALREADY_KNOWN",
               actionTaken: "ALREADY_KNOWN",
               isDuplicate: false,
-              errorDetails: metadataWarning || conflict
+              errorDetails: conflict
             });
           }
           continue;
@@ -966,6 +1089,7 @@ export class DailyIngestionEngine {
           auditRecords.push({
             sourceUrl: candidate.sourceUrl,
             fileName: candidate.fileName,
+            fileSize: uint8.byteLength,
             sha256,
             validationStatus: "INVALID",
             actionTaken: "REJECTED",
@@ -993,6 +1117,7 @@ export class DailyIngestionEngine {
           auditRecords.push({
             sourceUrl: candidate.sourceUrl,
             fileName: candidate.fileName,
+            fileSize: uint8.byteLength,
             sha256,
             validationStatus: "INVALID",
             actionTaken: "REJECTED",
@@ -1005,6 +1130,37 @@ export class DailyIngestionEngine {
         const lotteryCode = extraction.drawMetadata?.lotteryName?.value || "UNKNOWN";
         const drawNumber = extraction.drawMetadata?.drawNumber?.value || "UNKNOWN";
         const drawDate = extraction.drawMetadata?.drawDate?.value || "UNKNOWN";
+
+        // Check if caller explicitly supplied drawNumber or drawDate that conflicts with extracted PDF metadata
+        const cleanCallerDraw = (candidate.drawNumber || "").trim().replace(/(st|nd|rd|th)$/i, "").toUpperCase();
+        const cleanExtractedDraw = drawNumber.trim().replace(/(st|nd|rd|th)$/i, "").toUpperCase();
+        const callerDateIso = candidate.drawDate ? normalizeDateToIso(candidate.drawDate) : undefined;
+        const extractedDateIso = drawDate !== "UNKNOWN" ? normalizeDateToIso(drawDate) : undefined;
+
+        if (
+          (cleanCallerDraw && cleanExtractedDraw && cleanCallerDraw !== cleanExtractedDraw) ||
+          (callerDateIso && extractedDateIso && callerDateIso !== extractedDateIso)
+        ) {
+          conflictsCount++;
+          const conflictMsg =
+            cleanCallerDraw && cleanExtractedDraw && cleanCallerDraw !== cleanExtractedDraw
+              ? `Conflicting draw metadata: Caller-supplied draw '${candidate.drawNumber}' differs from PDF extracted draw '${drawNumber}'.`
+              : `Conflicting draw date: Caller-supplied date '${candidate.drawDate}' differs from PDF extracted date '${drawDate}'.`;
+          auditRecords.push({
+            sourceUrl: candidate.sourceUrl,
+            fileName: candidate.fileName,
+            fileSize: uint8.byteLength,
+            sha256,
+            lottery: lotteryName,
+            drawNumber,
+            drawDate,
+            resultCount: extraction.winningResults.length,
+            validationStatus: "CONFLICT",
+            actionTaken: "CONFLICT",
+            conflictDetails: conflictMsg
+          });
+          continue;
+        }
 
         // CONFLICT CHECK (Scenario F): Check if draw identity already exists in manifest under a DIFFERENT SHA
         const manifestDocs = Object.values(this.cacheManager.getManifest().documents);
@@ -1022,6 +1178,7 @@ export class DailyIngestionEngine {
           auditRecords.push({
             sourceUrl: candidate.sourceUrl,
             fileName: candidate.fileName,
+            fileSize: uint8.byteLength,
             sha256,
             lottery: lotteryName,
             drawNumber,
@@ -1045,6 +1202,7 @@ export class DailyIngestionEngine {
           auditRecords.push({
             sourceUrl: candidate.sourceUrl,
             fileName: candidate.fileName,
+            fileSize: uint8.byteLength,
             sha256,
             lottery: lotteryName,
             drawNumber,
@@ -1078,6 +1236,7 @@ export class DailyIngestionEngine {
           auditRecords.push({
             sourceUrl: candidate.sourceUrl,
             fileName: candidate.fileName,
+            fileSize: uint8.byteLength,
             sha256,
             lottery: lotteryName,
             drawNumber,
@@ -1095,6 +1254,7 @@ export class DailyIngestionEngine {
         // 4A: Lottery Knowledge Graph Builder & Validation
         const graph = buildLotteryKnowledgeGraph(extraction, seg);
         validateLotteryKnowledgeGraph(graph);
+        const graphPreview = extractGraphPreviewDetails(graph);
 
         validatedCount++;
         const totalResults = extraction.winningResults.length;
@@ -1120,6 +1280,7 @@ export class DailyIngestionEngine {
             canonicalFilename,
             sourceResponseFilename,
             fileName: candidate.fileName,
+            fileSize: uint8.byteLength,
             sha256,
             lottery: lotteryName,
             drawNumber,
@@ -1127,6 +1288,11 @@ export class DailyIngestionEngine {
             schemeId: schemeRes.schemeVersion.id,
             schemeAuthorityLevel: schemeRes.authorityLevel,
             resultCount: totalResults,
+            fullTicketCount,
+            suffixCount,
+            prizeTierSummary: graphPreview?.prizeTierSummary,
+            leadingZeroCount: graphPreview?.leadingZeroCount,
+            sampleLeadingZeroNumbers: graphPreview?.sampleLeadingZeroNumbers,
             validationStatus: "VALID",
             actionTaken: "VALIDATED"
           });
@@ -1164,6 +1330,7 @@ export class DailyIngestionEngine {
                   canonicalFilename,
                   sourceResponseFilename,
                   fileName: candidate.fileName,
+                  fileSize: uint8.byteLength,
                   sha256,
                   lottery: lotteryName,
                   drawNumber,
@@ -1171,6 +1338,11 @@ export class DailyIngestionEngine {
                   schemeId: schemeRes.schemeVersion.id,
                   schemeAuthorityLevel: schemeRes.authorityLevel,
                   resultCount: totalResults,
+                  fullTicketCount,
+                  suffixCount,
+                  prizeTierSummary: graphPreview?.prizeTierSummary,
+                  leadingZeroCount: graphPreview?.leadingZeroCount,
+                  sampleLeadingZeroNumbers: graphPreview?.sampleLeadingZeroNumbers,
                   validationStatus: "CONFLICT",
                   actionTaken: "CONFLICT",
                   conflictDetails: ingErr.message
@@ -1210,6 +1382,7 @@ export class DailyIngestionEngine {
             canonicalFilename,
             sourceResponseFilename,
             fileName: candidate.fileName,
+            fileSize: uint8.byteLength,
             sha256,
             lottery: lotteryName,
             drawNumber,
@@ -1217,6 +1390,11 @@ export class DailyIngestionEngine {
             schemeId: schemeRes.schemeVersion.id,
             schemeAuthorityLevel: schemeRes.authorityLevel,
             resultCount: totalResults,
+            fullTicketCount,
+            suffixCount,
+            prizeTierSummary: graphPreview?.prizeTierSummary,
+            leadingZeroCount: graphPreview?.leadingZeroCount,
+            sampleLeadingZeroNumbers: graphPreview?.sampleLeadingZeroNumbers,
             validationStatus: "VALID",
             actionTaken: "INGESTED"
           });

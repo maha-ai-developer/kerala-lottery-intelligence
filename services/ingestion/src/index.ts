@@ -38,6 +38,9 @@ import {
 export {
   computeSha256,
   validatePdfBuffer,
+  DEFAULT_MAX_UPLOAD_BYTES,
+  type PdfBufferValidationOptions,
+  validateSafeUrl,
   DocumentValidationError,
   KERALA_STATE_LOTTERY_PORTAL,
   getSourceStoragePath,
