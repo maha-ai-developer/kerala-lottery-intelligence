@@ -50,7 +50,7 @@ export function Footer() {
 
         <div className="footer-bottom">
           <div className="footer-provenance-note">
-            <span>V1 Verified Corpus: 114 Draws (up to 13/10/2026) &bull; SHA-256 Content-Addressed Provenance &bull; Non-Predictive Descriptive Analytics</span>
+            <span>Active DEV Corpus: 118 Draws (45,218 results up to 17/10/2026) &bull; V1.0 Frozen Baseline: 114 Draws (43,712 results up to 13/10/2026) &bull; SHA-256 Provenance</span>
           </div>
           <div className="footer-attribution">
             Developed by{" "}

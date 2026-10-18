@@ -10,8 +10,9 @@
  * 4. Quarantined or invalid documents are tracked explicitly.
  */
 
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync, copyFileSync } from "node:fs";
 import { join } from "node:path";
+import { normalizeLotteryCode, normalizeDateToIso } from "@kerala-lottery/domain";
 import type { LotteryKnowledgeGraph } from "@kerala-lottery/knowledge";
 
 export interface IngestedDocumentRecord {
@@ -33,12 +34,25 @@ export interface IngestedDocumentRecord {
   quarantineReason?: string;
 }
 
+export interface CorpusBaselineMetadata {
+  version: string;
+  draws: number;
+  totalResults: number;
+  fullTicketCount: number;
+  suffixCount: number;
+  earliestDrawDate: string;
+  latestDrawDate: string;
+  latestDrawNumber?: string;
+}
+
 export interface IngestionManifest {
   version: string;
   updatedAt: string;
   totalDocuments: number;
   validDocuments: number;
   quarantinedDocuments: number;
+  v1Baseline?: CorpusBaselineMetadata;
+  activeCorpus?: CorpusBaselineMetadata;
   documents: Record<string, IngestedDocumentRecord>;
 }
 
@@ -99,6 +113,44 @@ export class DocumentCacheManager {
     };
   }
 
+  private static computeCorpusMetadata(
+    docs: IngestedDocumentRecord[],
+    versionPrefix = "v1.0-research"
+  ): CorpusBaselineMetadata | undefined {
+    if (docs.length === 0) return undefined;
+    let totalResults = 0;
+    let fullTicketCount = 0;
+    let suffixCount = 0;
+    let earliestIso = "9999-99-99";
+    let latestIso = "0000-00-00";
+    let latestDrawNumber: string | undefined;
+
+    for (const d of docs) {
+      totalResults += d.totalResults;
+      fullTicketCount += d.fullTicketCount;
+      suffixCount += d.suffixCount;
+      const iso = normalizeDateToIso(d.drawDate) || "";
+      if (iso && iso < earliestIso) {
+        earliestIso = iso;
+      }
+      if (iso && iso >= latestIso) {
+        latestIso = iso;
+        latestDrawNumber = d.drawNumber;
+      }
+    }
+
+    return {
+      version: `${versionPrefix}-${docs.length}draws`,
+      draws: docs.length,
+      totalResults,
+      fullTicketCount,
+      suffixCount,
+      earliestDrawDate: earliestIso === "9999-99-99" ? "" : earliestIso,
+      latestDrawDate: latestIso === "0000-00-00" ? "" : latestIso,
+      latestDrawNumber
+    };
+  }
+
   public persistManifest(fixedUpdatedAt?: string): void {
     if (fixedUpdatedAt) {
       this.manifest.updatedAt = fixedUpdatedAt;
@@ -116,11 +168,87 @@ export class DocumentCacheManager {
     this.manifest.documents = sortedDocs;
 
     const docValues = Object.values(this.manifest.documents);
+    const validDocs = docValues.filter((d) => d.status === "VALID");
     this.manifest.totalDocuments = docValues.length;
-    this.manifest.validDocuments = docValues.filter((d) => d.status === "VALID").length;
+    this.manifest.validDocuments = validDocs.length;
     this.manifest.quarantinedDocuments = docValues.filter((d) => d.status === "QUARANTINED").length;
 
+    const v1Docs = validDocs.filter((d) => {
+      const iso = normalizeDateToIso(d.drawDate);
+      return Boolean(iso && iso <= "2026-10-13");
+    });
+    if (v1Docs.length > 0) {
+      this.manifest.v1Baseline = DocumentCacheManager.computeCorpusMetadata(v1Docs, "v1.0-research");
+    }
+    if (validDocs.length > 0) {
+      this.manifest.activeCorpus = DocumentCacheManager.computeCorpusMetadata(validDocs, "v1.0-research");
+    }
+
     writeFileSync(this.manifestPath, JSON.stringify(this.manifest, null, 2) + "\n", "utf-8");
+  }
+
+  /**
+   * Rebuilds `winning-results-index.json` from all VALID graphs when all valid graphs are present on disk,
+   * and mirrors `manifest.json` and `winning-results-index.json` to `apps/web/data/processed-cache`
+   * when operating on the primary repository cache directory.
+   */
+  public syncCompactIndexAndWebMirror(): void {
+    const validDocs = Object.values(this.manifest.documents)
+      .filter((d) => d.status === "VALID")
+      .sort((a, b) => a.sha256.localeCompare(b.sha256));
+
+    if (validDocs.length === 0) return;
+
+    const tuples: Array<[string, string, string, string, string, string, number, string, number, string]> = [];
+    for (const doc of validDocs) {
+      const graph = this.getGraph(doc.sha256);
+      if (!graph) {
+        // Do not overwrite compact index if any graph is missing on disk
+        return;
+      }
+      const cleanDrawNum = (doc.drawNumber || "").replace(/(st|nd|rd|th)$/i, "").trim();
+      const drawId = `draw_${cleanDrawNum}`;
+      const drawNumber = doc.drawNumber || cleanDrawNum;
+      const drawDate = doc.drawDate || "";
+      const lotteryCode = normalizeLotteryCode(doc.lotteryName || doc.drawNumber || "");
+
+      for (const n of graph.nodes) {
+        if (n.type === "WinningResult") {
+          const p = n.properties || {};
+          const series = p.series ? String(p.series).toUpperCase().trim() : "";
+          const canonicalNumber = String(p.canonicalNumber || "");
+          const isSuffixNum = p.isSuffix ? 1 : 0;
+          const prizeTierName = String(p.prizeTierName || `Rank ${p.rank}`);
+          const amount = typeof p.amount === "number" ? p.amount : 0;
+          tuples.push([
+            drawId,
+            drawNumber,
+            drawDate,
+            lotteryCode,
+            series,
+            canonicalNumber,
+            isSuffixNum,
+            prizeTierName,
+            amount,
+            doc.sha256
+          ]);
+        }
+      }
+    }
+
+    const indexPath = join(this.baseDir, "winning-results-index.json");
+    writeFileSync(indexPath, JSON.stringify(tuples), "utf-8");
+
+    const defaultCacheDir = join(process.cwd(), "data/processed-cache");
+    const webCacheDir = join(process.cwd(), "apps/web/data/processed-cache");
+    if (this.baseDir === defaultCacheDir && existsSync(webCacheDir)) {
+      try {
+        copyFileSync(this.manifestPath, join(webCacheDir, "manifest.json"));
+        copyFileSync(indexPath, join(webCacheDir, "winning-results-index.json"));
+      } catch {
+        // Ignore mirror copy failure if read-only in container
+      }
+    }
   }
 
   public static deriveCountsFromGraph(graph: LotteryKnowledgeGraph): {
@@ -202,6 +330,7 @@ export class DocumentCacheManager {
       status: "VALID"
     };
     this.persistManifest();
+    this.syncCompactIndexAndWebMirror();
   }
 
   /**

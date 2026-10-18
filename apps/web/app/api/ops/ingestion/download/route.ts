@@ -16,7 +16,6 @@ import {
   type InjectedCandidate,
   DocumentAcquisitionService,
   OfficialSourceDiscoveryService,
-  SourceIngestionService,
   AcquisitionSecurityError,
   resolveCanonicalAndResponseFilename
 } from "@kerala-lottery/service-ingestion";
@@ -29,17 +28,13 @@ import {
   KERALA_STATE_LOTTERY_PORTAL
 } from "@kerala-lottery/documents";
 import {
-  FirestoreDocumentRepository,
-  FirebaseStorageService
-} from "@kerala-lottery/data";
-import {
   verifyOpsAuthorization,
   validateOpsEnvironment,
   withOpsSingleFlightLock,
   getOpsRunRepository,
-  getOpsIngestionCloudDependenciesForTesting
+  getOpsIngestionCloudDependenciesForTesting,
+  buildOpsSourceIngestionService
 } from "../../../../../lib/ops-guard";
-import { db, isFirebaseConfigured } from "../../../../../lib/firebase";
 
 export const dynamic = "force-dynamic";
 
@@ -190,26 +185,8 @@ export async function POST(req: NextRequest) {
         lotteryCode: candidate.lotteryCode
       };
 
-      // Fail-closed Firebase check: operational ingestion requires durable cloud persistence
-      if (!isFirebaseConfigured && !testDeps) {
-        throw new Error(
-          "FIREBASE_NOT_CONFIGURED: Authoritative Firebase backend is not configured. Operational ingestion requires durable cloud persistence and cannot proceed in-memory."
-        );
-      }
-
-      let sourceIngestionService: SourceIngestionService;
-      if (testDeps) {
-        sourceIngestionService = testDeps.sourceIngestionService;
-      } else {
-        const docRepo = new FirestoreDocumentRepository(db);
-        const storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "kerala-lottery-intel-dev.firebasestorage.app";
-        const storageService = new FirebaseStorageService({ bucketName: storageBucket });
-
-        sourceIngestionService = new SourceIngestionService({
-          documentRepository: docRepo,
-          storageService
-        });
-      }
+      // Fail-closed Firebase check & authoritative cloud persistence service
+      const sourceIngestionService = buildOpsSourceIngestionService({ allowOptional: false })!;
 
       // Execute daily ingestion pipeline
       const engine = new DailyIngestionEngine({

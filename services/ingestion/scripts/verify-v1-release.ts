@@ -79,15 +79,20 @@ async function verifyAllV1Gates() {
     const manifest = JSON.parse(readFileSync(manifestPath, "utf-8"));
     const docCount = Object.keys(manifest.documents || {}).length;
 
-    if (docCount !== 114) {
-      throw new Error(`Expected exactly 114 documents in live research manifest, found ${docCount} (stale baseline rejected)`);
+    if (docCount !== 118) {
+      throw new Error(`Expected exactly 118 documents in live research manifest, found ${docCount} (stale baseline rejected)`);
     }
-    details.push(`Canonical manifest contains exactly ${docCount} documents.`);
+    const baselineDraws = manifest.v1Baseline?.draws ?? manifest.v1Baseline?.drawsCount;
+    const baselineResults = manifest.v1Baseline?.totalResults ?? manifest.v1Baseline?.totalResultsCount;
+    if (!manifest.v1Baseline || baselineDraws !== 114 || baselineResults !== 43712) {
+      throw new Error(`Expected preserved v1Baseline metadata (114 draws / 43,712 results), found ${JSON.stringify(manifest.v1Baseline)}`);
+    }
+    details.push(`Canonical manifest contains ${docCount} active documents and preserves V1.0 baseline (114 draws / 43,712 results).`);
 
     const graphsDir = join(cwd, "data/processed-cache/graphs");
     const graphFiles = readdirSync(graphsDir).filter((f) => f.endsWith(".json"));
-    if (graphFiles.length !== 114) {
-      throw new Error(`Expected exactly 114 graph files in ${graphsDir}, found ${graphFiles.length} (stale baseline rejected)`);
+    if (graphFiles.length !== 118) {
+      throw new Error(`Expected exactly 118 graph files in ${graphsDir}, found ${graphFiles.length} (stale baseline rejected)`);
     }
     details.push(`Knowledge graphs directory contains exactly ${graphFiles.length} graphs.`);
 
@@ -108,14 +113,14 @@ async function verifyAllV1Gates() {
       }
     }
 
-    if (totalWinningResults !== 43712) {
-      throw new Error(`Expected exactly 43,712 winning results in live corpus, found ${totalWinningResults} (stale baseline rejected)`);
+    if (totalWinningResults !== 45218) {
+      throw new Error(`Expected exactly 45,218 winning results in live corpus, found ${totalWinningResults} (stale baseline rejected)`);
     }
-    if (fullTicketCount !== 1658) {
-      throw new Error(`Expected exactly 1,658 full-ticket results in live corpus, found ${fullTicketCount}`);
+    if (fullTicketCount !== 1714) {
+      throw new Error(`Expected exactly 1,714 full-ticket results in live corpus, found ${fullTicketCount}`);
     }
-    if (suffixCount !== 42054) {
-      throw new Error(`Expected exactly 42,054 suffix results in live corpus, found ${suffixCount}`);
+    if (suffixCount !== 43504) {
+      throw new Error(`Expected exactly 43,504 suffix results in live corpus, found ${suffixCount}`);
     }
 
     details.push(`Winning results exact balance: ${totalWinningResults.toLocaleString()} total (${fullTicketCount.toLocaleString()} full-ticket, ${suffixCount.toLocaleString()} suffix).`);
@@ -133,19 +138,19 @@ async function verifyAllV1Gates() {
     const drawsPage2 = await researchService.getDraws({ page: 2, pageSize: 100 });
 
     const totalDraws = drawsRes.pagination.totalCount;
-    if (totalDraws !== 114) {
-      throw new Error(`researchService.getDraws returned totalCount = ${totalDraws}, expected exactly 114 in live corpus (stale baseline rejected)`);
+    if (totalDraws !== 118) {
+      throw new Error(`researchService.getDraws returned totalCount = ${totalDraws}, expected exactly 118 in live corpus (stale baseline rejected)`);
     }
     const combined = [...drawsRes.data, ...drawsPage2.data];
-    if (combined.length !== 114) {
-      throw new Error(`Combined pagination returned ${combined.length} draws, expected exactly 114 in live corpus`);
+    if (combined.length !== 118) {
+      throw new Error(`Combined pagination returned ${combined.length} draws, expected exactly 118 in live corpus`);
     }
 
     details.push(`Paginated research service correctly exposes all ${totalDraws} draws across pages.`);
     details.push(`Every draw retains validated prizeSchemeId and SHA-256 source identity.`);
-    recordGate("Gate 02", "114-Draw Research State Consistency", "PASS", details);
+    recordGate("Gate 02", "118-Draw Research State Consistency", "PASS", details);
   } catch (err: any) {
-    recordGate("Gate 02", "114-Draw Research State Consistency", "FAIL", [err.message]);
+    recordGate("Gate 02", "118-Draw Research State Consistency", "FAIL", [err.message]);
   }
 
   // --------------------------------------------------------------------------
@@ -394,11 +399,11 @@ async function verifyAllV1Gates() {
     }
     details.push(`Exact historical match detected for BT-73 1st Prize (${comp.exactTicketMatch.matches[0]?.drawId}).`);
 
-    if (comp.sampleSizeResults !== 43712) {
-      throw new Error(`Comparison sample size = ${comp.sampleSizeResults}, expected exactly 43,712 in live corpus (stale baseline rejected)`);
+    if (comp.sampleSizeResults !== 45218) {
+      throw new Error(`Comparison sample size = ${comp.sampleSizeResults}, expected 45,218 in live corpus (stale baseline rejected)`);
     }
-    if (comp.sampleSizeDraws !== 114) {
-      throw new Error(`Comparison sample size draws = ${comp.sampleSizeDraws}, expected exactly 114 in live corpus`);
+    if (comp.sampleSizeDraws !== 118) {
+      throw new Error(`Comparison sample size draws = ${comp.sampleSizeDraws}, expected 118 in live corpus`);
     }
     details.push(`Evaluated against full ${comp.sampleSizeResults.toLocaleString()} winning results in ${comp.sampleSizeDraws} draws.`);
 

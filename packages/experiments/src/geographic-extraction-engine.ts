@@ -72,7 +72,13 @@ export class GeographicExtractionEngine {
     }
     const CANONICAL_GOVERNMENT_FILENAME_REGEX = /^[0-9]+-[0-9]+-[0-9]{2}-[0-9]{2}-[0-9]{4}\.pdf$/i;
     const files = readdirSync(this.sourceDir)
-      .filter((f) => f.endsWith(".pdf") && f !== "dhanalekshmi-dl-40.pdf" && CANONICAL_GOVERNMENT_FILENAME_REGEX.test(f))
+      .filter(
+        (f) =>
+          f.endsWith(".pdf") &&
+          f !== "dhanalekshmi-dl-40.pdf" &&
+          CANONICAL_GOVERNMENT_FILENAME_REGEX.test(f) &&
+          Number(f.split("-")[1]) <= 2367
+      )
       .sort();
 
     if (files.length !== 103) {

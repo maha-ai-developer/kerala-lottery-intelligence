@@ -408,7 +408,7 @@ export default function CandidateLabPage() {
               {loading ? "Evaluating Candidates..." : "ANALYZE ALL CANDIDATES"}
             </button>
             <span style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>
-              Evaluates {candidates.length} candidates side-by-side against the 114-draw research corpus.
+              Evaluates {candidates.length} candidates side-by-side against the active 118-draw research corpus (45,218 results).
             </span>
           </div>
         </form>
@@ -689,7 +689,7 @@ export default function CandidateLabPage() {
             }}
           >
             <h2 style={{ fontSize: "1.15rem", fontWeight: 600, marginBottom: "1rem" }}>
-              4. Historical Corpus Comparison (114 Draws / 43,712 Winning Results)
+              4. Historical Corpus Comparison ({analysis.provenance?.corpusVersion?.includes("118") ? 118 : 114} Draws / {(analysis.provenance?.corpusVersion?.includes("118") ? 45218 : 43712).toLocaleString()} Winning Results)
             </h2>
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>

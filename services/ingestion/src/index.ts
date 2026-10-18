@@ -61,6 +61,7 @@ export * from "./page-extraction";
 export * from "./cross-document-validator";
 export * from "./document-cache";
 export * from "./daily-ingestion-engine";
+export * from "./catch-up-engine";
 export * from "./operations";
 
 export interface IngestDocumentInput {
@@ -96,6 +97,39 @@ export interface SourceIngestionServiceDependencies {
 
 export class SourceIngestionService {
   constructor(private readonly deps: SourceIngestionServiceDependencies) {}
+
+  /**
+   * Checks whether a SHA-256 document identity is present in Cloud Storage and Firestore.
+   */
+  async checkResidency(sha256: string): Promise<{
+    inCloudStorage: boolean;
+    inFirestore: boolean;
+  }> {
+    const normalizedSha = sha256.trim().toLowerCase();
+    const storagePath = getSourceStoragePath(normalizedSha);
+    let inFirestore = false;
+    let inCloudStorage = false;
+    try {
+      const doc = await this.deps.documentRepository.getBySha256(normalizedSha);
+      inFirestore = Boolean(doc && doc.sha256 === normalizedSha);
+    } catch {
+      inFirestore = false;
+    }
+    try {
+      if (this.deps.storageService.getObjectMetadata) {
+        const meta = await this.deps.storageService.getObjectMetadata(storagePath);
+        inCloudStorage = Boolean(meta);
+      } else if (this.deps.storageService.getObject) {
+        const bytes = await this.deps.storageService.getObject(storagePath);
+        inCloudStorage = Boolean(bytes && bytes.byteLength > 0);
+      } else {
+        inCloudStorage = inFirestore;
+      }
+    } catch {
+      inCloudStorage = false;
+    }
+    return { inCloudStorage, inFirestore };
+  }
 
   /**
    * Verifies that an existing GCS object matches the expected byte length, cryptographic

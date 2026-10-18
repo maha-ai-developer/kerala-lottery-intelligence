@@ -245,13 +245,13 @@ describe("Milestone 8C: Production Operationalization", () => {
       expect(result.success).toBe(true);
       expect(result.environment).toBe("PROD");
       expect(result.projectId).toBe(PROD_PROJECT_ID);
-      expect([103, 104, 114]).toContain(result.totalCandidates);
-      expect([103, 104, 114]).toContain(result.validatedDrawsCount);
-      expect([39550, 39926, 43712]).toContain(result.totalWinningResults);
+      expect([103, 104, 114, 118]).toContain(result.totalCandidates);
+      expect([103, 104, 114, 118]).toContain(result.validatedDrawsCount);
+      expect([39550, 39926, 43712, 45218]).toContain(result.totalWinningResults);
       expect(result.targetDrawVerified.sha256).toBe(TARGET_BT73_SHA);
       expect(result.auditRecord.status).toBe("SUCCEEDED");
-      expect([103, 104, 114]).toContain(result.auditRecord.corpusSummary?.draws);
-      expect([39550, 39926, 43712]).toContain(result.auditRecord.corpusSummary?.results);
+      expect([103, 104, 114, 118]).toContain(result.auditRecord.corpusSummary?.draws);
+      expect([39550, 39926, 43712, 45218]).toContain(result.auditRecord.corpusSummary?.results);
     });
 
     it("should guarantee idempotent replay on BT-73 (0 duplicate persistence)", async () => {

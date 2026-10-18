@@ -24,7 +24,7 @@
  * - Clear distinction: OFFICIAL_SCHEME vs OBSERVED_SCHEME_ARCHETYPE (BR-111).
  */
 
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, statSync } from "node:fs";
 import { join } from "node:path";
 import {
   createAuthoritativePrizeSchemeRegistry,
@@ -361,6 +361,21 @@ export interface HistoricalStatisticsResult {
     earliest: string;
     latest: string;
   };
+  v1Baseline?: {
+    cutoffDate: string;
+    totalDraws: number;
+    totalResults: number;
+    fullTicketCount: number;
+    suffixCount: number;
+  };
+  activeCorpus?: {
+    latestDrawDate: string;
+    latestDrawNumber: string;
+    totalDraws: number;
+    totalResults: number;
+    fullTicketCount: number;
+    suffixCount: number;
+  };
   lastDigitDistribution: Record<string, number>;
   firstDigitDistribution: Record<string, number>;
   positionDistributions: Record<number, Record<string, number>>;
@@ -478,8 +493,12 @@ export class ResearchDataService {
 
   private readonly manifestPath: string;
   private readonly graphsDir: string;
+  private readonly compactIndexPath: string;
   private manifestCache: Record<string, any> | null = null;
+  private manifestMtimeMs: number = 0;
+  private manifestMetaCache: { v1Baseline?: any; activeCorpus?: any } | null = null;
   private cachedDrawSummaries: DrawSummary[] | null = null;
+  private compactIndexByShaCache: Map<string, Array<[string, string, string, string, string, string, number, string, number, string]>> | null = null;
   private readonly graphCache = new Map<string, any>();
   private readonly schemeRegistry = createAuthoritativePrizeSchemeRegistry();
 
@@ -496,6 +515,7 @@ export class ResearchDataService {
     const base = candidateBases[0] || options?.baseDir || cwd;
     this.manifestPath = join(base, "data/processed-cache/manifest.json");
     this.graphsDir = join(base, "data/processed-cache/graphs");
+    this.compactIndexPath = join(base, "data/processed-cache/winning-results-index.json");
   }
 
   public static getInstance(): ResearchDataService {
@@ -505,23 +525,80 @@ export class ResearchDataService {
     return ResearchDataService.instance;
   }
 
+  public invalidateCache(): void {
+    this.manifestCache = null;
+    this.manifestMtimeMs = 0;
+    this.manifestMetaCache = null;
+    this.cachedDrawSummaries = null;
+    this.compactIndexByShaCache = null;
+    this.graphCache.clear();
+  }
+
   /**
-   * Loads the 100-document manifest.
+   * Loads the document manifest and auto-invalidates caches if modified on disk.
    */
   private loadManifest(): Record<string, any> {
-    if (this.manifestCache) return this.manifestCache;
     if (existsSync(this.manifestPath)) {
       try {
+        const mtimeMs = statSync(this.manifestPath).mtimeMs;
+        if (this.manifestCache && mtimeMs === this.manifestMtimeMs) {
+          return this.manifestCache;
+        }
         const raw = readFileSync(this.manifestPath, "utf-8");
         const json = JSON.parse(raw);
+        this.manifestMtimeMs = mtimeMs;
         this.manifestCache = json.documents || {};
+        this.manifestMetaCache = {
+          v1Baseline: json.v1Baseline,
+          activeCorpus: json.activeCorpus
+        };
+        this.cachedDrawSummaries = null;
+        this.compactIndexByShaCache = null;
         return this.manifestCache!;
       } catch (err) {
         console.warn("[WARN] Could not parse manifest.json:", err);
       }
     }
+    if (this.manifestCache) return this.manifestCache;
     this.manifestCache = {};
     return this.manifestCache;
+  }
+
+  /**
+   * Lazily loads compact index entries grouped by SHA-256 when individual graph JSONs are unavailable.
+   */
+  private getCompactResultsBySha(
+    sha256: string
+  ): Array<[string, string, string, string, string, string, number, string, number, string]> | null {
+    this.loadManifest();
+    if (!this.compactIndexByShaCache) {
+      const map = new Map<string, Array<[string, string, string, string, string, string, number, string, number, string]>>();
+      if (existsSync(this.compactIndexPath)) {
+        try {
+          const raw = readFileSync(this.compactIndexPath, "utf-8");
+          const entries: Array<[string, string, string, string, string, string, number, string, number, string]> = JSON.parse(raw);
+          for (const e of entries) {
+            const entrySha = String(e[9] || "").toLowerCase();
+            if (!entrySha) continue;
+            const list = map.get(entrySha) || [];
+            list.push(e);
+            map.set(entrySha, list);
+          }
+        } catch (err) {
+          console.warn("[WARN] Could not parse winning-results-index.json:", err);
+        }
+      }
+      this.compactIndexByShaCache = map;
+    }
+    return this.compactIndexByShaCache.get(sha256.toLowerCase()) || null;
+  }
+
+  private inferPrizeRankFromTierName(tierName: string): number {
+    const clean = (tierName || "").trim();
+    if (/cons/i.test(clean)) return 0;
+    const m = /(\d+)(?:st|nd|rd|th)/i.exec(clean);
+    if (m) return parseInt(m[1]!, 10);
+    return 0;
   }
 
   /**
@@ -546,14 +623,13 @@ export class ResearchDataService {
   }
 
   /**
-   * Builds and caches the list of 100 DrawSummaries.
+   * Builds and caches the list of DrawSummaries.
    */
   private getCachedDraws(): DrawSummary[] {
+    const manifest = this.loadManifest();
     if (this.cachedDrawSummaries) {
       return this.cachedDrawSummaries;
     }
-
-    const manifest = this.loadManifest();
     const summaries: DrawSummary[] = [];
 
     for (const [sha256, doc] of Object.entries(manifest)) {
@@ -784,7 +860,7 @@ export class ResearchDataService {
     const docMeta = manifest[summary.sourceDocumentSha256] || {};
     const graph = this.loadGraph(summary.sourceDocumentSha256);
 
-    // Extract prize tiers from graph nodes
+    // Extract prize tiers from graph nodes or compact index fallback
     const prizeTiers: Array<{
       tierCode: string;
       tierName: string;
@@ -809,6 +885,33 @@ export class ResearchDataService {
           isSuffix: Boolean(props.isSuffix),
           resultCount: count
         });
+      }
+    } else {
+      const compactEntries = this.getCompactResultsBySha(summary.sourceDocumentSha256);
+      if (compactEntries && compactEntries.length > 0) {
+        const tierGroups = new Map<string, { tierName: string; rank: number; amount: number; isSuffix: boolean; count: number }>();
+        for (const e of compactEntries) {
+          const isSuffix = e[6] === 1;
+          const tierName = e[7] || "Prize";
+          const amount = e[8] ?? 0;
+          const rank = this.inferPrizeRankFromTierName(tierName);
+          const existing = tierGroups.get(tierName);
+          if (existing) {
+            existing.count++;
+          } else {
+            tierGroups.set(tierName, { tierName, rank, amount, isSuffix, count: 1 });
+          }
+        }
+        for (const g of tierGroups.values()) {
+          prizeTiers.push({
+            tierCode: String(g.rank),
+            tierName: g.tierName,
+            rank: g.rank,
+            amount: g.amount,
+            isSuffix: g.isSuffix,
+            resultCount: g.count
+          });
+        }
       }
     }
 
@@ -841,36 +944,69 @@ export class ResearchDataService {
 
     const { page, pageSize } = parsePaginationParams(params || {});
     const graph = this.loadGraph(draw.sourceDocumentSha256);
-    if (!graph || !graph.nodes) {
-      return paginateArray([], page, pageSize);
-    }
+    let items: WinningResultItem[] = [];
 
-    const resultNodes = graph.nodes.filter((n: any) => n.type === "WinningResult");
-    let items: WinningResultItem[] = resultNodes.map((n: any) => {
-      const p = n.properties || {};
-      const prov = n.provenance || {};
-      return {
-        id: n.id,
-        drawId: draw.drawId,
-        drawNumber: draw.drawNumber,
-        drawDate: draw.drawDate,
-        lotteryCode: draw.lotteryCode,
-        lotteryName: draw.lotteryName,
-        prizeTierName: p.prizeTierName || `Rank ${p.rank}`,
-        rank: p.rank ?? 0,
-        amount: p.amount,
-        series: p.series || undefined,
-        canonicalNumber: String(p.canonicalNumber || ""), // Preserves leading zeros e.g. "0259"
-        numberLength: p.numberLength || String(p.canonicalNumber || "").length,
-        isSuffix: Boolean(p.isSuffix),
-        sourceDocumentSha256: draw.sourceDocumentSha256,
-        provenance: {
-          parserRule: prov.parserRule || "rule.entity.winning_result_v1",
-          confidence: prov.confidence ?? 1.0,
-          sourcePageNumber: prov.sourcePageNumber
-        }
-      };
-    });
+    if (graph?.nodes) {
+      const resultNodes = graph.nodes.filter((n: any) => n.type === "WinningResult");
+      items = resultNodes.map((n: any) => {
+        const p = n.properties || {};
+        const prov = n.provenance || {};
+        return {
+          id: n.id,
+          drawId: draw.drawId,
+          drawNumber: draw.drawNumber,
+          drawDate: draw.drawDate,
+          lotteryCode: draw.lotteryCode,
+          lotteryName: draw.lotteryName,
+          prizeTierName: p.prizeTierName || `Rank ${p.rank}`,
+          rank: p.rank ?? 0,
+          amount: p.amount,
+          series: p.series || undefined,
+          canonicalNumber: String(p.canonicalNumber || ""), // Preserves leading zeros e.g. "0259"
+          numberLength: p.numberLength || String(p.canonicalNumber || "").length,
+          isSuffix: Boolean(p.isSuffix),
+          sourceDocumentSha256: draw.sourceDocumentSha256,
+          provenance: {
+            parserRule: prov.parserRule || "rule.entity.winning_result_v1",
+            confidence: prov.confidence ?? 1.0,
+            sourcePageNumber: prov.sourcePageNumber
+          }
+        };
+      });
+    } else {
+      const compactEntries = this.getCompactResultsBySha(draw.sourceDocumentSha256);
+      if (!compactEntries || compactEntries.length === 0) {
+        return paginateArray([], page, pageSize);
+      }
+      items = compactEntries.map((e, idx) => {
+        const series = e[4] || undefined;
+        const canonicalNumber = String(e[5] || "");
+        const isSuffix = e[6] === 1;
+        const prizeTierName = e[7] || "Prize";
+        const amount = e[8] ?? 0;
+        const rank = this.inferPrizeRankFromTierName(prizeTierName);
+        return {
+          id: `res_${draw.sourceDocumentSha256.slice(0, 8)}_${idx + 1}`,
+          drawId: draw.drawId,
+          drawNumber: draw.drawNumber,
+          drawDate: draw.drawDate,
+          lotteryCode: draw.lotteryCode,
+          lotteryName: draw.lotteryName,
+          prizeTierName,
+          rank,
+          amount,
+          series,
+          canonicalNumber,
+          numberLength: canonicalNumber.length,
+          isSuffix,
+          sourceDocumentSha256: draw.sourceDocumentSha256,
+          provenance: {
+            parserRule: "rule.entity.winning_result_v1",
+            confidence: 1.0
+          }
+        };
+      });
+    }
 
     // Filtering
     if (params?.prizeTier) {
@@ -1114,6 +1250,14 @@ export class ResearchDataService {
       const code = params.lotteryCode.toUpperCase();
       filtered = filtered.filter(d => d.lotteryCode.toUpperCase().includes(code));
     }
+    if (params?.startDate) {
+      const startIso = params.startDate.includes("/") ? params.startDate.split("/").reverse().join("-") : params.startDate;
+      filtered = filtered.filter(d => d.drawDate.split("/").reverse().join("-") >= startIso);
+    }
+    if (params?.endDate) {
+      const endIso = params.endDate.includes("/") ? params.endDate.split("/").reverse().join("-") : params.endDate;
+      filtered = filtered.filter(d => d.drawDate.split("/").reverse().join("-") <= endIso);
+    }
 
     const totalDraws = filtered.length;
     let totalResults = 0;
@@ -1130,8 +1274,46 @@ export class ResearchDataService {
 
     const dates = filtered.map(d => d.drawDate.split("/").reverse().join("-")).sort();
 
+    // Compute V1 baseline (<= 2026-10-13) and activeCorpus from cached draws / manifest
+    let v1Draws = 0;
+    let v1Results = 0;
+    let v1Full = 0;
+    let v1Suffix = 0;
+    let activeResults = 0;
+    let activeFull = 0;
+    let activeSuffix = 0;
+
+    for (const d of draws) {
+      const dIso = d.drawDate.split("/").reverse().join("-");
+      activeResults += d.totalResults;
+      activeFull += d.fullTicketCount;
+      activeSuffix += d.suffixCount;
+      if (dIso <= "2026-10-13") {
+        v1Draws++;
+        v1Results += d.totalResults;
+        v1Full += d.fullTicketCount;
+        v1Suffix += d.suffixCount;
+      }
+    }
+
+    const latestDraw = draws[0];
+    const v1Baseline = this.manifestMetaCache?.v1Baseline || {
+      cutoffDate: "2026-10-13",
+      totalDraws: v1Draws,
+      totalResults: v1Results,
+      fullTicketCount: v1Full,
+      suffixCount: v1Suffix
+    };
+    const activeCorpus = this.manifestMetaCache?.activeCorpus || {
+      latestDrawDate: latestDraw ? latestDraw.drawDate.split("/").reverse().join("-") : "",
+      latestDrawNumber: latestDraw ? latestDraw.drawNumber.replace(/(st|nd|rd|th)$/i, "").trim() : "",
+      totalDraws: draws.length,
+      totalResults: activeResults,
+      fullTicketCount: activeFull,
+      suffixCount: activeSuffix
+    };
+
     // Canonical descriptive digit distributions across the verified historical baseline
-    // Deterministic empirical frequencies across the 38,416 historical results
     const lastDigits: Record<string, number> = {
       "0": Math.round(totalResults * 0.1002),
       "1": Math.round(totalResults * 0.0998),
@@ -1175,6 +1357,8 @@ export class ResearchDataService {
         earliest: dates[0]?.split("-").reverse().join("/") || "01/01/2026",
         latest: dates[dates.length - 1]?.split("-").reverse().join("/") || "28/09/2026"
       },
+      v1Baseline,
+      activeCorpus,
       lastDigitDistribution: lastDigits,
       firstDigitDistribution: firstDigits,
       positionDistributions,

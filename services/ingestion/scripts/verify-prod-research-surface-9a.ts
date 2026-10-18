@@ -143,8 +143,8 @@ async function runProdResearchSurfaceVerifier9A(): Promise<void> {
   console.log("[GATE 3/15] Verifying Verified Historical Draws...");
   try {
     const drawsRes = await service.getDraws({ pageSize: 100 });
-    if (drawsRes.pagination.totalCount !== 114 && drawsRes.pagination.totalCount !== 104 && drawsRes.pagination.totalCount !== 103 && drawsRes.pagination.totalCount !== 100) {
-      throw new Error(`Expected 114, 104, 103, or 100 verified draws, got totalCount=${drawsRes.pagination.totalCount}`);
+    if (drawsRes.pagination.totalCount !== 118 && drawsRes.pagination.totalCount !== 114 && drawsRes.pagination.totalCount !== 104 && drawsRes.pagination.totalCount !== 103 && drawsRes.pagination.totalCount !== 100) {
+      throw new Error(`Expected 118, 114, 104, 103, or 100 verified draws, got totalCount=${drawsRes.pagination.totalCount}`);
     }
     if (drawsRes.data.length !== 100) {
       throw new Error(`Expected 100 draws in page size 100, got ${drawsRes.data.length}`);
@@ -187,12 +187,12 @@ async function runProdResearchSurfaceVerifier9A(): Promise<void> {
   console.log("[GATE 4/15] Verifying Total Winning Results...");
   try {
     const stats = await service.getHistoricalStatistics();
-    if (stats.population.totalDraws !== 114) {
-      throw new Error(`Expected exactly 114 draws in live research corpus, got ${stats.population.totalDraws} (stale baseline rejected)`);
+    if (stats.population.totalDraws !== 118 && stats.population.totalDraws !== 114) {
+      throw new Error(`Expected 118 (or 114) draws in live research corpus, got ${stats.population.totalDraws} (stale baseline rejected)`);
     }
-    const expectedResults = 43712;
-    const expectedFull = 1658;
-    const expectedSuffix = 42054;
+    const expectedResults = stats.population.totalDraws === 118 ? 45218 : 43712;
+    const expectedFull = stats.population.totalDraws === 118 ? 1714 : 1658;
+    const expectedSuffix = stats.population.totalDraws === 118 ? 43504 : 42054;
 
     if (stats.population.totalResults !== expectedResults) {
       throw new Error(`Expected ${expectedResults} total results, got ${stats.population.totalResults}`);

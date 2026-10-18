@@ -243,6 +243,11 @@ export default function IngestionConsolePage() {
   const [confirmCandidateIngest, setConfirmCandidateIngest] = useState(false);
   const [downloadingCandidate, setDownloadingCandidate] = useState(false);
 
+  // Catch-Up Published Results workflow state
+  const [catchUpReport, setCatchUpReport] = useState<any | null>(null);
+  const [runningCatchUp, setRunningCatchUp] = useState(false);
+  const [confirmCatchUpIngest, setConfirmCatchUpIngest] = useState(false);
+
   // Mode 2: Manual Upload state
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [fileSha, setFileSha] = useState<string | null>(null);
@@ -259,11 +264,54 @@ export default function IngestionConsolePage() {
   const [postIngestResult, setPostIngestResult] = useState<PostIngestResult | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  // Load runs and integrity stats on mount
+  // Load runs, integrity stats, and initial catch-up summary on mount
   useEffect(() => {
     loadRuns();
     loadStorageIntegrity(false);
+    handleCatchUpAction("DISCOVER");
   }, []);
+
+  async function handleCatchUpAction(mode: "DISCOVER" | "DRY_RUN" | "INGEST") {
+    if (mode === "INGEST") {
+      if (selectedEnv === "PROD") {
+        setActionError("PROD mutations are strictly forbidden. PROD is READ-ONLY.");
+        return;
+      }
+      if (!confirmCatchUpIngest) {
+        setActionError("Explicit operator confirmation is required before ingesting catch-up results into DEV.");
+        return;
+      }
+    }
+    setRunningCatchUp(true);
+    setActionError(null);
+    try {
+      const res = await fetch("/api/ops/ingestion/catch-up", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode,
+          environment: selectedEnv,
+          confirm: mode === "INGEST" ? true : undefined
+        })
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.message || `Catch-up (${mode}) failed`);
+      }
+      setCatchUpReport(json);
+      if (mode === "INGEST") {
+        setConfirmCatchUpIngest(false);
+        loadRuns();
+        loadStorageIntegrity(false);
+      }
+    } catch (err: any) {
+      if (mode !== "DISCOVER") {
+        setActionError(err.message || `Catch-up (${mode}) failed`);
+      }
+    } finally {
+      setRunningCatchUp(false);
+    }
+  }
 
   async function loadRuns() {
     setLoadingRuns(true);
@@ -1210,6 +1258,288 @@ export default function IngestionConsolePage() {
       {/* MODE 1: AUTOMATIC DISCOVERY & TODAY'S OFFICIAL RESULT CHECK */}
       {activeMode === "DOWNLOAD" && (
         <div style={{ marginBottom: "2rem" }}>
+          {/* Reusable Catch-Up Workflow Card */}
+          <div
+            className="card"
+            style={{
+              marginBottom: "1.5rem",
+              background: "var(--bg-surface-elevated)",
+              border: "1px solid var(--border-medium)"
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                flexWrap: "wrap",
+                gap: "1rem",
+                marginBottom: "1rem"
+              }}
+            >
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap", marginBottom: "0.3rem" }}>
+                  <h3 style={{ fontSize: "1.15rem", fontWeight: 700, margin: 0 }}>
+                    Catch up published results
+                  </h3>
+                  <span className="badge badge-emerald">LAST INGESTED → TODAY (IST)</span>
+                </div>
+                <div style={{ fontSize: "0.82rem", color: "var(--text-muted)" }}>
+                  Automatically calculates the missing date range{" "}
+                  <span className="mono">
+                    {catchUpReport?.catchUpRange?.formula || "drawDate > lastVerifiedIngestedDrawDate AND drawDate <= currentISTDate"}
+                  </span>{" "}
+                  from the official LOTIS portal (`lotteryagent.kerala.gov.in`).
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  onClick={() => handleCatchUpAction("DISCOVER")}
+                  disabled={runningCatchUp}
+                  style={{
+                    background: "var(--bg-surface)",
+                    color: "var(--text-primary)",
+                    border: "1px solid var(--border-medium)",
+                    borderRadius: "0.45rem",
+                    padding: "0.6rem 1rem",
+                    minHeight: "44px",
+                    fontSize: "0.82rem",
+                    fontWeight: 600,
+                    cursor: runningCatchUp ? "wait" : "pointer"
+                  }}
+                >
+                  {runningCatchUp ? "Scanning..." : "Refresh Catch-Up Range"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleCatchUpAction("DRY_RUN")}
+                  disabled={runningCatchUp}
+                  style={{
+                    background: "var(--accent-blue)",
+                    color: "#000",
+                    border: "none",
+                    borderRadius: "0.45rem",
+                    padding: "0.6rem 1.1rem",
+                    minHeight: "44px",
+                    fontSize: "0.82rem",
+                    fontWeight: 700,
+                    cursor: runningCatchUp ? "wait" : "pointer"
+                  }}
+                >
+                  {runningCatchUp ? "Validating PDFs..." : "Dry-Run Validate Catch-Up"}
+                </button>
+              </div>
+            </div>
+
+            {/* Plain-Language Catch-Up Summary */}
+            <div className="grid-3" style={{ marginBottom: catchUpReport?.candidates?.length ? "1rem" : 0 }}>
+              <div style={{ background: "var(--bg-surface)", padding: "0.85rem", borderRadius: "0.5rem", border: "1px solid var(--border-subtle)" }}>
+                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase" }}>
+                  Last ingested result
+                </div>
+                <div style={{ fontSize: "1.05rem", fontWeight: 700, marginTop: "0.25rem", color: "var(--accent-blue)" }}>
+                  {catchUpReport?.plainLanguageSummary?.lastIngestedResult || "Checking corpus..."}
+                </div>
+                <div style={{ fontSize: "0.76rem", color: "var(--text-secondary)", marginTop: "0.2rem" }}>
+                  {catchUpReport?.corpusAfter
+                    ? `${catchUpReport.corpusAfter.totalDraws} verified draws (${catchUpReport.corpusAfter.totalResults.toLocaleString()} results)`
+                    : "Active verified corpus"}
+                </div>
+              </div>
+
+              <div style={{ background: "var(--bg-surface)", padding: "0.85rem", borderRadius: "0.5rem", border: "1px solid var(--border-subtle)" }}>
+                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase" }}>
+                  Published results found since then
+                </div>
+                <div style={{ fontSize: "1.05rem", fontWeight: 700, marginTop: "0.25rem", color: "var(--accent-emerald)" }}>
+                  {catchUpReport ? catchUpReport.plainLanguageSummary?.publishedResultsFoundSinceThen ?? 0 : "..."}
+                </div>
+                <div style={{ fontSize: "0.76rem", color: "var(--text-secondary)", marginTop: "0.2rem" }}>
+                  {catchUpReport
+                    ? `${catchUpReport.counts?.newEligible ?? 0} eligible • ${catchUpReport.plainLanguageSummary?.alreadyIngestedCount ?? 0} already ingested • ${catchUpReport.counts?.ingestedThisRun ?? 0} ingested this run`
+                    : "Scanning official LOTIS table"}
+                </div>
+              </div>
+
+              <div style={{ background: "var(--bg-surface)", padding: "0.85rem", borderRadius: "0.5rem", border: "1px solid var(--border-subtle)" }}>
+                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase" }}>
+                  Today&apos;s draw ({catchUpReport?.currentIst?.displayDate || "IST"})
+                </div>
+                <div style={{ fontSize: "1.05rem", fontWeight: 700, marginTop: "0.25rem", color: "var(--accent-amber)" }}>
+                  {catchUpReport?.todayStatus?.summary || "Checking schedule..."}
+                </div>
+                <div style={{ fontSize: "0.76rem", color: "var(--text-secondary)", marginTop: "0.2rem" }}>
+                  {catchUpReport?.todaySchedule?.venue
+                    ? `${catchUpReport.todaySchedule.drawTimeIst} • ${catchUpReport.todaySchedule.venue}`
+                    : "Official schedule checked"}
+                </div>
+              </div>
+            </div>
+
+            {/* Catch-Up Candidate Inventory Table */}
+            {catchUpReport?.candidates && catchUpReport.candidates.length > 0 && (
+              <div className="table-container" style={{ marginBottom: "0.85rem" }}>
+                <table className="research-table" style={{ fontSize: "0.78rem" }}>
+                  <thead>
+                    <tr>
+                      <th>Draw Date</th>
+                      <th>Lottery &amp; Draw</th>
+                      <th>Official PDF / Listing</th>
+                      <th>Size &amp; SHA-256</th>
+                      <th>Residency (Local / GCS / Firestore)</th>
+                      <th>Validation &amp; Records</th>
+                      <th>Disposition &amp; 1st Prize</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {catchUpReport.candidates.map((item: any) => {
+                      let badge = "badge-slate";
+                      if (item.classification === "NEW_ELIGIBLE") badge = "badge-emerald";
+                      else if (item.classification.startsWith("ALREADY_INGESTED")) badge = "badge-blue";
+                      else if (item.classification === "NOT_PUBLISHED_YET") badge = "badge-amber";
+                      else badge = "badge-rose";
+
+                      return (
+                        <tr key={`${item.drawNumber}_${item.isoDate}`}>
+                          <td className="mono">{item.drawDate}</td>
+                          <td>
+                            <div className="mono">
+                              <strong>{item.drawNumber}</strong>
+                            </div>
+                            <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)" }}>
+                              {item.lotteryName} ({item.lotteryCode})
+                            </div>
+                          </td>
+                          <td style={{ fontSize: "0.72rem" }}>
+                            <div className="mono">
+                              {item.canonicalFilename || item.sourceResponseFilename || "Pending PDF"}
+                            </div>
+                            {(item.sourceUrl || item.downloadUrl) ? (
+                              <a
+                                href={item.sourceUrl || item.downloadUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{ color: "var(--accent-blue)", textDecoration: "underline", fontSize: "0.68rem" }}
+                              >
+                                Official PDF
+                              </a>
+                            ) : (
+                              <span style={{ color: "var(--text-muted)", fontSize: "0.68rem" }}>
+                                {item.officialListingUrl ? "LOTIS Listing (Unpublished)" : "Not yet published"}
+                              </span>
+                            )}
+                          </td>
+                          <td className="mono" style={{ fontSize: "0.72rem" }}>
+                            <div>
+                              {typeof item.fileSize === "number"
+                                ? `${item.fileSize.toLocaleString()} B`
+                                : "—"}
+                            </div>
+                            {item.sha256 && (
+                              <div style={{ fontSize: "0.66rem", color: "var(--accent-cyan)" }} title={item.sha256}>
+                                {item.sha256.slice(0, 14)}...
+                              </div>
+                            )}
+                          </td>
+                          <td className="mono" style={{ fontSize: "0.68rem" }}>
+                            <div>Local: {item.localCorpusStatus || "—"}</div>
+                            <div>GCS: {item.devCloudStorageStatus || "—"}</div>
+                            <div>DB: {item.devFirestoreStatus || "—"}</div>
+                          </td>
+                          <td style={{ fontSize: "0.72rem" }}>
+                            <span className={`badge ${badge}`} style={{ fontSize: "0.65rem", marginBottom: "0.2rem", display: "inline-block" }}>
+                              {item.classification}
+                            </span>
+                            <div>
+                              {item.resultCount
+                                ? `${item.resultCount} (${item.fullTicketCount} full + ${item.suffixCount} suffix)`
+                                : item.schemeId || "—"}
+                            </div>
+                          </td>
+                          <td style={{ fontSize: "0.72rem", color: "var(--text-secondary)" }}>
+                            <div className="mono" style={{ fontWeight: 700, color: "var(--text-primary)", marginBottom: "0.15rem" }}>
+                              {item.finalDisposition || (item.actionTaken === "INGESTED" || item.ingested ? "INGESTED" : "—")}
+                            </div>
+                            {item.firstPrize
+                              ? `1st: ${item.firstPrize.series ? `${item.firstPrize.series} ` : ""}${item.firstPrize.ticketNumber} (₹${item.firstPrize.amount.toLocaleString()})`
+                              : item.details}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Operator Confirmation for Eligible Catch-Up Results */}
+            {catchUpReport?.counts?.newEligible > 0 && (
+              <div
+                style={{
+                  paddingTop: "0.85rem",
+                  borderTop: "1px solid var(--border-subtle)",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: "0.85rem"
+                }}
+              >
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.55rem",
+                    fontSize: "0.84rem",
+                    cursor: selectedEnv === "PROD" ? "not-allowed" : "pointer"
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={confirmCatchUpIngest}
+                    disabled={selectedEnv === "PROD"}
+                    onChange={(e) => setConfirmCatchUpIngest(e.target.checked)}
+                    style={{ width: "18px", height: "18px" }}
+                  />
+                  <span>
+                    Confirm DEV ingestion of <strong>{catchUpReport.counts.newEligible}</strong> eligible official result(s) in catch-up range.
+                  </span>
+                </label>
+
+                <button
+                  type="button"
+                  onClick={() => handleCatchUpAction("INGEST")}
+                  disabled={!confirmCatchUpIngest || runningCatchUp || selectedEnv === "PROD"}
+                  style={{
+                    background:
+                      !confirmCatchUpIngest || selectedEnv === "PROD"
+                        ? "var(--bg-surface)"
+                        : "var(--accent-emerald)",
+                    color: !confirmCatchUpIngest || selectedEnv === "PROD" ? "var(--text-muted)" : "#000",
+                    fontWeight: 700,
+                    border: "none",
+                    borderRadius: "0.45rem",
+                    padding: "0.65rem 1.25rem",
+                    minHeight: "44px",
+                    fontSize: "0.84rem",
+                    cursor:
+                      !confirmCatchUpIngest || selectedEnv === "PROD"
+                        ? "not-allowed"
+                        : runningCatchUp
+                          ? "wait"
+                          : "pointer"
+                  }}
+                >
+                  {runningCatchUp
+                    ? "Ingesting Catch-Up Results..."
+                    : `Confirm & Ingest ${catchUpReport.counts.newEligible} Eligible Result(s) into DEV`}
+                </button>
+              </div>
+            )}
+          </div>
+
           {/* Action Header */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem", marginBottom: "1.25rem" }}>
             <div>
@@ -1217,7 +1547,7 @@ export default function IngestionConsolePage() {
                 Automatic Current-Date (`Asia/Kolkata`) & Latest Result Discovery
               </h3>
               <div style={{ fontSize: "0.82rem", color: "var(--text-muted)", marginTop: "0.2rem" }}>
-                Checks official Kerala State Lottery publication endpoints (`statelottery.kerala.gov.in` & `result.keralalotteries.com`) for today&apos;s scheduled draw and any newly published gazette PDFs.
+                Checks official Kerala State Lottery publication endpoints (`lotteryagent.kerala.gov.in` & `statelottery.kerala.gov.in`) for today&apos;s scheduled draw and any newly published gazette PDFs.
               </div>
             </div>
 

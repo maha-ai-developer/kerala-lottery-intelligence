@@ -60,9 +60,9 @@ export default function StatisticsPage() {
           const json = await res.json();
           const d = json.data;
           if (d) {
-            const totalResults = d.population?.totalResults ?? d.totalWinningResultsAnalyzed ?? 43712;
-            const totalDraws = d.population?.totalDraws ?? d.totalDrawsAnalyzed ?? 114;
-            const firstDigitTotal = d.population?.fullTicketCount ?? 1658;
+            const totalResults = d.population?.totalResults ?? d.totalWinningResultsAnalyzed ?? 45218;
+            const totalDraws = d.population?.totalDraws ?? d.totalDrawsAnalyzed ?? 118;
+            const firstDigitTotal = d.population?.fullTicketCount ?? 1714;
 
             const lastDigitDist = normalizeDistribution(d.lastDigitDistribution, totalResults);
             const firstDigitDist = normalizeDistribution(d.firstDigitDistribution, firstDigitTotal);

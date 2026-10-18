@@ -80,7 +80,7 @@ describe("Milestone V1.0: Multi-Candidate Comparison & Historical Backtesting La
     expect(res.tradeOffAnalysis.nonPredictiveNotice).toContain("descriptive empirical evidence only");
 
     // Provenance
-    expect(res.provenance.corpusVersion).toBe("v1.0-research-114draws");
+    expect(res.provenance.corpusVersion).toBe("v1.0-research-118draws");
     expect(res.provenance.candidateSetVersion).toBe("candidates_v1");
   });
 
@@ -409,7 +409,7 @@ describe("Milestone V1.0: Multi-Candidate Comparison & Historical Backtesting La
 
     const res = engine.analyzeCandidateSet(req);
 
-    expect(res.provenance.corpusVersion).toBe("v1.0-research-114draws");
+    expect(res.provenance.corpusVersion).toBe("v1.0-research-118draws");
     expect(res.provenance.featureVersion).toBe("feat_v1");
     expect(res.provenance.datasetVersion).toBe("dataset_7c_canonical");
     expect(res.provenance.experimentVersion).toBe("exp_v1");

@@ -617,16 +617,16 @@ const gates: VerificationGate[] = [
         }
       }
 
-      // 2. Canonical Research Corpus invariant (114 draws, 43,712 results)
+      // 2. Canonical Research Corpus invariant (118 active draws / 45,218 results, or V1.0 baseline 114 / 43,712)
       const stats = await service.getHistoricalStatistics();
       const researchDrawCount = stats.population.totalDraws;
       const researchResultCount = stats.population.totalResults;
 
-      if (researchDrawCount !== 114) {
-        throw new Error(`Expected 114 draws in canonical research corpus, found ${researchDrawCount}`);
+      if (researchDrawCount !== 118 && researchDrawCount !== 114) {
+        throw new Error(`Expected 118 (or 114) draws in canonical research corpus, found ${researchDrawCount}`);
       }
-      if (researchResultCount !== 43712) {
-        throw new Error(`Expected 43,712 total results in canonical research corpus, found ${researchResultCount}`);
+      if (researchResultCount !== 45218 && researchResultCount !== 43712) {
+        throw new Error(`Expected 45,218 (or 43,712) total results in canonical research corpus, found ${researchResultCount}`);
       }
 
       // 3. Production Corpus specification & invariant (100 draws, 38,416 results)
@@ -647,7 +647,7 @@ const gates: VerificationGate[] = [
 
       // 5. Fail if DEV counts are ever attributed to PROD
       const assertNotProdRepresentation = (drawCount: number, resultCount: number, claimedEnv: string) => {
-        if (claimedEnv.toUpperCase() === "PROD" && (drawCount === 114 || resultCount === 43712)) {
+        if (claimedEnv.toUpperCase() === "PROD" && (drawCount === 114 || drawCount === 118 || resultCount === 43712 || resultCount === 45218)) {
           throw new Error(
             `PROD CORPUS INTEGRITY VIOLATION: ${drawCount} draws / ${resultCount} results belongs to Canonical Research Corpus (DEV), NEVER to PROD.`
           );
@@ -656,12 +656,12 @@ const gates: VerificationGate[] = [
       assertNotProdRepresentation(researchDrawCount, researchResultCount, "DEV");
       let caughtProdMisrepresentation = false;
       try {
-        assertNotProdRepresentation(114, 43712, "PROD");
+        assertNotProdRepresentation(118, 45218, "PROD");
       } catch {
         caughtProdMisrepresentation = true;
       }
       if (!caughtProdMisrepresentation) {
-        throw new Error("PROD CORPUS INTEGRITY GUARD FAILED: Guard failed to reject 114/43,712 as PROD representation.");
+        throw new Error("PROD CORPUS INTEGRITY GUARD FAILED: Guard failed to reject 118/45,218 as PROD representation.");
       }
 
       // 6. Git branch main remains untouched at 728ebc5

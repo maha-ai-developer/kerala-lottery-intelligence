@@ -99,10 +99,10 @@ const LOTTERY_SCHEMES = [
 
 export default function OverviewPage() {
   const [stats, setStats] = useState<StatsSummary>({
-    researchDraws: 114,
-    researchWinningResults: 43712,
-    researchFullTickets: 1658,
-    researchSuffixes: 42054,
+    researchDraws: 118,
+    researchWinningResults: 45218,
+    researchFullTickets: 1714,
+    researchSuffixes: 43504,
     geoObservations: 380,
     districtsCount: 14,
     prodDraws: 100,
@@ -154,10 +154,10 @@ export default function OverviewPage() {
           const pop = statsJson.data?.population || {};
           setStats((prev) => ({
             ...prev,
-            researchDraws: pop.totalDraws || 114,
-            researchWinningResults: pop.totalResults || 43712,
-            researchFullTickets: pop.fullTicketCount || 1658,
-            researchSuffixes: pop.suffixCount || 42054
+            researchDraws: pop.totalDraws || 118,
+            researchWinningResults: pop.totalResults || 45218,
+            researchFullTickets: pop.fullTicketCount || 1714,
+            researchSuffixes: pop.suffixCount || 43504
           }));
         }
 

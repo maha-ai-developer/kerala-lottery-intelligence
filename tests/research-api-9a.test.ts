@@ -28,11 +28,11 @@ describe("Directive 9A: Production Research API & Read-Only Surface Invariants",
     expect(codes).toContain("BR"); // Thiruvonam Bumper
   });
 
-  it("Invariant 2: Exposes exactly 114 verified historical draws with deterministic pagination", async () => {
+  it("Invariant 2: Exposes 118 verified historical draws with deterministic pagination", async () => {
     // Default page 1, pageSize 20
     const resPage1 = await researchService.getDraws({ page: 1, pageSize: 20 });
     expect(resPage1.data.length).toBe(20);
-    expect(resPage1.pagination.totalCount).toBe(114);
+    expect(resPage1.pagination.totalCount).toBe(118);
     expect(resPage1.pagination.page).toBe(1);
     expect(resPage1.pagination.hasMore).toBe(true);
 
@@ -41,9 +41,9 @@ describe("Directive 9A: Production Research API & Read-Only Surface Invariants",
     expect(resPage100.data.length).toBe(100);
     expect(resPage100.pagination.hasMore).toBe(true);
 
-    // Page 2 returns the remaining 14 draws
+    // Page 2 returns the remaining 18 draws
     const resPage2 = await researchService.getDraws({ page: 2, pageSize: 100 });
-    expect(resPage2.data.length).toBe(14);
+    expect(resPage2.data.length).toBe(18);
     expect(resPage2.pagination.hasMore).toBe(false);
 
     // Maximum pageSize guard (requesting 500 clamps to 100)
@@ -148,12 +148,12 @@ describe("Directive 9A: Production Research API & Read-Only Surface Invariants",
     expect(source?.status).toBe("VALID");
   });
 
-  it("Invariant 7: Statistics evaluate 43,712 winning results across 114 draws with non-predictive notice", async () => {
+  it("Invariant 7: Statistics evaluate 45,218 winning results across 118 draws with non-predictive notice", async () => {
     const stats = await researchService.getStatistics();
-    expect(stats.population.totalDraws).toBe(114);
-    expect(stats.population.totalResults).toBe(43712);
-    expect(stats.population.fullTicketCount).toBe(1658);
-    expect(stats.population.suffixCount).toBe(42054);
+    expect(stats.population.totalDraws).toBe(118);
+    expect(stats.population.totalResults).toBe(45218);
+    expect(stats.population.fullTicketCount).toBe(1714);
+    expect(stats.population.suffixCount).toBe(43504);
     expect(Object.keys(stats.lastDigitDistribution).length).toBe(10);
     expect(Object.keys(stats.firstDigitDistribution).length).toBe(10);
 

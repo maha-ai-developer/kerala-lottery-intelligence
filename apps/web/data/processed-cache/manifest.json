@@ -1,8 +1,8 @@
 {
   "version": "v1.0.0-ingestion-manifest",
   "updatedAt": "2026-10-02T12:00:00.000Z",
-  "totalDocuments": 114,
-  "validDocuments": 114,
+  "totalDocuments": 118,
+  "validDocuments": 118,
   "quarantinedDocuments": 0,
   "documents": {
     "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb": {
@@ -32,6 +32,23 @@
       "fullTicketCount": 14,
       "suffixCount": 362,
       "ingestedAt": "2026-09-27T03:30:51.163Z",
+      "status": "VALID"
+    },
+    "04cb4771ca0105f69096c9d146f9ab7d5146e726dea4b6574ef3aee97d8cd36a": {
+      "fileName": "276-2395-17-10-2026.pdf",
+      "canonicalFilename": "276-2395-17-10-2026.pdf",
+      "sourceResponseFilename": "KR-772.pdf",
+      "sourceUrl": "https://www.lotteryagent.kerala.gov.in/results/8a985162-ae14-c3cd-9b55-e1ffbe554b5a",
+      "fileSize": 87176,
+      "lotteryName": "KARUNYA",
+      "lotteryCode": "KARUNYA",
+      "drawNumber": "KR-772nd",
+      "drawDate": "17/10/2026",
+      "totalResults": 376,
+      "fullTicketCount": 14,
+      "suffixCount": 362,
+      "ingestedAt": "2026-10-18T08:33:09.070Z",
+      "sha256": "04cb4771ca0105f69096c9d146f9ab7d5146e726dea4b6574ef3aee97d8cd36a",
       "status": "VALID"
     },
     "04dd99bf3f6b02775cd8c59d06f19e78204d2fc41645d9bb76c291dcf2682563": {
@@ -260,6 +277,23 @@
       "ingestedAt": "2026-09-27T03:30:36.676Z",
       "status": "VALID"
     },
+    "224e4d241ca2f0ae10f7b26a507e13de419890f0fb00a2545a7e691a859ec682": {
+      "fileName": "273-2381-14-10-2026.pdf",
+      "canonicalFilename": "273-2381-14-10-2026.pdf",
+      "sourceResponseFilename": "DL-73.pdf",
+      "sourceUrl": "https://www.lotteryagent.kerala.gov.in/results/72c97033-15ee-df55-1e69-3e0a50a1b1cb",
+      "fileSize": 263588,
+      "lotteryName": "DHANALEKSHMI",
+      "lotteryCode": "DHANALEKSHMI",
+      "drawNumber": "DL-73rd",
+      "drawDate": "14/10/2026",
+      "totalResults": 374,
+      "fullTicketCount": 14,
+      "suffixCount": 360,
+      "ingestedAt": "2026-10-18T08:30:08.992Z",
+      "sha256": "224e4d241ca2f0ae10f7b26a507e13de419890f0fb00a2545a7e691a859ec682",
+      "status": "VALID"
+    },
     "25ee2fcbbf436e359afcb9a7f59a5a88f5f21a992443b336d677c7038ee4475c": {
       "sha256": "25ee2fcbbf436e359afcb9a7f59a5a88f5f21a992443b336d677c7038ee4475c",
       "fileName": "273-2261-01-07-2026.pdf",
@@ -286,6 +320,23 @@
       "fullTicketCount": 14,
       "suffixCount": 362,
       "ingestedAt": "2026-09-27T03:31:00.530Z",
+      "status": "VALID"
+    },
+    "289a9f364e4a1e2477317505f817a0365ad047e28c6b3b9572b8c010263e10ec": {
+      "fileName": "275-2390-16-10-2026.pdf",
+      "canonicalFilename": "275-2390-16-10-2026.pdf",
+      "sourceResponseFilename": "SK-73.pdf",
+      "sourceUrl": "https://www.lotteryagent.kerala.gov.in/results/c65f08ae-fe05-b6e9-10c3-30b5c65af944",
+      "fileSize": 87181,
+      "lotteryName": "SUVARNA KERALAM",
+      "lotteryCode": "SUVARNA KERALAM",
+      "drawNumber": "SK-73rd",
+      "drawDate": "16/10/2026",
+      "totalResults": 376,
+      "fullTicketCount": 14,
+      "suffixCount": 362,
+      "ingestedAt": "2026-10-18T08:32:05.981Z",
+      "sha256": "289a9f364e4a1e2477317505f817a0365ad047e28c6b3b9572b8c010263e10ec",
       "status": "VALID"
     },
     "292db5b08f96ce05b448d4aa17c88918b4288e136bf5544b47a7a7bbde689d05": {
@@ -434,6 +485,23 @@
       "suffixCount": 368,
       "ingestedAt": "2026-10-14T04:02:07.536Z",
       "sha256": "3a0ea2c300e39acaa4205374988c46d54b5050446fd0082071495715cecb68b8",
+      "status": "VALID"
+    },
+    "3a95c86db086ff702a0a53de8844da9cd9e5839757b613ac5ffbcfe6d75292f3": {
+      "fileName": "274-2386-15-10-2026.pdf",
+      "canonicalFilename": "274-2386-15-10-2026.pdf",
+      "sourceResponseFilename": "KN-645.pdf",
+      "sourceUrl": "https://www.lotteryagent.kerala.gov.in/results/d8d406bf-ba27-96b6-4be7-de0c1f10710d",
+      "fileSize": 263670,
+      "lotteryName": "KARUNYA PLUS",
+      "lotteryCode": "KARUNYA PLUS",
+      "drawNumber": "KN-645th",
+      "drawDate": "15/10/2026",
+      "totalResults": 380,
+      "fullTicketCount": 14,
+      "suffixCount": 366,
+      "ingestedAt": "2026-10-18T08:31:06.338Z",
+      "sha256": "3a95c86db086ff702a0a53de8844da9cd9e5839757b613ac5ffbcfe6d75292f3",
       "status": "VALID"
     },
     "3ee14f9f836bff7f6e7b67101f1fbd5c244d3409fbaa06208417cc2f3a533d8e": {
@@ -1634,5 +1702,25 @@
       "ingestedAt": "2026-09-27T03:30:45.046Z",
       "status": "VALID"
     }
+  },
+  "v1Baseline": {
+    "version": "v1.0-research-114draws",
+    "draws": 114,
+    "totalResults": 43712,
+    "fullTicketCount": 1658,
+    "suffixCount": 42054,
+    "earliestDrawDate": "2026-06-19",
+    "latestDrawDate": "2026-10-13",
+    "latestDrawNumber": "SS-541st"
+  },
+  "activeCorpus": {
+    "version": "v1.0-research-118draws",
+    "draws": 118,
+    "totalResults": 45218,
+    "fullTicketCount": 1714,
+    "suffixCount": 43504,
+    "earliestDrawDate": "2026-06-19",
+    "latestDrawDate": "2026-10-17",
+    "latestDrawNumber": "KR-772nd"
   }
 }

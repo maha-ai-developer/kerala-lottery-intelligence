@@ -16,7 +16,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, statSync } from "node:fs";
 import { join } from "node:path";
 import {
   createAuthoritativePrizeSchemeRegistry,
@@ -73,6 +73,7 @@ export class ResearchSandboxEngine {
 
   // Cached corpus structures
   private corpusRecords: CorpusIndexedRecord[] | null = null;
+  private corpusMtimeSignature: string = "";
 
   constructor(options?: ResearchSandboxEngineOptions) {
     const cwd = process.cwd();
@@ -86,17 +87,27 @@ export class ResearchSandboxEngine {
   }
 
   /**
-   * Lazily loads and indexes all winning results from the 103 canonical knowledge graphs.
+   * Lazily loads and indexes all winning results from the canonical knowledge graphs or compact index.
    */
   private loadCorpusRecords(): CorpusIndexedRecord[] {
-    if (this.corpusRecords) {
+    const compactIndexPath = join(this.baseDir, "data/processed-cache/winning-results-index.json");
+    let currentSig = "";
+    try {
+      const mStat = existsSync(this.manifestPath) ? statSync(this.manifestPath).mtimeMs : 0;
+      const cStat = existsSync(compactIndexPath) ? statSync(compactIndexPath).mtimeMs : 0;
+      currentSig = `${mStat}:${cStat}`;
+    } catch {
+      currentSig = "";
+    }
+
+    if (this.corpusRecords && currentSig === this.corpusMtimeSignature) {
       return this.corpusRecords;
     }
 
     const records: CorpusIndexedRecord[] = [];
+    this.corpusMtimeSignature = currentSig;
 
     // 1. Fast precompiled winning results index (used in production & serverless cloud runtimes)
-    const compactIndexPath = join(this.baseDir, "data/processed-cache/winning-results-index.json");
     if (existsSync(compactIndexPath)) {
       try {
         const raw = readFileSync(compactIndexPath, "utf-8");

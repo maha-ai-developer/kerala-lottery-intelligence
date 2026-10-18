@@ -116,6 +116,28 @@ export class InMemoryIngestionRunRepository implements IngestionRunRepository {
   }
 }
 
+function toFirestoreRestValue(val: any): Record<string, any> {
+  if (val === null || val === undefined) return { nullValue: null };
+  if (typeof val === "boolean") return { booleanValue: val };
+  if (typeof val === "number") {
+    return Number.isInteger(val) ? { integerValue: String(val) } : { doubleValue: val };
+  }
+  if (typeof val === "string") return { stringValue: val };
+  if (Array.isArray(val)) {
+    return { arrayValue: { values: val.map((item) => toFirestoreRestValue(item)) } };
+  }
+  if (typeof val === "object") {
+    const fields: Record<string, any> = {};
+    for (const [k, v] of Object.entries(val)) {
+      if (v !== undefined) {
+        fields[k] = toFirestoreRestValue(v);
+      }
+    }
+    return { mapValue: { fields } };
+  }
+  return { stringValue: String(val) };
+}
+
 /**
  * Firestore-Backed Ingestion Run Repository.
  * Writes records to the `/ingestion_runs/{runId}` collection.
@@ -124,8 +146,20 @@ export class FirestoreIngestionRunRepository implements IngestionRunRepository {
   private inMemoryFallback: InMemoryIngestionRunRepository;
   private readonly collectionName = "ingestion_runs";
   private readonly db?: any;
+  private readonly projectId?: string;
+  private readonly getAccessToken?: () => Promise<string> | string;
 
-  constructor(options?: { db?: any }) {
+  constructor(options?: {
+    db?: any;
+    projectId?: string;
+    getAccessToken?: () => Promise<string> | string;
+  }) {
+    this.projectId =
+      options?.projectId ||
+      process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ||
+      process.env.GCLOUD_PROJECT ||
+      "kerala-lottery-intel-dev";
+    this.getAccessToken = options?.getAccessToken;
     if (options?.db) {
       this.db = options.db;
     } else {
@@ -142,33 +176,75 @@ export class FirestoreIngestionRunRepository implements IngestionRunRepository {
     this.inMemoryFallback = new InMemoryIngestionRunRepository();
   }
 
+  private async writeViaRest(runId: string, clean: Record<string, any>): Promise<void> {
+    if (
+      !this.projectId ||
+      process.env.NODE_ENV === "test" ||
+      process.env.VITEST === "true" ||
+      process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATORS === "true"
+    ) {
+      return;
+    }
+    try {
+      let token = this.getAccessToken ? await this.getAccessToken() : undefined;
+      if (!token) {
+        const { acquireGoogleCloudAccessToken } = await import("./reconciliation-verifier");
+        token = await acquireGoogleCloudAccessToken({ projectId: this.projectId });
+      }
+      const fields: Record<string, any> = {};
+      for (const [k, v] of Object.entries(clean)) {
+        if (v !== undefined) {
+          fields[k] = toFirestoreRestValue(v);
+        }
+      }
+      const url = `https://firestore.googleapis.com/v1/projects/${this.projectId}/databases/(default)/documents/${this.collectionName}/${encodeURIComponent(runId)}`;
+      await fetch(url, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ fields })
+      });
+    } catch {
+      // Non-blocking fallback
+    }
+  }
+
   public async createRun(record: IngestionRunRecord): Promise<void> {
     const clean = sanitizeOperationalRecord(record);
-    this.inMemoryFallback.createRun(clean);
+    await this.inMemoryFallback.createRun(clean);
 
-    if (!this.db) return;
+    if (!this.db) {
+      await this.writeViaRest(clean.runId, clean);
+      return;
+    }
 
     try {
       const { doc, setDoc } = await import("firebase/firestore");
       const ref = doc(this.db, this.collectionName, clean.runId);
       await setDoc(ref, clean);
     } catch {
-      // Offline fallback
+      await this.writeViaRest(clean.runId, clean);
     }
   }
 
   public async updateRun(runId: string, updates: Partial<IngestionRunRecord>): Promise<void> {
     const clean = sanitizeOperationalRecord(updates);
     await this.inMemoryFallback.updateRun(runId, clean);
+    const merged = await this.inMemoryFallback.getRun(runId);
 
-    if (!this.db) return;
+    if (!this.db) {
+      if (merged) await this.writeViaRest(runId, merged);
+      return;
+    }
 
     try {
       const { doc, updateDoc } = await import("firebase/firestore");
       const ref = doc(this.db, this.collectionName, runId);
       await updateDoc(ref, clean);
     } catch {
-      // Offline fallback
+      if (merged) await this.writeViaRest(runId, merged);
     }
   }
 

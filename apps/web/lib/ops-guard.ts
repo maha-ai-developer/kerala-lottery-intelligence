@@ -14,10 +14,16 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   FirestoreIngestionLockManager,
   FirestoreIngestionRunRepository,
+  SourceIngestionService,
+  acquireGoogleCloudAccessToken,
   type IngestionLockManager,
-  type IngestionRunRepository,
-  type SourceIngestionService
+  type IngestionRunRepository
 } from "@kerala-lottery/service-ingestion";
+import {
+  FirestoreDocumentRepository,
+  FirestoreRestDocumentRepository,
+  FirebaseStorageService
+} from "@kerala-lottery/data";
 import { db, isFirebaseConfigured } from "./firebase";
 
 export interface OpsAuthResult {
@@ -58,6 +64,59 @@ export function setDiscoveryFetchOverrideForTesting(fn: typeof fetch | null): vo
 
 export function getDiscoveryFetchOverrideForTesting(): typeof fetch | null {
   return discoveryFetchOverride;
+}
+
+/**
+ * Builds the authoritative SourceIngestionService for DEV operational ingestion.
+ * In non-emulator server runtime, uses Google Cloud ADC token with Firestore REST
+ * and Cloud Storage JSON API so server-side mutations and residency checks succeed
+ * under strict Firebase security rules.
+ */
+export function buildOpsSourceIngestionService(options?: {
+  allowOptional?: boolean;
+}): SourceIngestionService | undefined {
+  const testDeps = getOpsIngestionCloudDependenciesForTesting();
+  if (testDeps) {
+    return testDeps.sourceIngestionService;
+  }
+
+  if (!isFirebaseConfigured) {
+    if (options?.allowOptional) {
+      return undefined;
+    }
+    throw new Error(
+      "FIREBASE_NOT_CONFIGURED: Authoritative Firebase backend is not configured. Operational ingestion requires durable cloud persistence and cannot proceed in-memory."
+    );
+  }
+
+  const useEmulators = process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATORS === "true";
+  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "kerala-lottery-intel-dev";
+  const storageBucket =
+    process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "kerala-lottery-intel-dev.firebasestorage.app";
+
+  if (useEmulators) {
+    const docRepo = new FirestoreDocumentRepository(db);
+    const storageService = new FirebaseStorageService({ bucketName: storageBucket });
+    return new SourceIngestionService({
+      documentRepository: docRepo,
+      storageService
+    });
+  }
+
+  const getAccessToken = () => acquireGoogleCloudAccessToken({ projectId });
+  const docRepo = new FirestoreRestDocumentRepository({
+    projectId,
+    getAccessToken
+  });
+  const storageService = new FirebaseStorageService({
+    bucketName: storageBucket,
+    getAccessToken
+  });
+
+  return new SourceIngestionService({
+    documentRepository: docRepo,
+    storageService
+  });
 }
 
 // Global shared lock manager and run repository instances

@@ -14,7 +14,7 @@
 import { readdirSync, existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
-import { DocumentCacheManager } from "@kerala-lottery/service-ingestion";
+import { DocumentCacheManager, acquireGoogleCloudAccessToken } from "@kerala-lottery/service-ingestion";
 import { db, storage, isFirebaseConfigured } from "./firebase";
 
 export type ExpectedEnvironmentScope =
@@ -150,6 +150,29 @@ async function checkCloudStorageIndependently(
     }
     return { ran: true, shas };
   } catch (err: unknown) {
+    try {
+      const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "kerala-lottery-intel-dev";
+      const bucketName =
+        process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || `${projectId}.firebasestorage.app`;
+      const token = await acquireGoogleCloudAccessToken({ projectId });
+      const url = `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(bucketName)}/o?prefix=source-documents/&maxResults=500`;
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const json = (await res.json()) as { items?: Array<{ name?: string }> };
+        const shas = new Set<string>();
+        for (const item of json.items || []) {
+          const match = (item.name || "").match(/^source-documents\/([a-f0-9]{64})\.pdf$/i);
+          if (match && match[1]) {
+            shas.add(match[1].toLowerCase());
+          }
+        }
+        return { ran: true, shas };
+      }
+    } catch {
+      // Fall through to report original error
+    }
     const msg = err instanceof Error ? err.message : String(err);
     return {
       ran: false,
@@ -208,6 +231,32 @@ async function checkFirestoreIndependently(
     });
     return { ran: true, shas };
   } catch (err: unknown) {
+    try {
+      const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "kerala-lottery-intel-dev";
+      const token = await acquireGoogleCloudAccessToken({ projectId });
+      const url = `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/databases/(default)/documents/documents?pageSize=500`;
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const json = (await res.json()) as {
+          documents?: Array<{ name?: string; fields?: Record<string, { stringValue?: string }> }>;
+        };
+        const shas = new Set<string>();
+        for (const docItem of json.documents || []) {
+          const idPart = (docItem.name || "").split("/").pop() || "";
+          const sha = String(docItem.fields?.sha256?.stringValue || idPart)
+            .trim()
+            .toLowerCase();
+          if (/^[a-f0-9]{64}$/.test(sha)) {
+            shas.add(sha);
+          }
+        }
+        return { ran: true, shas };
+      }
+    } catch {
+      // Fall through to report original error
+    }
     const msg = err instanceof Error ? err.message : String(err);
     return {
       ran: false,

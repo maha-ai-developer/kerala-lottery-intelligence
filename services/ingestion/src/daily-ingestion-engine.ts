@@ -915,6 +915,12 @@ export class DailyIngestionEngine {
             });
             uint8 = acq.fileBuffer;
             if (acq.fileName && acq.fileName.toLowerCase().endsWith(".pdf")) {
+              if (!candidate.sourceResponseFilename) {
+                candidate.sourceResponseFilename = candidate.fileName;
+              }
+              if (CANONICAL_GOVERNMENT_FILENAME_REGEX.test(acq.fileName)) {
+                candidate.canonicalFilename = acq.fileName;
+              }
               candidate.fileName = acq.fileName;
             }
             downloadedCount++;

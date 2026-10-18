@@ -56,7 +56,7 @@ export default function OfflinePage() {
           <ul style={{ margin: 0, paddingLeft: "1.25rem" }}>
             <li>Live research endpoints (<code>/api/v1/*</code>) and operational endpoints (<code>/api/ops/*</code>) are strictly network-only and never cached by the Service Worker.</li>
             <li>Historical SHA-256 document hashes, scheme validation rules, and cloud storage integrity checks require live server verification.</li>
-            <li>Reconnect to the network to inspect the verified 114-draw V1 research corpus.</li>
+            <li>Reconnect to the network to inspect the verified 118-draw active research corpus (V1.0 frozen baseline: 114 draws).</li>
           </ul>
         </div>
 
