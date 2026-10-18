@@ -336,7 +336,8 @@ export async function POST(req: NextRequest) {
     // 5. Evaluate today's official draw & discovery status
     const todayResult =
       remoteCandidates.find((c) => normalizeDateToIso(c.drawDate || "") === todayIst.isoDate) || null;
-    const latestOfficialResult = remoteCandidates[0] || null;
+    const latestOfficialResult =
+      remoteCandidates.find((c) => Boolean(c.drawNumber || c.drawDate)) || remoteCandidates[0] || null;
     const remoteNewCount = remoteCandidates.filter((c) => c.state === "NEW").length;
 
     let discoveryStatus: DiscoveryStatusCode;

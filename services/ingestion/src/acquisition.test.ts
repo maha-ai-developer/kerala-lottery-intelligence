@@ -462,6 +462,9 @@ describe("Milestone 3B — Official Source Discovery & Acquisition", () => {
       <!DOCTYPE html>
       <html>
         <body>
+          <nav>
+            <a href="http://www.statelottery.kerala.gov.in/images/pdf/Kerala_Lottaries_rule.pdf">Act/Rules</a>
+          </nav>
           <table id="resulttable">
             <tbody>
               <tr>

@@ -364,42 +364,7 @@ export class OfficialSourceDiscoveryService {
       });
     }
 
-    // Strategy 2: Fallback scan for any remaining <a href="...pdf"> tags referencing /pdf/ or result files
-    const genericPdfRegex = /<a\s+[^>]*href=["']([^"']+\.pdf)["'][^>]*>([\s\S]*?)<\/a>/gi;
-    while ((match = genericPdfRegex.exec(html)) !== null) {
-      const rawHref = (match[1] ?? "").trim();
-      const rawText = (match[2] ?? "").replace(/<[^>]+>/g, "").trim();
-
-      const documentUrl = this.resolveAndValidateUrl(rawHref, officialSource);
-      if (!documentUrl || seenUrls.has(documentUrl)) {
-        continue;
-      }
-
-      // Filter for result PDFs (avoid unrelated links if any)
-      if (
-        documentUrl.includes("/pdf/") ||
-        documentUrl.includes("/files/") ||
-        documentUrl.includes("result") ||
-        /\d{2,}-\d{2,}/.test(documentUrl)
-      ) {
-        seenUrls.add(documentUrl);
-        const parsedMeta = this.parseTitleMetadata(rawText);
-
-        results.push({
-          sourceId: officialSource.sourceId,
-          sourceOrganization: officialSource.organization,
-          discoveryUrl: officialSource.discoveryUrl,
-          documentUrl,
-          title: rawText && rawText !== "Click here" ? rawText : `Official Gazette Result (${documentUrl.split("/").pop()})`,
-          drawDate: parsedMeta.drawDate,
-          drawNumber: parsedMeta.drawNumber,
-          lotteryCode: parsedMeta.lotteryCode,
-          rawLinkText: rawText || undefined
-        });
-      }
-    }
-
-    // Strategy 3: Match table rows from official results view table:
+    // Strategy 2: Match table rows from official results view table:
     // <tr><td class='text-left'>KARUNYA PLUS(KN-641)</td><td >17/09/2026</td><td ><a href='http://result.keralalotteries.com/viewlotisresult.php?drawserial=75382'...
     const tableRowRegex =
       /<tr[^>]*>\s*<td[^>]*class=['"][^'"]*text-left[^'"]*['"][^>]*>([^<]+)<\/td>\s*<td[^>]*>([^<]+)<\/td>\s*<td[^>]*><a\s+[^>]*href=['"]([^'"]+)['"][^>]*>([^<]*)<\/a>/gi;
@@ -437,7 +402,7 @@ export class OfficialSourceDiscoveryService {
       });
     }
 
-    // Strategy 4: Match official Kerala State Lotteries LOTIS public portal table rows
+    // Strategy 3: Match official Kerala State Lotteries LOTIS public portal table rows
     // Example: <td>1</td><td>KARUNYA-10/11/2025 (KR-772)</td><td>17-10-2026</td><td><a class="btn..." data-item-id="8a985162-ae14-c3cd-9b55-e1ffbe554b5a" ...>Download</a></td>
     const lotisRowRegex =
       /<td[^>]*>\s*\d+\s*<\/td>\s*<td[^>]*>\s*([^<]+?)\s*<\/td>\s*<td[^>]*>\s*(\d{2}[-/]\d{2}[-/]\d{4}|\d{4}-\d{2}-\d{2})\s*<\/td>\s*<td[^>]*>[\s\S]*?<a\s+[^>]*data-item-id=["']([0-9a-fA-F-]{8,64})["'][^>]*>([\s\S]*?)<\/a>[\s\S]*?<\/td>/gi;
@@ -478,6 +443,49 @@ export class OfficialSourceDiscoveryService {
         lotteryCode: parsedMeta.lotteryCode,
         rawLinkText: rawLinkText || undefined
       });
+    }
+
+    // Strategy 4: Fallback scan for any remaining <a href="...pdf"> tags referencing /pdf/ or result files
+    const genericPdfRegex = /<a\s+[^>]*href=["']([^"']+\.pdf)["'][^>]*>([\s\S]*?)<\/a>/gi;
+    while ((match = genericPdfRegex.exec(html)) !== null) {
+      const rawHref = (match[1] ?? "").trim();
+      const rawText = (match[2] ?? "").replace(/<[^>]+>/g, "").trim();
+
+      // Ignore static non-result rulebook / act / claim form links in portal navigation headers
+      if (
+        /rule|act[\s/_-]*rules|claim[\s/_-]*form|application|manual|welfare/i.test(rawHref) ||
+        /^(act\s*\/?\s*rules|rules|claim\s*form|manual)$/i.test(rawText)
+      ) {
+        continue;
+      }
+
+      const documentUrl = this.resolveAndValidateUrl(rawHref, officialSource);
+      if (!documentUrl || seenUrls.has(documentUrl)) {
+        continue;
+      }
+
+      // Filter for result PDFs (avoid unrelated links if any)
+      if (
+        documentUrl.includes("/pdf/") ||
+        documentUrl.includes("/files/") ||
+        documentUrl.includes("result") ||
+        /\d{2,}-\d{2,}/.test(documentUrl)
+      ) {
+        seenUrls.add(documentUrl);
+        const parsedMeta = this.parseTitleMetadata(rawText);
+
+        results.push({
+          sourceId: officialSource.sourceId,
+          sourceOrganization: officialSource.organization,
+          discoveryUrl: officialSource.discoveryUrl,
+          documentUrl,
+          title: rawText && rawText !== "Click here" ? rawText : `Official Gazette Result (${documentUrl.split("/").pop()})`,
+          drawDate: parsedMeta.drawDate,
+          drawNumber: parsedMeta.drawNumber,
+          lotteryCode: parsedMeta.lotteryCode,
+          rawLinkText: rawText || undefined
+        });
+      }
     }
 
     return results;
