@@ -140,6 +140,13 @@ export async function POST(req: NextRequest) {
             title: candidate.title
           });
           fileBuffer = acq.fileBuffer;
+          if (
+            !candidate.canonicalFilename &&
+            acq.fileName &&
+            /^[0-9]+-[0-9]+-[0-9]{2}-[0-9]{2}-[0-9]{4}\.pdf$/i.test(acq.fileName)
+          ) {
+            candidate.canonicalFilename = acq.fileName;
+          }
         } catch (acqErr: unknown) {
           if (acqErr instanceof AcquisitionSecurityError) {
             throw acqErr;

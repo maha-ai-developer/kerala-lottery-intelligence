@@ -204,10 +204,30 @@ describe("Kerala Lottery Intelligence — Responsive Web, PWA, Branding & Theme 
       expect(pwaContent).toContain('navigator.serviceWorker');
       expect(pwaContent).toContain('.register("/sw.js"');
       expect(pwaContent).toContain("beforeinstallprompt");
+      expect(pwaContent).toContain("appinstalled");
+      expect(pwaContent).toContain("activePrompt.userChoice");
+      expect(pwaContent).toContain("setDeferredPrompt(null)");
       expect(pwaContent).toContain("(display-mode: standalone)");
       expect(pwaContent).toContain('role="dialog"');
       expect(pwaContent).toContain("Android (Chrome / Edge / Brave)");
       expect(pwaContent).toContain("iOS / iPadOS (Safari)");
+      expect(pwaContent).toContain("How to Install");
+    });
+
+    it("provides a guided 3-step user workflow on / and collapsible operational details on /ingestion", () => {
+      const homePagePath = path.join(APP_DIR, "page.tsx");
+      const homeContent = fs.readFileSync(homePagePath, "utf-8");
+      expect(homeContent).toContain("STEP 1 — Check Latest Official Results");
+      expect(homeContent).toContain("STEP 2 — Enter Candidate Number(s)");
+      expect(homeContent).toContain("STEP 3 — Understand the Evidence & Decide Personally");
+      expect(homeContent).toContain("How was this calculated?");
+      expect(homeContent).toContain("personal decision shortlist");
+      expect(homeContent).toContain("Keep in my comparison");
+
+      const ingestionPagePath = path.join(APP_DIR, "ingestion/page.tsx");
+      const ingestionContent = fs.readFileSync(ingestionPagePath, "utf-8");
+      expect(ingestionContent).toContain("Advanced operational details");
+      expect(ingestionContent).toContain("<details");
     });
   });
 
@@ -244,3 +264,4 @@ describe("Kerala Lottery Intelligence — Responsive Web, PWA, Branding & Theme 
     });
   });
 });
+

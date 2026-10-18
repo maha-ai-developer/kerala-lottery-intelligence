@@ -111,9 +111,15 @@ export function resolveCanonicalAndResponseFilename(
   verifiedSourceUrl?: string,
   options?: ResolveFilenameOptions
 ): ResolvedFilenames {
-  // Check conflicting draw identity
-  const candidateDraw = options?.candidateDrawNumber?.trim().toUpperCase();
-  const verifiedDraw = (options?.verifiedDrawNumber || options?.existingDrawNumber)?.trim().toUpperCase();
+  // Check conflicting draw identity (ignoring optional ordinal suffixes like 772nd vs 772)
+  const candidateDraw = options?.candidateDrawNumber
+    ?.trim()
+    .toUpperCase()
+    .replace(/(ST|ND|RD|TH)$/i, "");
+  const verifiedDraw = (options?.verifiedDrawNumber || options?.existingDrawNumber)
+    ?.trim()
+    .toUpperCase()
+    .replace(/(ST|ND|RD|TH)$/i, "");
   let conflict: string | undefined;
 
   if (candidateDraw && verifiedDraw && candidateDraw !== verifiedDraw) {

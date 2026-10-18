@@ -80,6 +80,8 @@ interface DiscoveryCheckResponse {
   runId: string;
   environment: string;
   checkedAt: string;
+  officialSourceUrl?: string;
+  portalNotice?: string;
   todayIst: {
     isoDate: string;
     displayDate: string;
@@ -89,22 +91,32 @@ interface DiscoveryCheckResponse {
     timeIst: string;
   };
   todaySchedule: {
-    isoDate: string;
-    displayDate: string;
-    weekday: string;
-    scheduledLotteryCode: string | null;
-    scheduledLotteryName: string | null;
-    isExpectedToday: boolean;
-    typicalPublicationTimeIst: string;
-    statusNote: string;
+    scheduled?: boolean;
+    isoDate?: string;
+    displayDate?: string;
+    weekday?: string;
+    lotteryCode?: string | null;
+    scheduledLotteryCode?: string | null;
+    lotteryName?: string | null;
+    scheduledLotteryName?: string | null;
+    drawNumber?: string | null;
+    isExpectedToday?: boolean;
+    drawTimeIst?: string;
+    expectedPdfPublicationTimeIst?: string;
+    typicalPublicationTimeIst?: string;
+    venue?: string;
+    reason?: string;
+    statusNote?: string;
   };
   discoveryStatus:
     | "TODAY_PUBLISHED"
     | "NO_NEW_RESULT"
     | "NOT_YET_PUBLISHED"
     | "NO_SCHEDULED_DRAW"
-    | "SOURCE_UNAVAILABLE";
-  discoveryMessage: string;
+    | "SOURCE_UNAVAILABLE"
+    | "SOURCE_PARSE_ERROR";
+  statusExplanation?: string;
+  discoveryMessage?: string;
   portalReachable: boolean;
   portalError: string | null;
   todayResult: DiscoveredCandidate | null;
@@ -117,9 +129,10 @@ interface DiscoveryCheckResponse {
     lotteryCode: string;
     canonicalFilename: string;
   } | null;
-  totalCandidates: number;
-  alreadyKnownCount: number;
-  newOrPendingCount: number;
+  totalDiscovered?: number;
+  totalCandidates?: number;
+  alreadyKnownCount?: number;
+  newOrPendingCount?: number;
   candidates: DiscoveredCandidate[];
 }
 
@@ -575,6 +588,7 @@ export default function IngestionConsolePage() {
       case "NO_SCHEDULED_DRAW":
         return "badge-slate";
       case "SOURCE_UNAVAILABLE":
+      case "SOURCE_PARSE_ERROR":
         return "badge-rose";
       default:
         return "badge-slate";
@@ -968,8 +982,35 @@ export default function IngestionConsolePage() {
         </div>
       )}
 
-      {/* Storage Integrity & Local ↔ Cloud Reconciliation Panel */}
-      <div className="card" style={{ marginBottom: "2rem", background: "var(--bg-surface)" }}>
+      {/* Storage Integrity & Local ↔ Cloud Reconciliation Panel (Expandable Advanced Details) */}
+      <details
+        style={{
+          marginBottom: "1.5rem",
+          background: "var(--bg-surface)",
+          border: "1px solid var(--border-subtle)",
+          borderRadius: "0.65rem",
+          padding: "0.85rem 1.15rem"
+        }}
+      >
+        <summary
+          style={{
+            cursor: "pointer",
+            fontWeight: 600,
+            fontSize: "0.9rem",
+            color: "var(--text-secondary)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "0.5rem"
+          }}
+        >
+          <span>Advanced operational details — Storage Integrity &amp; Local ↔ Cloud Reconciliation</span>
+          <span className="badge badge-blue">
+            {integrityData ? `${integrityData.counts.localDocumentCount} PDFs / ${integrityData.counts.researchDrawCount} DEV Draws` : "Deterministic SHA-256"}
+          </span>
+        </summary>
+        <div style={{ marginTop: "1rem" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.75rem", marginBottom: "1.25rem" }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
@@ -1116,7 +1157,8 @@ export default function IngestionConsolePage() {
             </div>
           </div>
         )}
-      </div>
+        </div>
+      </details>
 
       {/* Mode Switch Tabs */}
       <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: "1.5rem", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "0.5rem" }}>
@@ -1211,13 +1253,22 @@ export default function IngestionConsolePage() {
                     <span className="mono" style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
                       IST Date: {discoveryReport.todayIst.displayDate} ({discoveryReport.todayIst.weekday}, {discoveryReport.todayIst.timeIst})
                     </span>
+                    <a
+                      href={discoveryReport.officialSourceUrl || "https://statelottery.kerala.gov.in/English/index.php/lottery-result-view"}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{ fontSize: "0.78rem", color: "var(--accent-blue)", fontWeight: 600 }}
+                    >
+                      Official Directorate Portal ↗
+                    </a>
                   </div>
                   <div style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--text-primary)" }}>
-                    {discoveryReport.discoveryMessage}
+                    {discoveryReport.statusExplanation || discoveryReport.discoveryMessage}
                   </div>
                 </div>
 
-                {discoveryReport.discoveryStatus === "SOURCE_UNAVAILABLE" && (
+                {(discoveryReport.discoveryStatus === "SOURCE_UNAVAILABLE" ||
+                  discoveryReport.discoveryStatus === "SOURCE_PARSE_ERROR") && (
                   <button
                     type="button"
                     onClick={() => setActiveMode("UPLOAD")}
@@ -1244,14 +1295,18 @@ export default function IngestionConsolePage() {
                     Today&apos;s Scheduled Draw ({discoveryReport.todayIst.displayDate})
                   </div>
                   <div style={{ fontSize: "1rem", fontWeight: 700, marginTop: "0.25rem", color: "var(--accent-cyan)" }}>
-                    {discoveryReport.todaySchedule.scheduledLotteryName
-                      ? `${discoveryReport.todaySchedule.scheduledLotteryName} (${discoveryReport.todaySchedule.scheduledLotteryCode})`
+                    {discoveryReport.todaySchedule.lotteryName || discoveryReport.todaySchedule.scheduledLotteryName
+                      ? `${discoveryReport.todaySchedule.lotteryName || discoveryReport.todaySchedule.scheduledLotteryName} (${discoveryReport.todaySchedule.drawNumber || discoveryReport.todaySchedule.lotteryCode || discoveryReport.todaySchedule.scheduledLotteryCode || "Scheduled"})`
                       : "No Weekly Draw Scheduled"}
                   </div>
                   <div style={{ fontSize: "0.78rem", color: "var(--text-secondary)", marginTop: "0.2rem" }}>
                     {discoveryReport.todayResult
                       ? `Published: ${discoveryReport.todayResult.drawNumber} (${discoveryReport.todayResult.state})`
-                      : discoveryReport.todaySchedule.statusNote}
+                      : discoveryReport.todaySchedule.reason ||
+                        discoveryReport.todaySchedule.statusNote ||
+                        (discoveryReport.todaySchedule.venue
+                          ? `Draw at ${discoveryReport.todaySchedule.drawTimeIst || "15:00 IST"} • ${discoveryReport.todaySchedule.venue}`
+                          : "Official schedule checked")}
                   </div>
                 </div>
 
@@ -1718,8 +1773,33 @@ export default function IngestionConsolePage() {
         </div>
       )}
 
-      {/* RECENT INGESTION RUNS AUDIT TABLE */}
-      <div>
+      {/* RECENT INGESTION RUNS AUDIT TABLE (Expandable Advanced Details) */}
+      <details
+        style={{
+          marginTop: "1.5rem",
+          background: "var(--bg-surface)",
+          border: "1px solid var(--border-subtle)",
+          borderRadius: "0.65rem",
+          padding: "0.85rem 1.15rem"
+        }}
+      >
+        <summary
+          style={{
+            cursor: "pointer",
+            fontWeight: 600,
+            fontSize: "0.9rem",
+            color: "var(--text-secondary)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "0.5rem"
+          }}
+        >
+          <span>Advanced operational details — Recent Pipeline Ingestion Runs Audit Trail</span>
+          <span className="badge badge-emerald">Audit Trail Preserved ({runs.length} runs)</span>
+        </summary>
+        <div style={{ marginTop: "1rem" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem", marginBottom: "1rem" }}>
           <div>
             <h2 style={{ fontSize: "1.25rem", fontWeight: 700, margin: 0 }}>Recent Pipeline Ingestion Runs</h2>
@@ -1802,7 +1882,8 @@ export default function IngestionConsolePage() {
             </tbody>
           </table>
         </div>
-      </div>
+        </div>
+      </details>
     </div>
   );
 }

@@ -456,4 +456,104 @@ describe("Milestone 3B — Official Source Discovery & Acquisition", () => {
     expect(discovered[1]!.drawDate).toBe("2025-12-30");
     expect(discovered[1]!.lotteryCode).toBe("STHREE-SAKTHI");
   });
+
+  it("16. Invariant: Parses live lotteryagent.kerala.gov.in /result/public/ LOTIS table rows (data-item-id -> /results/<id>) and strips scheme revision date suffixes", async () => {
+    const lotisPublicHtml = `
+      <!DOCTYPE html>
+      <html>
+        <body>
+          <table id="resulttable">
+            <tbody>
+              <tr>
+                <td>1</td>
+                <td>KARUNYA-10/11/2025 (KR-772)</td>
+                <td>17-10-2026</td>
+                <td>
+                  <a class="btn btn-sm btn-primary view" data-item-id="8a985162-ae14-c3cd-9b55-e1ffbe554b5a" href="javascript:void(0)">Download</a>
+                </td>
+              </tr>
+              <tr>
+                <td>2</td>
+                <td>SUVARNA KERALAM-10/11/2025 (SK-49)</td>
+                <td>16-10-2026</td>
+                <td>
+                  <a class="btn btn-sm btn-primary view" data-item-id="3a351908-6433-e90f-9558-8789506200b3" href="javascript:void(0)">Download</a>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `;
+
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      url: "https://www.lotteryagent.kerala.gov.in/result/public/",
+      text: async () => lotisPublicHtml
+    });
+
+    const discoveryService = new OfficialSourceDiscoveryService({ fetchFn: mockFetch as any });
+    const discovered = await discoveryService.discover(KERALA_STATE_LOTTERY_PORTAL);
+
+    expect(discovered.length).toBe(2);
+    expect(discovered[0]!.documentUrl).toBe(
+      "https://www.lotteryagent.kerala.gov.in/results/8a985162-ae14-c3cd-9b55-e1ffbe554b5a"
+    );
+    expect(discovered[0]!.lotteryCode).toBe("KARUNYA");
+    expect(discovered[0]!.drawNumber).toBe("KR-772");
+    expect(discovered[0]!.drawDate).toBe("2026-10-17");
+
+    expect(discovered[1]!.documentUrl).toBe(
+      "https://www.lotteryagent.kerala.gov.in/results/3a351908-6433-e90f-9558-8789506200b3"
+    );
+    expect(discovered[1]!.lotteryCode).toBe("SUVARNA-KERALAM");
+    expect(discovered[1]!.drawNumber).toBe("SK-49");
+    expect(discovered[1]!.drawDate).toBe("2026-10-16");
+  });
+
+  it("17. Invariant: Parses official LOTIS homepage upcoming draw schedule (#drawtabletbody)", async () => {
+    const lotisHomepageHtml = `
+      <!DOCTYPE html>
+      <html>
+        <body>
+          <table>
+            <tbody id="drawtabletbody">
+              <tr>
+                <td>1</td>
+                <td>SAMRUDHI-10/11/2025 (SM-25)</td>
+                <td>18-10-2026 3:00 PM</td>
+                <td>GORKY BHAVAN NEAR BAKERY JUNCTION THIRUVANANTHAPURAM</td>
+              </tr>
+              <tr>
+                <td>2</td>
+                <td>BHAGYATHARA-10/11/2025 (BT-25)</td>
+                <td>19-10-2026 3:00 PM</td>
+                <td>GORKY BHAVAN NEAR BAKERY JUNCTION THIRUVANANTHAPURAM</td>
+              </tr>
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `;
+
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      url: "https://www.lotteryagent.kerala.gov.in/",
+      text: async () => lotisHomepageHtml
+    });
+
+    const discoveryService = new OfficialSourceDiscoveryService({ fetchFn: mockFetch as any });
+    const upcoming = await discoveryService.discoverUpcomingSchedule(KERALA_STATE_LOTTERY_PORTAL);
+
+    expect(upcoming.length).toBe(2);
+    expect(upcoming[0]!.lotteryCode).toBe("SAMRUDHI");
+    expect(upcoming[0]!.drawNumber).toBe("SM-25");
+    expect(upcoming[0]!.drawDate).toBe("2026-10-18");
+    expect(upcoming[0]!.drawTimeIst).toBe("3:00 PM IST");
+    expect(upcoming[0]!.venue).toContain("GORKY BHAVAN");
+  });
 });
+
+

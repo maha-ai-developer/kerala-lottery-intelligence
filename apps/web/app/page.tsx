@@ -28,6 +28,75 @@ interface DrawItem {
   status: string;
 }
 
+interface DiscoveryCheckResult {
+  success: boolean;
+  checkedAt: string;
+  officialSourceUrl?: string;
+  discoveryStatus:
+    | "TODAY_PUBLISHED"
+    | "NO_NEW_RESULT"
+    | "NOT_YET_PUBLISHED"
+    | "NO_SCHEDULED_DRAW"
+    | "SOURCE_UNAVAILABLE"
+    | "SOURCE_PARSE_ERROR";
+  statusExplanation: string;
+  todayIst: {
+    isoDate: string;
+    displayDate: string;
+    weekday: string;
+    timeIst: string;
+  };
+  todaySchedule: {
+    scheduled: boolean;
+    lotteryCode: string | null;
+    lotteryName: string | null;
+    drawNumber?: string | null;
+    drawTimeIst?: string;
+    expectedPdfPublicationTimeIst?: string;
+    venue?: string | null;
+    reason?: string;
+  };
+  latestOfficialResult: {
+    fileName: string;
+    sourceUrl?: string;
+    title?: string;
+    drawDate?: string;
+    drawNumber?: string;
+    lotteryCode?: string;
+    state: "ALREADY_KNOWN" | "NEW" | "PENDING" | "CONFLICT";
+    sha256?: string;
+  } | null;
+  latestCorpusDraw: {
+    drawNumber: string;
+    lotteryName: string;
+    lotteryCode: string;
+    drawDate: string;
+    isoDate: string;
+    sha256: string;
+    canonicalFilename: string;
+  } | null;
+}
+
+interface CandidateRow {
+  id: string;
+  lotteryCode: string;
+  series: string;
+  ticketNumber: string;
+  label: string;
+}
+
+type ShortlistStatus = "KEEP" | "REVIEW_AGAIN" | "REMOVED";
+
+const LOTTERY_SCHEMES = [
+  { code: "BT", name: "Bhagyathara (BT)", sampleSeries: "BA" },
+  { code: "KN", name: "Karunya Plus (KN)", sampleSeries: "BB" },
+  { code: "KR", name: "Karunya (KR)", sampleSeries: "KA" },
+  { code: "SM", name: "Samrudhi (SM)", sampleSeries: "MA" },
+  { code: "SS", name: "Sthree Sakthi (SS)", sampleSeries: "SA" },
+  { code: "DL", name: "Dhanalekshmi (DL)", sampleSeries: "DA" },
+  { code: "SW", name: "Suvarna Keralam (SW)", sampleSeries: "WA" }
+];
+
 export default function OverviewPage() {
   const [stats, setStats] = useState<StatsSummary>({
     researchDraws: 114,
@@ -46,6 +115,31 @@ export default function OverviewPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[] | null>(null);
   const [searching, setSearching] = useState(false);
+
+  // Step 1: Official Results Check state
+  const [checkingOfficial, setCheckingOfficial] = useState(false);
+  const [officialCheck, setOfficialCheck] = useState<DiscoveryCheckResult | null>(null);
+  const [officialCheckError, setOfficialCheckError] = useState<string | null>(null);
+
+  // Step 2: Candidate Entry state
+  const [workflowMode, setWorkflowMode] = useState<"SINGLE" | "MULTI">("SINGLE");
+  const [singleLottery, setSingleLottery] = useState("BT");
+  const [singleSeries, setSingleSeries] = useState("BA");
+  const [singleNumber, setSingleNumber] = useState("025916");
+
+  const [multiLottery, setMultiLottery] = useState("KN");
+  const [multiCandidates, setMultiCandidates] = useState<CandidateRow[]>([
+    { id: "cand-1", lotteryCode: "KN", series: "BB", ticketNumber: "814615", label: "Option A" },
+    { id: "cand-2", lotteryCode: "KN", series: "BC", ticketNumber: "004582", label: "Option B" },
+    { id: "cand-3", lotteryCode: "KN", series: "BD", ticketNumber: "385012", label: "Option C" }
+  ]);
+  const [formValidationError, setFormValidationError] = useState<string | null>(null);
+
+  // Step 3: Evidence & Personal Decision state
+  const [analyzing, setAnalyzing] = useState(false);
+  const [singleEvidence, setSingleEvidence] = useState<any | null>(null);
+  const [multiEvidence, setMultiEvidence] = useState<any | null>(null);
+  const [shortlistDecisions, setShortlistDecisions] = useState<Record<string, ShortlistStatus>>({});
 
   useEffect(() => {
     async function loadOverviewData() {
@@ -81,6 +175,151 @@ export default function OverviewPage() {
     loadOverviewData();
   }, []);
 
+  const handleCheckOfficialResults = async () => {
+    setCheckingOfficial(true);
+    setOfficialCheckError(null);
+    try {
+      const res = await fetch("/api/ops/ingestion/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ environment: "DEV", since: "2026-06-01" })
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        setOfficialCheckError(json.message || "Unable to complete official source check right now.");
+      } else {
+        setOfficialCheck(json);
+      }
+    } catch (err: any) {
+      setOfficialCheckError(err.message || "Network error while checking official results.");
+    } finally {
+      setCheckingOfficial(false);
+    }
+  };
+
+  const validateSeriesAndNumber = (series: string, num: string): string | null => {
+    const cleanSeries = series.trim().toUpperCase();
+    const cleanNum = num.trim();
+    if (!/^[A-Z]{1,2}$/.test(cleanSeries)) {
+      return `Series "${series}" must be 1 or 2 letters (for example BA or BB).`;
+    }
+    if (!/^\d{6}$/.test(cleanNum)) {
+      return `Ticket number "${num}" must be exactly 6 digits (keep leading zeros such as 004582).`;
+    }
+    return null;
+  };
+
+  const handleRunAnalysis = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormValidationError(null);
+
+    if (workflowMode === "SINGLE") {
+      const err = validateSeriesAndNumber(singleSeries, singleNumber);
+      if (err) {
+        setFormValidationError(err);
+        return;
+      }
+
+      setAnalyzing(true);
+      setMultiEvidence(null);
+      try {
+        const params = new URLSearchParams({
+          lottery: singleLottery.trim().toUpperCase(),
+          series: singleSeries.trim().toUpperCase(),
+          number: singleNumber.trim()
+        });
+        const res = await fetch(`/api/v1/research-sandbox?${params.toString()}`);
+        const json = await res.json();
+        if (!res.ok || json.status !== "success") {
+          setFormValidationError(json.message || "Analysis request failed.");
+        } else {
+          setSingleEvidence(json.data);
+          const key = `${singleLottery}:${singleSeries.trim().toUpperCase()}:${singleNumber.trim()}`;
+          setShortlistDecisions((prev) => ({ ...prev, [key]: prev[key] || "KEEP" }));
+        }
+      } catch (err: any) {
+        setFormValidationError(err.message || "Network error while running analysis.");
+      } finally {
+        setAnalyzing(false);
+      }
+    } else {
+      if (multiCandidates.length < 2 || multiCandidates.length > 10) {
+        setFormValidationError("Please enter between 2 and 10 candidate numbers to compare.");
+        return;
+      }
+      for (const row of multiCandidates) {
+        const err = validateSeriesAndNumber(row.series, row.ticketNumber);
+        if (err) {
+          setFormValidationError(`${row.label}: ${err}`);
+          return;
+        }
+      }
+
+      setAnalyzing(true);
+      setSingleEvidence(null);
+      try {
+        const serialized = multiCandidates
+          .map(
+            (c) =>
+              `${multiLottery.trim().toUpperCase()}:${c.series.trim().toUpperCase()}:${c.ticketNumber.trim()}:${encodeURIComponent(c.label.trim() || "Candidate")}`
+          )
+          .join(",");
+        const res = await fetch(`/api/v1/candidate-lab?candidates=${serialized}`);
+        const json = await res.json();
+        if (!res.ok || json.status !== "success") {
+          setFormValidationError(json.message || "Candidate comparison failed.");
+        } else {
+          setMultiEvidence(json.data);
+          const nextDecisions: Record<string, ShortlistStatus> = { ...shortlistDecisions };
+          for (const item of json.data.validationSummaries || []) {
+            if (!nextDecisions[item.candidateId]) {
+              nextDecisions[item.candidateId] = "KEEP";
+            }
+          }
+          setShortlistDecisions(nextDecisions);
+        }
+      } catch (err: any) {
+        setFormValidationError(err.message || "Network error while comparing candidates.");
+      } finally {
+        setAnalyzing(false);
+      }
+    }
+  };
+
+  const handleAddCandidateRow = () => {
+    if (multiCandidates.length >= 10) return;
+    const nextIdx = multiCandidates.length + 1;
+    const labelChar = String.fromCharCode(64 + nextIdx);
+    setMultiCandidates((prev) => [
+      ...prev,
+      {
+        id: `cand-${Date.now()}-${nextIdx}`,
+        lotteryCode: multiLottery,
+        series: "BA",
+        ticketNumber: "000000".slice(0, 6 - String(nextIdx).length) + String(nextIdx),
+        label: `Option ${labelChar}`
+      }
+    ]);
+  };
+
+  const handleRemoveCandidateRow = (id: string) => {
+    if (multiCandidates.length <= 2) return;
+    setMultiCandidates((prev) => prev.filter((c) => c.id !== id));
+  };
+
+  const handleUpdateCandidateRow = (id: string, field: "series" | "ticketNumber" | "label", value: string) => {
+    setMultiCandidates((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, [field]: value } : c))
+    );
+  };
+
+  const handleDecisionChange = (candidateKey: string, status: ShortlistStatus) => {
+    setShortlistDecisions((prev) => ({
+      ...prev,
+      [candidateKey]: status
+    }));
+  };
+
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchQuery.trim()) {
@@ -102,33 +341,985 @@ export default function OverviewPage() {
     }
   };
 
+  const latestCorpusDraw = recentDraws.length > 0 ? recentDraws[0] : null;
+
   return (
-    <div className="container" style={{ padding: "2rem 1.5rem" }}>
+    <div className="container" style={{ padding: "1.75rem 1.25rem" }}>
       {/* Scientific Notice Banner */}
-      <div className="scientific-notice" style={{ marginBottom: "2rem" }}>
+      <div className="scientific-notice" style={{ marginBottom: "1.5rem" }}>
         <strong>SCIENTIFIC & DESCRIPTIVE RESEARCH PLATFORM ONLY — V1.0 CLOSED RELEASE</strong>
         <p style={{ margin: "0.25rem 0 0 0", fontSize: "0.825rem", color: "var(--text-secondary)" }}>
           Every number and observation on this platform is cryptographically connected to its Government Gazette result PDF,
           prize scheme, rule context, and statistical provenance. Lottery draws are independent physical trials.
-          Historical feature frequencies provide strictly zero predictive validity, winning score, or gambling recommendations.
+          Historical results describe the past and do not establish a candidate&apos;s probability of winning a future draw.
         </p>
       </div>
 
       {/* Hero Header */}
-      <div style={{ marginBottom: "2rem" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.5rem", flexWrap: "wrap" }}>
-          <h1 style={{ fontSize: "1.75rem", fontWeight: 700, margin: 0 }}>
+      <div style={{ marginBottom: "1.75rem" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", marginBottom: "0.5rem", flexWrap: "wrap" }}>
+          <h1 style={{ fontSize: "1.65rem", fontWeight: 700, margin: 0 }}>
             Kerala State Lottery Intelligence Platform
           </h1>
           <span className="badge badge-emerald">V1.0 Closed Release</span>
-          <span className="badge badge-blue">Research Platform</span>
+          <span className="badge badge-blue">Guided 3-Step Workflow</span>
           <span className="badge badge-yellow">PROD Boundary Isolated</span>
         </div>
-        <p style={{ color: "var(--text-secondary)", fontSize: "0.95rem", margin: 0 }}>
-          Deterministic knowledge graph, descriptive statistical engine, formal experiment baselines, geographic evidence,
-          and interactive research sandbox covering 114 canonical draws and 43,712 winning results.
+        <p style={{ color: "var(--text-secondary)", fontSize: "0.95rem", margin: 0, maxWidth: "860px" }}>
+          Check official published results, enter one or more candidate numbers, and review clear historical evidence from{" "}
+          <strong>{stats.researchDraws}</strong> verified draws and{" "}
+          <strong>{stats.researchWinningResults.toLocaleString()}</strong> winning results to make an informed personal decision.
         </p>
       </div>
+
+      {/* =====================================================================
+          GUIDED 3-STEP USER WORKFLOW
+         ===================================================================== */}
+      <section
+        aria-label="Guided 3-Step User Workflow"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "1.5rem",
+          marginBottom: "2.25rem"
+        }}
+      >
+        {/* -----------------------------------------------------------------
+            STEP 1: CHECK OFFICIAL RESULTS
+           ----------------------------------------------------------------- */}
+        <div
+          style={{
+            background: "var(--bg-surface)",
+            border: "1px solid var(--border-medium)",
+            borderRadius: "0.75rem",
+            padding: "1.35rem"
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem", marginBottom: "1rem" }}>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.35rem" }}>
+                <span className="badge badge-blue">STEP 1 OF 3</span>
+                <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-secondary)" }}>
+                  Verify Official Publication & Corpus Status
+                </span>
+              </div>
+              <h2 style={{ fontSize: "1.25rem", fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>
+                STEP 1 — Check Latest Official Results
+              </h2>
+              <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)", margin: "0.25rem 0 0 0" }}>
+                Check the latest officially published Kerala State Lotteries result and today&apos;s scheduled draw status, or upload a result PDF directly.
+              </p>
+            </div>
+            <div style={{ display: "flex", gap: "0.65rem", flexWrap: "wrap" }}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleCheckOfficialResults}
+                disabled={checkingOfficial}
+              >
+                {checkingOfficial ? "Checking Official Portal..." : "Check Latest Official Results"}
+              </button>
+              <Link href="/ingestion" className="btn btn-outline">
+                Upload Result PDF &rarr;
+              </Link>
+            </div>
+          </div>
+
+          {officialCheckError && (
+            <div
+              style={{
+                background: "rgba(239, 68, 68, 0.1)",
+                border: "1px solid rgba(239, 68, 68, 0.35)",
+                borderRadius: "0.5rem",
+                padding: "0.85rem 1rem",
+                marginBottom: "1rem",
+                fontSize: "0.85rem"
+              }}
+            >
+              <strong>Official Check Notice:</strong> {officialCheckError}{" "}
+              You can still browse the verified corpus below or{" "}
+              <Link href="/ingestion" style={{ color: "var(--accent-cyan)", textDecoration: "underline" }}>
+                upload an official result PDF manually
+              </Link>
+              .
+            </div>
+          )}
+
+          <div className="grid-2" style={{ gap: "1rem" }}>
+            {/* Card A: Latest Verified Published Result */}
+            <div
+              style={{
+                background: "var(--bg-surface-elevated)",
+                border: "1px solid var(--border-subtle)",
+                borderRadius: "0.6rem",
+                padding: "1rem"
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
+                <span style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", color: "var(--text-muted)" }}>
+                  Latest Verified Published Result
+                </span>
+                <span className="badge badge-emerald">VERIFIED</span>
+              </div>
+
+              {officialCheck?.latestOfficialResult ? (
+                <div>
+                  <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--text-primary)" }}>
+                    {officialCheck.latestOfficialResult.lotteryCode || "Official Draw"} ({officialCheck.latestOfficialResult.drawNumber})
+                  </div>
+                  <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
+                    Draw Date: <strong>{officialCheck.latestOfficialResult.drawDate}</strong> &bull; Status:{" "}
+                    <strong>
+                      {officialCheck.latestOfficialResult.state === "ALREADY_KNOWN"
+                        ? "In Verified DEV Corpus"
+                        : "Available on Official Portal"}
+                    </strong>
+                  </div>
+                  <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap", marginTop: "0.75rem" }}>
+                    {officialCheck.latestOfficialResult.sha256 && (
+                      <Link
+                        href={`/sources/${officialCheck.latestOfficialResult.sha256}`}
+                        className="btn btn-outline"
+                        style={{ fontSize: "0.78rem", padding: "0.3rem 0.65rem" }}
+                      >
+                        Verified Source PDF &rarr;
+                      </Link>
+                    )}
+                    {officialCheck.latestOfficialResult.sourceUrl && (
+                      <a
+                        href={officialCheck.latestOfficialResult.sourceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn btn-outline"
+                        style={{ fontSize: "0.78rem", padding: "0.3rem 0.65rem" }}
+                      >
+                        Official Result PDF &nearr;
+                      </a>
+                    )}
+                    {officialCheck.latestOfficialResult.state === "NEW" && (
+                      <Link
+                        href="/ingestion"
+                        className="btn btn-primary"
+                        style={{ fontSize: "0.78rem", padding: "0.3rem 0.65rem" }}
+                      >
+                        Preview & Ingest on Console &rarr;
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              ) : latestCorpusDraw ? (
+                <div>
+                  <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--text-primary)" }}>
+                    {latestCorpusDraw.lotteryName} ({latestCorpusDraw.lotteryCode}-{latestCorpusDraw.drawNumber})
+                  </div>
+                  <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
+                    Draw Date: <strong>{latestCorpusDraw.drawDate}</strong> &bull; Winning Numbers:{" "}
+                    <strong>{latestCorpusDraw.totalResults}</strong>
+                  </div>
+                  <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap", marginTop: "0.75rem" }}>
+                    <Link
+                      href={`/draws/${latestCorpusDraw.id}`}
+                      className="btn btn-outline"
+                      style={{ fontSize: "0.78rem", padding: "0.3rem 0.65rem" }}
+                    >
+                      View Draw Results &rarr;
+                    </Link>
+                    <Link
+                      href={`/sources/${latestCorpusDraw.sourceDocumentSha256}`}
+                      className="btn btn-outline"
+                      style={{ fontSize: "0.78rem", padding: "0.3rem 0.65rem" }}
+                    >
+                      Verified Source PDF
+                    </Link>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>
+                  Loading latest verified draw from research corpus...
+                </div>
+              )}
+            </div>
+
+            {/* Card B: Today's Scheduled Draw */}
+            <div
+              style={{
+                background: "var(--bg-surface-elevated)",
+                border: "1px solid var(--border-subtle)",
+                borderRadius: "0.6rem",
+                padding: "1rem"
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
+                <span style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", color: "var(--text-muted)" }}>
+                  Today&apos;s Scheduled Draw (Asia/Kolkata)
+                </span>
+                {officialCheck ? (
+                  <span
+                    className={`badge ${
+                      officialCheck.discoveryStatus === "TODAY_PUBLISHED" ||
+                      officialCheck.discoveryStatus === "NO_NEW_RESULT"
+                        ? "badge-emerald"
+                        : officialCheck.discoveryStatus === "NOT_YET_PUBLISHED"
+                          ? "badge-blue"
+                          : "badge-yellow"
+                    }`}
+                  >
+                    {officialCheck.discoveryStatus}
+                  </span>
+                ) : (
+                  <span className="badge badge-blue">3:00 PM IST Publication</span>
+                )}
+              </div>
+
+              {officialCheck ? (
+                <div>
+                  <div style={{ fontSize: "1.05rem", fontWeight: 700, color: "var(--text-primary)" }}>
+                    {officialCheck.todaySchedule.lotteryName
+                      ? `${officialCheck.todaySchedule.lotteryName}${
+                          officialCheck.todaySchedule.drawNumber
+                            ? ` (${officialCheck.todaySchedule.drawNumber})`
+                            : officialCheck.todaySchedule.lotteryCode
+                              ? ` (${officialCheck.todaySchedule.lotteryCode})`
+                              : ""
+                        }`
+                      : "No Weekly Draw Scheduled"}
+                  </div>
+                  <div style={{ fontSize: "0.825rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
+                    Date: <strong>{officialCheck.todayIst.displayDate} ({officialCheck.todayIst.weekday})</strong> &bull; Typical Publication:{" "}
+                    <strong>{officialCheck.todaySchedule.expectedPdfPublicationTimeIst || "16:30 IST"}</strong>
+                    {officialCheck.todaySchedule.venue ? ` • Venue: ${officialCheck.todaySchedule.venue}` : ""}
+                  </div>
+                  <div style={{ fontSize: "0.825rem", color: "var(--text-secondary)", marginTop: "0.45rem" }}>
+                    {officialCheck.statusExplanation}
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div style={{ fontSize: "0.9rem", color: "var(--text-secondary)" }}>
+                    Click <strong>&ldquo;Check Latest Official Results&rdquo;</strong> above to check live publication status from the official Kerala State Lotteries portal (LOTIS) for today&apos;s draw.
+                  </div>
+                  <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "0.5rem" }}>
+                    Typical daily publication window: <strong>3:00 PM – 4:30 PM IST</strong>. If you already have today&apos;s official Gazette PDF, you can upload it directly on the{" "}
+                    <Link href="/ingestion" style={{ color: "var(--accent-cyan)", textDecoration: "underline" }}>
+                      Ingestion Console
+                    </Link>
+                    .
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* -----------------------------------------------------------------
+            STEP 2: ENTER CANDIDATE NUMBER(S)
+           ----------------------------------------------------------------- */}
+        <div
+          style={{
+            background: "var(--bg-surface)",
+            border: "1px solid var(--border-medium)",
+            borderRadius: "0.75rem",
+            padding: "1.35rem"
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem", marginBottom: "1rem" }}>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.35rem" }}>
+                <span className="badge badge-emerald">STEP 2 OF 3</span>
+                <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-secondary)" }}>
+                  Single Ticket or Multi-Candidate Comparison
+                </span>
+              </div>
+              <h2 style={{ fontSize: "1.25rem", fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>
+                STEP 2 — Enter Candidate Number(s)
+              </h2>
+              <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)", margin: "0.25rem 0 0 0" }}>
+                Select a lottery scheme and enter a single ticket or compare 2 to 10 candidate numbers side by side. Leading zeros (such as <code className="mono">004582</code>) are preserved automatically.
+              </p>
+            </div>
+
+            {/* Mode Switcher */}
+            <div
+              role="group"
+              aria-label="Analysis mode"
+              style={{
+                display: "inline-flex",
+                background: "var(--bg-surface-elevated)",
+                border: "1px solid var(--border-medium)",
+                borderRadius: "0.5rem",
+                padding: "0.2rem"
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  setWorkflowMode("SINGLE");
+                  setFormValidationError(null);
+                }}
+                style={{
+                  padding: "0.45rem 0.85rem",
+                  borderRadius: "0.375rem",
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: "0.825rem",
+                  fontWeight: 600,
+                  background: workflowMode === "SINGLE" ? "var(--accent-primary)" : "transparent",
+                  color: workflowMode === "SINGLE" ? "#ffffff" : "var(--text-secondary)"
+                }}
+              >
+                Single Candidate
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setWorkflowMode("MULTI");
+                  setFormValidationError(null);
+                }}
+                style={{
+                  padding: "0.45rem 0.85rem",
+                  borderRadius: "0.375rem",
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: "0.825rem",
+                  fontWeight: 600,
+                  background: workflowMode === "MULTI" ? "var(--accent-primary)" : "transparent",
+                  color: workflowMode === "MULTI" ? "#ffffff" : "var(--text-secondary)"
+                }}
+              >
+                Compare Multiple (2–10)
+              </button>
+            </div>
+          </div>
+
+          <form onSubmit={handleRunAnalysis}>
+            {workflowMode === "SINGLE" ? (
+              <div className="grid-3" style={{ gap: "1rem", alignItems: "end" }}>
+                <div>
+                  <label
+                    htmlFor="single-lottery-select"
+                    style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "0.35rem" }}
+                  >
+                    Lottery Scheme
+                  </label>
+                  <select
+                    id="single-lottery-select"
+                    className="search-input"
+                    style={{ width: "100%" }}
+                    value={singleLottery}
+                    onChange={(e) => {
+                      const code = e.target.value;
+                      setSingleLottery(code);
+                      const found = LOTTERY_SCHEMES.find((s) => s.code === code);
+                      if (found) setSingleSeries(found.sampleSeries);
+                    }}
+                  >
+                    {LOTTERY_SCHEMES.map((s) => (
+                      <option key={s.code} value={s.code}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="single-series-input"
+                    style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "0.35rem" }}
+                  >
+                    Series Code (2 Letters)
+                  </label>
+                  <input
+                    id="single-series-input"
+                    type="text"
+                    className="search-input mono"
+                    style={{ width: "100%", textTransform: "uppercase" }}
+                    maxLength={2}
+                    placeholder="BA"
+                    value={singleSeries}
+                    onChange={(e) => setSingleSeries(e.target.value.toUpperCase())}
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="single-number-input"
+                    style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "0.35rem" }}
+                  >
+                    6-Digit Ticket Number
+                  </label>
+                  <input
+                    id="single-number-input"
+                    type="text"
+                    inputMode="numeric"
+                    className="search-input mono"
+                    style={{ width: "100%" }}
+                    maxLength={6}
+                    placeholder="004582"
+                    value={singleNumber}
+                    onChange={(e) => setSingleNumber(e.target.value.replace(/[^\d]/g, "").slice(0, 6))}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.75rem", marginBottom: "0.85rem" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", flexWrap: "wrap" }}>
+                    <label
+                      htmlFor="multi-lottery-select"
+                      style={{ fontSize: "0.825rem", fontWeight: 600, color: "var(--text-secondary)" }}
+                    >
+                      Lottery Scheme for Comparison:
+                    </label>
+                    <select
+                      id="multi-lottery-select"
+                      className="search-input"
+                      style={{ width: "auto", minWidth: "210px" }}
+                      value={multiLottery}
+                      onChange={(e) => setMultiLottery(e.target.value)}
+                    >
+                      {LOTTERY_SCHEMES.map((s) => (
+                        <option key={s.code} value={s.code}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    onClick={handleAddCandidateRow}
+                    disabled={multiCandidates.length >= 10}
+                    style={{ fontSize: "0.8rem" }}
+                  >
+                    + Add Candidate ({multiCandidates.length}/10)
+                  </button>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem" }}>
+                  {multiCandidates.map((row, idx) => (
+                    <div
+                      key={row.id}
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+                        gap: "0.65rem",
+                        alignItems: "center",
+                        background: "var(--bg-surface-elevated)",
+                        border: "1px solid var(--border-subtle)",
+                        borderRadius: "0.5rem",
+                        padding: "0.75rem"
+                      }}
+                    >
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.72rem", color: "var(--text-muted)", marginBottom: "0.2rem" }}>
+                          Candidate Label #{idx + 1}
+                        </label>
+                        <input
+                          type="text"
+                          className="search-input"
+                          style={{ width: "100%", padding: "0.4rem 0.6rem", fontSize: "0.85rem" }}
+                          value={row.label}
+                          onChange={(e) => handleUpdateCandidateRow(row.id, "label", e.target.value)}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.72rem", color: "var(--text-muted)", marginBottom: "0.2rem" }}>
+                          Series (2 Letters)
+                        </label>
+                        <input
+                          type="text"
+                          className="search-input mono"
+                          style={{ width: "100%", padding: "0.4rem 0.6rem", fontSize: "0.85rem", textTransform: "uppercase" }}
+                          maxLength={2}
+                          value={row.series}
+                          onChange={(e) => handleUpdateCandidateRow(row.id, "series", e.target.value.toUpperCase())}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.72rem", color: "var(--text-muted)", marginBottom: "0.2rem" }}>
+                          6-Digit Number
+                        </label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          className="search-input mono"
+                          style={{ width: "100%", padding: "0.4rem 0.6rem", fontSize: "0.85rem" }}
+                          maxLength={6}
+                          value={row.ticketNumber}
+                          onChange={(e) =>
+                            handleUpdateCandidateRow(
+                              row.id,
+                              "ticketNumber",
+                              e.target.value.replace(/[^\d]/g, "").slice(0, 6)
+                            )
+                          }
+                        />
+                      </div>
+
+                      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "flex-end", height: "100%" }}>
+                        <button
+                          type="button"
+                          className="btn btn-outline"
+                          onClick={() => handleRemoveCandidateRow(row.id)}
+                          disabled={multiCandidates.length <= 2}
+                          style={{ fontSize: "0.75rem", padding: "0.35rem 0.65rem" }}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {formValidationError && (
+              <div
+                role="alert"
+                style={{
+                  marginTop: "0.85rem",
+                  background: "rgba(239, 68, 68, 0.1)",
+                  border: "1px solid rgba(239, 68, 68, 0.35)",
+                  borderRadius: "0.5rem",
+                  padding: "0.75rem 1rem",
+                  fontSize: "0.85rem",
+                  color: "var(--text-primary)"
+                }}
+              >
+                <strong>Input Validation Error:</strong> {formValidationError}
+              </div>
+            )}
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.75rem", marginTop: "1rem" }}>
+              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
+                <button type="submit" className="btn btn-primary" disabled={analyzing}>
+                  {analyzing
+                    ? "Computing Historical Evidence..."
+                    : workflowMode === "SINGLE"
+                      ? "Check Historical Evidence (Step 3)"
+                      : `Compare ${multiCandidates.length} Candidates (Step 3)`}
+                </button>
+                {workflowMode === "SINGLE" && (
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    style={{ fontSize: "0.8rem" }}
+                    onClick={() => {
+                      setSingleLottery("BT");
+                      setSingleSeries("BA");
+                      setSingleNumber("004582");
+                    }}
+                  >
+                    Try Leading-Zero Example (004582)
+                  </button>
+                )}
+              </div>
+
+              <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", fontSize: "0.825rem" }}>
+                <Link href="/research-sandbox" style={{ color: "var(--accent-cyan)", textDecoration: "underline" }}>
+                  Full Interactive Research Sandbox &rarr;
+                </Link>
+                <Link href="/candidate-lab" style={{ color: "var(--accent-cyan)", textDecoration: "underline" }}>
+                  Full Candidate Comparison Lab &rarr;
+                </Link>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        {/* -----------------------------------------------------------------
+            STEP 3: UNDERSTAND THE EVIDENCE & DECIDE PERSONALLY
+           ----------------------------------------------------------------- */}
+        <div
+          style={{
+            background: "var(--bg-surface)",
+            border: "1px solid var(--border-medium)",
+            borderRadius: "0.75rem",
+            padding: "1.35rem"
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem", marginBottom: "1rem" }}>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.35rem" }}>
+                <span className="badge badge-purple">STEP 3 OF 3</span>
+                <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-secondary)" }}>
+                  Plain-Language Historical Evidence & Personal Decision Workspace
+                </span>
+              </div>
+              <h2 style={{ fontSize: "1.25rem", fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>
+                STEP 3 — Understand the Evidence & Decide Personally
+              </h2>
+              <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)", margin: "0.25rem 0 0 0" }}>
+                Historical results describe the past and do not establish a candidate&apos;s probability of winning a future draw.
+              </p>
+            </div>
+          </div>
+
+          {!singleEvidence && !multiEvidence ? (
+            <div
+              style={{
+                background: "var(--bg-surface-elevated)",
+                border: "1px dashed var(--border-medium)",
+                borderRadius: "0.6rem",
+                padding: "1.25rem",
+                fontSize: "0.9rem",
+                color: "var(--text-secondary)"
+              }}
+            >
+              Submit a single ticket or multiple candidates in <strong>Step 2</strong> above to view:
+              <ul style={{ margin: "0.5rem 0 0 1.25rem", padding: 0 }}>
+                <li>Rule & series validation against official Kerala State Lottery scheme rules</li>
+                <li>Exact historical prize matches across {stats.researchDraws} verified draws</li>
+                <li>Terminal digit frequency vs expected uniform 10%, digit sum percentile, and odd/even balance</li>
+                <li>2-digit, 3-digit, and 4-digit suffix appearances in the verified corpus</li>
+                <li>Your personal decision shortlist (Keep in comparison, Review again, or Remove)</li>
+              </ul>
+            </div>
+          ) : singleEvidence ? (
+            /* SINGLE CANDIDATE EVIDENCE VIEW */
+            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              {/* Plain-Language Summary Banner */}
+              <div
+                style={{
+                  background: "var(--bg-surface-elevated)",
+                  border: "1px solid var(--border-subtle)",
+                  borderRadius: "0.6rem",
+                  padding: "1rem"
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem", marginBottom: "0.5rem" }}>
+                  <div style={{ fontSize: "1.1rem", fontWeight: 700 }} className="mono">
+                    Candidate: {singleEvidence.input.lotteryCode}-{singleEvidence.input.series}-{singleEvidence.input.ticketNumber}
+                  </div>
+                  <span className={`badge ${singleEvidence.validation.isValid ? "badge-emerald" : "badge-red"}`}>
+                    {singleEvidence.validation.isValid ? "VALID SCHEME & SERIES FORMAT" : "VALIDATION WARNING"}
+                  </span>
+                </div>
+                <p style={{ margin: "0 0 0.5rem 0", fontSize: "0.9rem", color: "var(--text-primary)" }}>
+                  {singleEvidence.researchInterpretation?.summary}
+                </p>
+                <p style={{ margin: 0, fontSize: "0.825rem", color: "var(--text-secondary)" }}>
+                  {singleEvidence.researchInterpretation?.explanation}
+                </p>
+              </div>
+
+              {/* 4 Key Evidence Cards */}
+              <div className="grid-4" style={{ gap: "0.85rem" }}>
+                <div className="stat-card">
+                  <div className="stat-label">Exact Full-Ticket Match</div>
+                  <div className="stat-value" style={{ fontSize: "1.25rem" }}>
+                    {singleEvidence.historicalComparison.exactTicketMatch.observedInCorpus
+                      ? `${singleEvidence.historicalComparison.exactTicketMatch.matchCount} Match(es)`
+                      : "0 Matches"}
+                  </div>
+                  <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
+                    Checked across {singleEvidence.historicalComparison.fullTicketSampleSize.toLocaleString()} full winning tickets
+                  </div>
+                  {singleEvidence.historicalComparison.exactTicketMatch.matches?.length > 0 && (
+                    <div style={{ marginTop: "0.4rem", display: "flex", flexWrap: "wrap", gap: "0.35rem" }}>
+                      {singleEvidence.historicalComparison.exactTicketMatch.matches.map((m: any, i: number) => (
+                        <Link
+                          key={i}
+                          href={`/draws/${m.drawId}`}
+                          className="badge badge-emerald"
+                          style={{ textDecoration: "underline" }}
+                        >
+                          {m.drawId} ({m.prizeTierName})
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="stat-card">
+                  <div className="stat-label">Terminal Digit ({singleEvidence.featureProfile?.lastDigit})</div>
+                  <div className="stat-value" style={{ fontSize: "1.25rem" }}>
+                    {(singleEvidence.historicalComparison.lastDigitComparison.empiricalFrequency * 100).toFixed(2)}%
+                  </div>
+                  <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
+                    Expected uniform baseline: <strong>10.00%</strong> ({singleEvidence.historicalComparison.lastDigitComparison.observedCount.toLocaleString()} observed)
+                  </div>
+                </div>
+
+                <div className="stat-card">
+                  <div className="stat-label">Digit Sum & Balance</div>
+                  <div className="stat-value" style={{ fontSize: "1.25rem" }}>
+                    Sum {singleEvidence.featureProfile?.digitSum} ({singleEvidence.featureProfile?.parityBalance})
+                  </div>
+                  <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
+                    Percentile: <strong>{(singleEvidence.historicalComparison.digitSumComparison.empiricalPercentile * 100).toFixed(1)}%</strong> within 0–54 ({singleEvidence.featureProfile?.uniqueDigitCount} unique digits)
+                  </div>
+                </div>
+
+                <div className="stat-card">
+                  <div className="stat-label">Suffix Appearances (2 / 3 / 4-Digit)</div>
+                  <div className="stat-value mono" style={{ fontSize: "1.1rem" }}>
+                    -{singleEvidence.featureProfile?.suffix2}: {singleEvidence.historicalComparison.suffixComparisons.suffix2.observedCount} | -{singleEvidence.featureProfile?.suffix4}: {singleEvidence.historicalComparison.suffixComparisons.suffix4.observedCount}
+                  </div>
+                  <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
+                    3-digit (-{singleEvidence.featureProfile?.suffix3}): {singleEvidence.historicalComparison.suffixComparisons.suffix3.observedCount} appearances in {singleEvidence.historicalComparison.sampleSizeDraws} draws
+                  </div>
+                </div>
+              </div>
+
+              {/* Personal Decision Controls for Single Candidate */}
+              {(() => {
+                const candidateKey = `${singleEvidence.input.lotteryCode}:${singleEvidence.input.series}:${singleEvidence.input.ticketNumber}`;
+                const status = shortlistDecisions[candidateKey] || "KEEP";
+                return (
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                      gap: "0.75rem",
+                      background: "var(--bg-surface-elevated)",
+                      border: "1px solid var(--border-subtle)",
+                      borderRadius: "0.6rem",
+                      padding: "0.85rem 1rem"
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontSize: "0.85rem", fontWeight: 700 }}>
+                        Your Personal Decision Note for <span className="mono">{candidateKey}</span>:{" "}
+                        <span className="badge badge-blue">{status.replace("_", " ")}</span>
+                      </div>
+                      <div style={{ fontSize: "0.78rem", color: "var(--text-secondary)", marginTop: "0.15rem" }}>
+                        Historical results describe the past and do not establish a candidate&apos;s probability of winning a future draw.
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                      <button
+                        type="button"
+                        className={status === "KEEP" ? "btn btn-primary" : "btn btn-outline"}
+                        style={{ fontSize: "0.78rem", padding: "0.35rem 0.7rem" }}
+                        onClick={() => handleDecisionChange(candidateKey, "KEEP")}
+                      >
+                        Keep in my comparison
+                      </button>
+                      <button
+                        type="button"
+                        className={status === "REVIEW_AGAIN" ? "btn btn-primary" : "btn btn-outline"}
+                        style={{ fontSize: "0.78rem", padding: "0.35rem 0.7rem" }}
+                        onClick={() => handleDecisionChange(candidateKey, "REVIEW_AGAIN")}
+                      >
+                        Review again
+                      </button>
+                      <button
+                        type="button"
+                        className={status === "REMOVED" ? "btn btn-primary" : "btn btn-outline"}
+                        style={{ fontSize: "0.78rem", padding: "0.35rem 0.7rem" }}
+                        onClick={() => handleDecisionChange(candidateKey, "REMOVED")}
+                      >
+                        Remove from comparison
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Expandable "How was this calculated?" section */}
+              <details
+                style={{
+                  background: "var(--bg-surface-elevated)",
+                  border: "1px solid var(--border-subtle)",
+                  borderRadius: "0.6rem",
+                  padding: "0.85rem 1rem"
+                }}
+              >
+                <summary style={{ cursor: "pointer", fontWeight: 600, fontSize: "0.875rem", color: "var(--accent-cyan)" }}>
+                  How was this calculated? (Dataset scope, confidence intervals & limitations)
+                </summary>
+                <div style={{ marginTop: "0.75rem", fontSize: "0.825rem", color: "var(--text-secondary)", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                  <div>
+                    <strong>Corpus Scope:</strong> Evaluated against {singleEvidence.historicalComparison.sampleSizeDraws} verified draws and{" "}
+                    {singleEvidence.historicalComparison.sampleSizeResults.toLocaleString()} winning entries ({singleEvidence.historicalComparison.corpusVersion}).
+                  </div>
+                  <div>
+                    <strong>Terminal Digit 95% Wilson Confidence Interval:</strong> [
+                    {(singleEvidence.historicalComparison.lastDigitComparison.wilsonConfidenceInterval95[0] * 100).toFixed(2)}%,{" "}
+                    {(singleEvidence.historicalComparison.lastDigitComparison.wilsonConfidenceInterval95[1] * 100).toFixed(2)}%]
+                  </div>
+                  <div>
+                    <strong>Exposure Limitation:</strong> {singleEvidence.limitations?.exposureLimitation}
+                  </div>
+                  <div>
+                    <strong>Deterministic Audit Hash:</strong>{" "}
+                    <code className="mono">{singleEvidence.deterministicHash}</code>
+                  </div>
+                </div>
+              </details>
+            </div>
+          ) : (
+            /* MULTI-CANDIDATE EVIDENCE VIEW */
+            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              <div
+                style={{
+                  background: "var(--bg-surface-elevated)",
+                  border: "1px solid var(--border-subtle)",
+                  borderRadius: "0.6rem",
+                  padding: "1rem"
+                }}
+              >
+                <div style={{ fontWeight: 700, fontSize: "1rem", marginBottom: "0.35rem" }}>
+                  Side-by-Side Comparison Summary ({multiEvidence.candidateCount} Candidates)
+                </div>
+                <p style={{ margin: "0 0 0.35rem 0", fontSize: "0.875rem", color: "var(--text-primary)" }}>
+                  {multiEvidence.researchInterpretation?.summary}
+                </p>
+                <p style={{ margin: 0, fontSize: "0.8rem", color: "var(--text-secondary)" }}>
+                  {multiEvidence.seriesComparison?.criticalExposureNotice}
+                </p>
+              </div>
+
+              {/* Comparison Table (scrollable on mobile, full width on desktop) */}
+              <div className="table-container">
+                <table className="research-table">
+                  <thead>
+                    <tr>
+                      <th>Candidate</th>
+                      <th>Ticket</th>
+                      <th>Exact Matches</th>
+                      <th>Terminal Digit Freq</th>
+                      <th>Digit Sum (Pct)</th>
+                      <th>Parity & Unique</th>
+                      <th>4-Digit / 2-Digit Suffix</th>
+                      <th>Personal Shortlist Decision</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(multiEvidence.tradeOffAnalysis?.comparisonMatrix || []).map((row: any) => {
+                      const hist = (multiEvidence.historicalComparisons || []).find(
+                        (h: any) => h.candidateId === row.candidateId
+                      );
+                      const feat = (multiEvidence.featureProfiles || []).find(
+                        (f: any) => f.candidateId === row.candidateId
+                      );
+                      const decision = shortlistDecisions[row.candidateId] || "KEEP";
+                      return (
+                        <tr
+                          key={row.candidateId}
+                          style={{
+                            opacity: decision === "REMOVED" ? 0.55 : 1
+                          }}
+                        >
+                          <td style={{ fontWeight: 700 }}>
+                            {row.label}
+                            <div style={{ marginTop: "0.2rem" }}>
+                              <span
+                                className={`badge ${
+                                  decision === "KEEP"
+                                    ? "badge-emerald"
+                                    : decision === "REVIEW_AGAIN"
+                                      ? "badge-yellow"
+                                      : "badge-blue"
+                                }`}
+                              >
+                                {decision.replace("_", " ")}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="mono" style={{ fontWeight: 600 }}>
+                            {row.series}-{row.ticketNumber}
+                          </td>
+                          <td>
+                            {row.exactHistoricalMatches > 0 ? (
+                              <div>
+                                <span className="badge badge-emerald">{row.exactHistoricalMatches} match(es)</span>
+                                {hist?.exactMatch?.matches?.map((m: any, idx: number) => (
+                                  <div key={idx} style={{ marginTop: "0.2rem" }}>
+                                    <Link
+                                      href={`/draws/${m.drawId}`}
+                                      style={{ fontSize: "0.75rem", color: "var(--accent-cyan)", textDecoration: "underline" }}
+                                    >
+                                      {m.drawId}
+                                    </Link>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <span style={{ fontSize: "0.825rem", color: "var(--text-secondary)" }}>0 in corpus</span>
+                            )}
+                          </td>
+                          <td>
+                            <strong>{row.terminalDigitFreqPercent}%</strong>
+                            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>vs 10.0% uniform</div>
+                          </td>
+                          <td>
+                            <strong>{row.digitSum}</strong> ({row.digitSumPercentile}%)
+                          </td>
+                          <td>
+                            <span className="mono">{row.parityBalance}</span>
+                            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                              {feat?.profile?.uniqueDigitCount ?? "-"} unique digits
+                            </div>
+                          </td>
+                          <td className="mono" style={{ fontSize: "0.8rem" }}>
+                            -{feat?.profile?.suffix4}: {hist?.suffix4?.observedCount ?? 0} | -{feat?.profile?.suffix2}: {hist?.suffix2?.observedCount ?? 0}
+                          </td>
+                          <td>
+                            <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
+                              <button
+                                type="button"
+                                className={decision === "KEEP" ? "btn btn-primary" : "btn btn-outline"}
+                                style={{ fontSize: "0.72rem", padding: "0.25rem 0.5rem" }}
+                                onClick={() => handleDecisionChange(row.candidateId, "KEEP")}
+                              >
+                                Keep in my comparison
+                              </button>
+                              <button
+                                type="button"
+                                className={decision === "REVIEW_AGAIN" ? "btn btn-primary" : "btn btn-outline"}
+                                style={{ fontSize: "0.72rem", padding: "0.25rem 0.5rem" }}
+                                onClick={() => handleDecisionChange(row.candidateId, "REVIEW_AGAIN")}
+                              >
+                                Review again
+                              </button>
+                              <button
+                                type="button"
+                                className={decision === "REMOVED" ? "btn btn-primary" : "btn btn-outline"}
+                                style={{ fontSize: "0.72rem", padding: "0.25rem 0.5rem" }}
+                                onClick={() => handleDecisionChange(row.candidateId, "REMOVED")}
+                              >
+                                Remove from comparison
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <details
+                style={{
+                  background: "var(--bg-surface-elevated)",
+                  border: "1px solid var(--border-subtle)",
+                  borderRadius: "0.6rem",
+                  padding: "0.85rem 1rem"
+                }}
+              >
+                <summary style={{ cursor: "pointer", fontWeight: 600, fontSize: "0.875rem", color: "var(--accent-cyan)" }}>
+                  How was this calculated? (Methodology & dataset scope)
+                </summary>
+                <div style={{ marginTop: "0.75rem", fontSize: "0.825rem", color: "var(--text-secondary)", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                  <div>{multiEvidence.tradeOffAnalysis?.nonPredictiveNotice}</div>
+                  <div>{multiEvidence.researchInterpretation?.globalNotice}</div>
+                  <div>
+                    <strong>Deterministic Comparison Hash:</strong>{" "}
+                    <code className="mono">{multiEvidence.deterministicHash}</code>
+                  </div>
+                </div>
+              </details>
+            </div>
+          )}
+        </div>
+      </section>
 
       {/* Core V1.0 Platform Architecture Status Grid */}
       <div className="grid-4" style={{ gap: "1rem", marginBottom: "2rem" }}>
@@ -162,9 +1353,9 @@ export default function OverviewPage() {
           </div>
         </div>
 
-        <div className="stat-card" style={{ borderLeft: "3px solid #f59e0b" }}>
+        <div className="stat-card" style={{ borderLeft: "3px solid var(--accent-amber)" }}>
           <div className="stat-label">Production Isolation (PROD)</div>
-          <div className="stat-value" style={{ color: "#f59e0b" }}>
+          <div className="stat-value" style={{ color: "var(--accent-amber)" }}>
             {stats.prodDraws} Draws
           </div>
           <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
@@ -173,7 +1364,7 @@ export default function OverviewPage() {
         </div>
       </div>
 
-      {/* Research Sandbox Feature Callout Card */}
+      {/* Interactive Research Sandbox & Candidate Comparison Lab Callout Card */}
       <div
         style={{
           background: "var(--bg-surface-elevated)",
@@ -186,16 +1377,15 @@ export default function OverviewPage() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem" }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.35rem" }}>
-              <span className="badge badge-blue">New in V1.0</span>
-              <span className="badge badge-emerald">Interactive Sandbox</span>
+              <span className="badge badge-blue">Deep-Dive Tools</span>
+              <span className="badge badge-emerald">Deterministic Analysis</span>
             </div>
             <h2 style={{ fontSize: "1.35rem", fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>
-              Interactive Research Sandbox: Analyze Candidate & Historical Tickets
+              Interactive Research Sandbox & Candidate Comparison Lab
             </h2>
             <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem", marginTop: "0.35rem", marginBottom: 0, maxWidth: "780px" }}>
-              Enter any candidate lottery ticket (Lottery, Scheme, Series, Number) to run deterministic structural validation,
-              extract mathematical features, compute empirical frequencies against the 114-draw research corpus, and inspect
-              statistical baseline benchmarks without prediction scores or betting bias.
+              Open the dedicated Interactive Research Sandbox or the Candidate Comparison Lab for full confidence-interval breakdowns,
+              prize-scheme rule traces, and multi-ticket matrix exports.
             </p>
           </div>
           <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", alignItems: "center" }}>

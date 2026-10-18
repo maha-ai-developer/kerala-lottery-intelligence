@@ -130,6 +130,7 @@ export async function POST(req: NextRequest) {
     const discoveryFetchOverride = getDiscoveryFetchOverrideForTesting();
     const discoveryService = new OfficialSourceDiscoveryService(discoveryFetchOverride || undefined);
     let discoveredFromPortal: any[] = [];
+    let upcomingSchedule: any[] = [];
     let portalReachable = true;
     let portalNotice: string | undefined;
 
@@ -138,6 +139,24 @@ export async function POST(req: NextRequest) {
         maxRetries: discoveryFetchOverride ? 1 : 2,
         retryDelayMs: 50
       });
+      if (todaySchedule.scheduled) {
+        upcomingSchedule = await discoveryService.discoverUpcomingSchedule(KERALA_STATE_LOTTERY_PORTAL, {
+          maxRetries: 1,
+          retryDelayMs: 50
+        });
+        const liveUpcomingToday = upcomingSchedule.find((u) => u.drawDate === todayIst.isoDate);
+        if (liveUpcomingToday) {
+          if (liveUpcomingToday.lotteryName) todaySchedule.lotteryName = liveUpcomingToday.lotteryName;
+          if (liveUpcomingToday.lotteryCode) {
+            todaySchedule.lotteryCode = liveUpcomingToday.lotteryCode;
+            todaySchedule.scheduledLotteryCode = liveUpcomingToday.lotteryCode;
+          }
+          if (liveUpcomingToday.drawNumber) todaySchedule.drawNumber = liveUpcomingToday.drawNumber;
+          if (liveUpcomingToday.drawTimeIst) todaySchedule.drawTimeIst = liveUpcomingToday.drawTimeIst;
+          if (liveUpcomingToday.venue) todaySchedule.venue = liveUpcomingToday.venue;
+          if (liveUpcomingToday.rawTitle) todaySchedule.rawScheduleTitle = liveUpcomingToday.rawTitle;
+        }
+      }
     } catch (err: unknown) {
       if (err instanceof AcquisitionSecurityError) {
         const completedAt = new Date().toISOString();
@@ -247,7 +266,12 @@ export async function POST(req: NextRequest) {
     const sourceDir = join(process.cwd(), "data/source-documents/lottery-results");
     if (existsSync(sourceDir)) {
       const recentManifest = [...manifestDocs]
-        .sort((a, b) => new Date(b.ingestedAt || 0).getTime() - new Date(a.ingestedAt || 0).getTime())
+        .sort((a, b) => {
+          const aIso = normalizeDateToIso(a.drawDate || "") || "";
+          const bIso = normalizeDateToIso(b.drawDate || "") || "";
+          if (bIso !== aIso) return bIso.localeCompare(aIso);
+          return new Date(b.ingestedAt || 0).getTime() - new Date(a.ingestedAt || 0).getTime();
+        })
         .slice(0, 10);
 
       for (const mDoc of recentManifest) {
@@ -272,9 +296,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Add known scheduled pending draws when not using an isolated mock fetch override
+    // Add known scheduled pending draws when explicitly requested or when portal is unreachable
     const shouldIncludeBaselinePending =
-      includeBaselinePending !== undefined ? Boolean(includeBaselinePending) : !discoveryFetchOverride;
+      includeBaselinePending !== undefined ? Boolean(includeBaselinePending) : !portalReachable && !discoveryFetchOverride;
 
     if (shouldIncludeBaselinePending) {
       const pendingDraws = [
@@ -285,15 +309,6 @@ export async function POST(req: NextRequest) {
           title: "SUVARNA KERALAM (SK-72) dated 02-10-2026",
           state: "PENDING" as const,
           details: "Official draw postponed for Gandhi Jayanti national holiday."
-        },
-        {
-          lotteryCode: "KARUNYA",
-          drawNumber: "KR-770",
-          drawDate: "03/10/2026",
-          title: "KARUNYA (KR-770) dated 03-10-2026",
-          sourceUrl: "https://result.keralalotteries.com/viewlotisresult.php?drawserial=75397",
-          state: "NEW" as const,
-          details: "Official draw held 03-10-2026. Published on official results portal."
         }
       ];
 
@@ -307,7 +322,6 @@ export async function POST(req: NextRequest) {
           candidates.push({
             fileName: `${p.drawNumber}.pdf`,
             sourceResponseFilename: `${p.drawNumber}.pdf`,
-            sourceUrl: (p as any).sourceUrl,
             title: p.title,
             drawDate: p.drawDate,
             drawNumber: p.drawNumber,
@@ -342,6 +356,12 @@ export async function POST(req: NextRequest) {
     } else if (!todaySchedule.scheduled) {
       discoveryStatus = "NO_SCHEDULED_DRAW";
       statusExplanation = todaySchedule.reason || `No draw scheduled for ${todayIst.isoDate}`;
+    } else if (discoveredFromPortal.length === 0) {
+      discoveryStatus = "SOURCE_PARSE_ERROR";
+      portalNotice =
+        "Official Kerala State Lotteries portal responded with HTTP 200, but no published result entries could be parsed from the page structure.";
+      statusExplanation =
+        "Official portal responded, but its HTML structure changed and could not be parsed automatically. You can still upload an official PDF directly.";
     } else if (
       remoteCandidates.length > 0 &&
       remoteNewCount === 0 &&
@@ -354,10 +374,16 @@ export async function POST(req: NextRequest) {
       statusExplanation = `Latest published official draw (${latestLabel}) is already ingested in the corpus. No new results to ingest.`;
     } else {
       discoveryStatus = "NOT_YET_PUBLISHED";
+      const scheduledLabel = todaySchedule.drawNumber
+        ? `${todaySchedule.lotteryName} (${todaySchedule.drawNumber})`
+        : todaySchedule.lotteryName;
+      const latestPublishedSummary = latestOfficialResult
+        ? ` Latest verified published draw on portal: ${latestOfficialResult.lotteryCode || "Official Draw"} (${latestOfficialResult.drawNumber}) dated ${latestOfficialResult.drawDate}.`
+        : "";
       if (remoteNewCount > 0) {
-        statusExplanation = `Today's scheduled draw (${todaySchedule.lotteryName} for ${todayIst.displayDate}) is not yet published on the portal, but ${remoteNewCount} earlier official draw(s) are newly available for preview and ingestion.`;
+        statusExplanation = `Today's scheduled draw (${scheduledLabel} for ${todayIst.displayDate}, draw at ${todaySchedule.drawTimeIst}) is not yet published on the portal, and ${remoteNewCount} recent official draw(s) are available for preview and ingestion.${latestPublishedSummary}`;
       } else {
-        statusExplanation = `Today's scheduled draw (${todaySchedule.lotteryName} for ${todayIst.displayDate}) is not yet published on the official portal. Live draws typically begin at 15:00 IST with official PDF publication around 16:30 IST.`;
+        statusExplanation = `Today's scheduled draw (${scheduledLabel} for ${todayIst.displayDate}) is not yet published on the official portal. Live draws begin at ${todaySchedule.drawTimeIst} with official PDF publication around ${todaySchedule.expectedPdfPublicationTimeIst}.${latestPublishedSummary}`;
       }
     }
 
@@ -380,12 +406,13 @@ export async function POST(req: NextRequest) {
 
     // 6. Record every discovery check in the operational run log
     const completedAt = new Date().toISOString();
+    const checkSucceeded = portalReachable && discoveryStatus !== "SOURCE_PARSE_ERROR";
     await getOpsRunRepository().createRun({
       runId,
       environment,
       trigger: "MANUAL",
       dryRun: true,
-      status: portalReachable ? "SUCCEEDED" : "FAILED",
+      status: checkSucceeded ? "SUCCEEDED" : "FAILED",
       requestedAt: startedAt,
       startedAt,
       completedAt,
@@ -396,15 +423,16 @@ export async function POST(req: NextRequest) {
       ingestedCount: 0,
       promotedCount: 0,
       rejectedCount: 0,
-      errorCount: portalReachable ? 0 : 1,
+      errorCount: checkSucceeded ? 0 : 1,
       conflictCount: counts.conflict,
       candidates: [],
-      failureReason: portalReachable ? undefined : portalNotice,
+      failureReason: checkSucceeded ? undefined : portalNotice,
       metadata: {
         operation: "DISCOVERY_CHECK",
         discoveryStatus,
         todayIstDate: todayIst.isoDate,
         scheduledLottery: todaySchedule.lotteryName,
+        scheduledDrawNumber: todaySchedule.drawNumber,
         portalReachable,
         portalNotice,
         remoteDiscoveredCount: remoteCandidates.length,
@@ -418,6 +446,7 @@ export async function POST(req: NextRequest) {
       timestamp: completedAt,
       checkedAt: completedAt,
       environment,
+      officialSourceUrl: KERALA_STATE_LOTTERY_PORTAL.discoveryUrl,
       portalReachable,
       portalNotice,
       portalError: portalNotice,
@@ -425,6 +454,7 @@ export async function POST(req: NextRequest) {
       statusExplanation,
       todayIst,
       todaySchedule,
+      upcomingSchedule: upcomingSchedule.slice(0, 7),
       todayPublished: Boolean(todayResult),
       todayAlreadyIngested: todayResult?.state === "ALREADY_KNOWN",
       todayResult,

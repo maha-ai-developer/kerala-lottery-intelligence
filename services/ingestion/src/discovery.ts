@@ -25,7 +25,8 @@ export type DiscoveryStatusCode =
   | "NO_NEW_RESULT"
   | "NOT_YET_PUBLISHED"
   | "NO_SCHEDULED_DRAW"
-  | "SOURCE_UNAVAILABLE";
+  | "SOURCE_UNAVAILABLE"
+  | "SOURCE_PARSE_ERROR";
 
 export interface IstDateInfo {
   /** Canonical YYYY-MM-DD in Asia/Kolkata */
@@ -57,9 +58,22 @@ export interface ScheduledLotteryInfo {
   lotteryCode?: string;
   scheduledLotteryCode: string | null;
   drawSeriesPrefix?: string;
+  drawNumber?: string;
+  venue?: string;
+  rawScheduleTitle?: string;
   drawTimeIst: string;
   expectedPdfPublicationTimeIst: string;
   reason?: string;
+}
+
+export interface UpcomingScheduledDraw {
+  lotteryName: string;
+  lotteryCode?: string;
+  drawNumber?: string;
+  drawDate: string;
+  drawTimeIst: string;
+  venue?: string;
+  rawTitle: string;
 }
 
 const WEEKDAY_INDEX: Record<string, number> = {
@@ -423,12 +437,151 @@ export class OfficialSourceDiscoveryService {
       });
     }
 
+    // Strategy 4: Match official Kerala State Lotteries LOTIS public portal table rows
+    // Example: <td>1</td><td>KARUNYA-10/11/2025 (KR-772)</td><td>17-10-2026</td><td><a class="btn..." data-item-id="8a985162-ae14-c3cd-9b55-e1ffbe554b5a" ...>Download</a></td>
+    const lotisRowRegex =
+      /<td[^>]*>\s*\d+\s*<\/td>\s*<td[^>]*>\s*([^<]+?)\s*<\/td>\s*<td[^>]*>\s*(\d{2}[-/]\d{2}[-/]\d{4}|\d{4}-\d{2}-\d{2})\s*<\/td>\s*<td[^>]*>[\s\S]*?<a\s+[^>]*data-item-id=["']([0-9a-fA-F-]{8,64})["'][^>]*>([\s\S]*?)<\/a>[\s\S]*?<\/td>/gi;
+    while ((match = lotisRowRegex.exec(html)) !== null) {
+      const rawTitle = (match[1] ?? "").trim();
+      const rawDate = (match[2] ?? "").trim();
+      const itemId = (match[3] ?? "").trim();
+      const rawLinkText = (match[4] ?? "").replace(/<[^>]+>/g, "").trim();
+
+      const documentUrl = this.resolveAndValidateUrl(`/results/${itemId}`, officialSource);
+      if (!documentUrl || seenUrls.has(documentUrl)) {
+        continue;
+      }
+      seenUrls.add(documentUrl);
+
+      const parsedMeta = this.parseTitleMetadata(rawTitle);
+      let canonicalDate: string | undefined;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(rawDate)) {
+        canonicalDate = rawDate;
+      } else if (rawDate) {
+        const parts = rawDate.split(/[-/]/);
+        if (parts.length === 3 && parts[0] && parts[1] && parts[2]) {
+          canonicalDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+        }
+      }
+      if (!canonicalDate) {
+        canonicalDate = parsedMeta.drawDate;
+      }
+
+      results.push({
+        sourceId: officialSource.sourceId,
+        sourceOrganization: officialSource.organization,
+        discoveryUrl: officialSource.discoveryUrl,
+        documentUrl,
+        title: rawTitle ? `Result - ${rawTitle}` : `Kerala State Lottery Result ${parsedMeta.drawNumber || ""}`.trim(),
+        drawDate: canonicalDate,
+        drawNumber: parsedMeta.drawNumber,
+        lotteryCode: parsedMeta.lotteryCode,
+        rawLinkText: rawLinkText || undefined
+      });
+    }
+
     return results;
+  }
+
+  /**
+   * Fetches and parses the official upcoming draw schedule from the LOTIS homepage.
+   */
+  async discoverUpcomingSchedule(
+    source?: OfficialSource,
+    options?: DiscoverOptions
+  ): Promise<UpcomingScheduledDraw[]> {
+    const officialSource = source || KERALA_STATE_LOTTERY_PORTAL;
+    let scheduleUrl = "https://www.lotteryagent.kerala.gov.in/";
+    try {
+      const parsedOrigin = new URL(officialSource.discoveryUrl);
+      if (parsedOrigin.hostname.includes("lotteryagent.kerala.gov.in")) {
+        scheduleUrl = `${parsedOrigin.origin}/`;
+      }
+      validateSafeUrl(scheduleUrl, officialSource.allowedDomains);
+    } catch {
+      return [];
+    }
+
+    const maxRetries = Math.max(0, options?.maxRetries ?? 0);
+    const retryDelayMs = Math.max(0, options?.retryDelayMs ?? 50);
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      if (attempt > 0 && retryDelayMs > 0) {
+        await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+      }
+      try {
+        const res = await this.fetch(scheduleUrl, {
+          method: "GET",
+          headers: {
+            Accept: "text/html,application/xhtml+xml",
+            "User-Agent": "KeralaLotteryIntelligence/1.0 (+https://kerala-lottery-intelligence)"
+          }
+        });
+        if (!res.ok) {
+          continue;
+        }
+        const html = await res.text();
+        return this.parseUpcomingScheduleHtml(html);
+      } catch {
+        continue;
+      }
+    }
+    return [];
+  }
+
+  /**
+   * Parses the upcoming draw schedule table (#drawtabletbody) from the official LOTIS portal.
+   */
+  parseUpcomingScheduleHtml(html: string): UpcomingScheduledDraw[] {
+    const schedules: UpcomingScheduledDraw[] = [];
+    const scheduleRowRegex =
+      /<td[^>]*>\s*(?:<[^>]+>\s*)*\d+\s*(?:<\/[^>]+>\s*)*<\/td>\s*<td[^>]*>([\s\S]*?)<\/td>\s*<td[^>]*>([\s\S]*?)<\/td>\s*<td[^>]*>([\s\S]*?)<\/td>/gi;
+    let match: RegExpExecArray | null;
+    while ((match = scheduleRowRegex.exec(html)) !== null) {
+      const rawTitle = (match[1] ?? "").replace(/<[^>]+>/g, "").trim();
+      const rawDateTime = (match[2] ?? "").replace(/<[^>]+>/g, "").trim();
+      const rawVenue = (match[3] ?? "").replace(/<[^>]+>/g, "").trim();
+
+      const dtMatch = rawDateTime.match(/^(\d{2}[-/]\d{2}[-/]\d{4}|\d{4}-\d{2}-\d{2})(?:\s+(.+))?$/i);
+      if (!dtMatch || !dtMatch[1]) {
+        continue;
+      }
+      const dateStr = dtMatch[1];
+      let canonicalDate = dateStr;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        const parts = dateStr.split(/[-/]/);
+        if (parts.length === 3 && parts[0] && parts[1] && parts[2]) {
+          canonicalDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+        }
+      }
+      const timePart = (dtMatch[2] ?? "3:00 PM").trim();
+      const drawTimeIst = /IST$/i.test(timePart) ? timePart : `${timePart} IST`;
+      const meta = this.parseTitleMetadata(rawTitle);
+
+      schedules.push({
+        lotteryName: meta.lotteryCode || rawTitle,
+        lotteryCode: meta.lotteryCode,
+        drawNumber: meta.drawNumber,
+        drawDate: canonicalDate,
+        drawTimeIst,
+        venue: rawVenue || undefined,
+        rawTitle
+      });
+    }
+    return schedules;
   }
 
   private resolveAndValidateUrl(rawHref: string, source: OfficialSource): string | null {
     try {
-      const resolved = new URL(rawHref, source.discoveryUrl).toString();
+      let baseUrl = source.discoveryUrl;
+      if (
+        (rawHref.startsWith("/English/") || rawHref.startsWith("/images/pdf/")) &&
+        baseUrl.includes("lotteryagent.kerala.gov.in") &&
+        source.allowedDomains.includes("statelottery.kerala.gov.in")
+      ) {
+        baseUrl = "https://statelottery.kerala.gov.in/English/index.php/lottery-result-view";
+      }
+      const resolved = new URL(rawHref, baseUrl).toString();
       validateSafeUrl(resolved, source.allowedDomains);
       return resolved;
     } catch {
@@ -450,7 +603,13 @@ export class OfficialSourceDiscoveryService {
     }
 
     // Match lottery name / code e.g. DHANALEKSHMI, STHREE-SAKTHI, WIN-WIN, KARUNYA PLUS
-    const cleanedPrefix = text.split("(")[0]?.replace(/^Result\s*-\s*/i, "").trim() || text.trim();
+    // Strip scheme revision date suffixes like "-10/11/2025" before "("
+    const cleanedPrefix =
+      text
+        .split("(")[0]
+        ?.replace(/^Result\s*-\s*/i, "")
+        .replace(/-\d{2}[-/]\d{2}[-/]\d{4}\s*$/i, "")
+        .trim() || text.trim();
     const multiWordMatch = cleanedPrefix.match(
       /^(KARUNYA\s+PLUS|SUVARNA\s+KERALAM|STHREE\s+SAKTHI|FIFTY\s+FIFTY|WIN\s+WIN)/i
     );
@@ -463,9 +622,10 @@ export class OfficialSourceDiscoveryService {
       }
     }
 
-    // Match draw date: prioritize explicit "dated DD-MM-YYYY"
-    const explicitDateMatch = text.match(/dated\s+(\d{2}[-/]\d{2}[-/]\d{4})/i);
-    const dateMatch = explicitDateMatch || text.match(/(\d{2}[-/]\d{2}[-/]\d{4})/);
+    // Match draw date: prioritize explicit "dated DD-MM-YYYY", ignoring scheme revision dates like "-10/11/2025 ("
+    const textWithoutSchemeRevDate = text.replace(/-\d{2}[-/]\d{2}[-/]\d{4}\s*(?=\()/g, "");
+    const explicitDateMatch = textWithoutSchemeRevDate.match(/dated\s+(\d{2}[-/]\d{2}[-/]\d{4})/i);
+    const dateMatch = explicitDateMatch || textWithoutSchemeRevDate.match(/(\d{2}[-/]\d{2}[-/]\d{4})/);
     if (dateMatch && dateMatch[1]) {
       // Convert DD-MM-YYYY to canonical YYYY-MM-DD
       const parts = dateMatch[1].split(/[-/]/);

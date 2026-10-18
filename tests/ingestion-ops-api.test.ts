@@ -389,6 +389,109 @@ describe("Operational Ingestion Console: API & Security Boundary Tests", () => {
       expect(res.status).toBe(405);
       expect(res.headers.get("Allow")).toBe("POST");
     });
+
+    it("parses official lotteryagent.kerala.gov.in /result/public/ table rows and homepage upcoming draw schedule", async () => {
+      setDiscoveryFetchOverrideForTesting(async (input) => {
+        const url = typeof input === "string" ? input : input.toString();
+        if (url.endsWith("/result/public/")) {
+          const publicHtml = `
+            <!DOCTYPE html>
+            <html>
+              <body>
+                <table id="resulttable">
+                  <tbody>
+                    <tr>
+                      <td>1</td>
+                      <td>KARUNYA-10/11/2025 (KR-772)</td>
+                      <td>17-10-2026</td>
+                      <td>
+                        <a class="btn btn-sm btn-primary view" data-item-id="8a985162-ae14-c3cd-9b55-e1ffbe554b5a" href="javascript:void(0)">Download</a>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </body>
+            </html>
+          `;
+          return new Response(publicHtml, { status: 200, headers: { "Content-Type": "text/html" } });
+        }
+
+        const scheduleHtml = `
+          <!DOCTYPE html>
+          <html>
+            <body>
+              <table>
+                <tbody id="drawtabletbody">
+                  <tr>
+                    <td>1</td>
+                    <td>SAMRUDHI-10/11/2025 (SM-25)</td>
+                    <td>18-10-2026 3:00 PM</td>
+                    <td>GORKY BHAVAN NEAR BAKERY JUNCTION THIRUVANANTHAPURAM</td>
+                  </tr>
+                </tbody>
+              </table>
+            </body>
+          </html>
+        `;
+        return new Response(scheduleHtml, { status: 200, headers: { "Content-Type": "text/html" } });
+      });
+
+      const req = new NextRequest("http://localhost:3000/api/ops/ingestion/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          environment: "DEV",
+          since: "2026-10-01",
+          nowIso: "2026-10-18T08:00:00.000Z" // 13:30 IST on 18/10/2026
+        })
+      });
+
+      const res = await checkPost(req);
+      expect(res.status).toBe(200);
+      const json = await res.json();
+
+      expect(json.success).toBe(true);
+      expect(json.portalReachable).toBe(true);
+      expect(json.officialSourceUrl).toBe("https://www.lotteryagent.kerala.gov.in/result/public/");
+      expect(json.discoveryStatus).toBe("NOT_YET_PUBLISHED");
+      expect(json.todaySchedule.lotteryCode).toBe("SAMRUDHI");
+      expect(json.todaySchedule.drawNumber).toBe("SM-25");
+      expect(json.todaySchedule.venue).toContain("GORKY BHAVAN");
+      expect(json.latestOfficialResult).not.toBeNull();
+      expect(json.latestOfficialResult.drawNumber).toBe("KR-772");
+      expect(json.latestOfficialResult.sourceUrl).toBe(
+        "https://www.lotteryagent.kerala.gov.in/results/8a985162-ae14-c3cd-9b55-e1ffbe554b5a"
+      );
+      expect(Array.isArray(json.upcomingSchedule)).toBe(true);
+      expect(json.upcomingSchedule.length).toBe(1);
+    });
+
+    it("returns SOURCE_PARSE_ERROR when official portal responds 200 OK with unrecognized markup > 200 chars", async () => {
+      setDiscoveryFetchOverrideForTesting(async () => {
+        const unrecognizedHtml =
+          "<!DOCTYPE html><html><head><title>Portal Maintenance Redesign</title></head><body>" +
+          "<div class='completely-new-portal-layout'>".repeat(8) +
+          "</div></body></html>";
+        return new Response(unrecognizedHtml, { status: 200, headers: { "Content-Type": "text/html" } });
+      });
+
+      const req = new NextRequest("http://localhost:3000/api/ops/ingestion/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          environment: "DEV",
+          nowIso: "2026-10-15T11:00:00.000Z"
+        })
+      });
+
+      const res = await checkPost(req);
+      expect(res.status).toBe(200);
+      const json = await res.json();
+
+      expect(json.portalReachable).toBe(true);
+      expect(json.discoveryStatus).toBe("SOURCE_PARSE_ERROR");
+      expect(json.statusExplanation).toContain("could not be parsed automatically");
+    });
   });
 
   // ==========================================================================

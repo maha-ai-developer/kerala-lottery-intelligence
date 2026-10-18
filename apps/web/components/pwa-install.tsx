@@ -16,6 +16,7 @@ export function PwaInstallControl() {
   const [isStandalone, setIsStandalone] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
   const [installNotice, setInstallNotice] = useState<string | null>(null);
+  const [promptDismissed, setPromptDismissed] = useState(false);
 
   useEffect(() => {
     // 1. Register Service Worker safely
@@ -39,7 +40,8 @@ export function PwaInstallControl() {
       return mediaStandalone || iosStandalone;
     };
 
-    setIsStandalone(checkStandalone());
+    const currentlyStandalone = checkStandalone();
+    setIsStandalone(currentlyStandalone);
 
     const mediaQuery =
       typeof window.matchMedia === "function"
@@ -47,17 +49,25 @@ export function PwaInstallControl() {
         : null;
     const onDisplayModeChange = (event: MediaQueryListEvent) => {
       setIsStandalone(event.matches);
+      if (event.matches) {
+        setDeferredPrompt(null);
+      }
     };
     mediaQuery?.addEventListener("change", onDisplayModeChange);
 
-    // 3. Capture beforeinstallprompt & appinstalled
+    // 3. Capture beforeinstallprompt & appinstalled only when active in browser mode
     const handleBeforeInstallPrompt = (event: Event) => {
+      if (checkStandalone()) {
+        return;
+      }
       event.preventDefault();
       setDeferredPrompt(event as BeforeInstallPromptEvent);
+      setPromptDismissed(false);
     };
 
     const handleAppInstalled = () => {
       setDeferredPrompt(null);
+      setPromptDismissed(false);
       setIsStandalone(true);
       setShowInstructions(false);
       setInstallNotice("App installed successfully.");
@@ -87,13 +97,24 @@ export function PwaInstallControl() {
   const handleInstallClick = async () => {
     setInstallNotice(null);
     if (deferredPrompt) {
+      const activePrompt = deferredPrompt;
       try {
-        await deferredPrompt.prompt();
-        const choice = await deferredPrompt.userChoice;
+        await activePrompt.prompt();
+        const choice = await activePrompt.userChoice;
+        // Always clear deferredPrompt after userChoice resolves (a prompt event can only be used once)
+        setDeferredPrompt(null);
         if (choice.outcome === "accepted") {
-          setDeferredPrompt(null);
+          setPromptDismissed(false);
+          setInstallNotice("App installation accepted.");
+        } else {
+          setPromptDismissed(true);
+          setInstallNotice(
+            "Native install prompt was dismissed. You can still install manually from your browser menu below."
+          );
+          setShowInstructions(true);
         }
       } catch {
+        setDeferredPrompt(null);
         setShowInstructions(true);
       }
       return;
@@ -114,19 +135,25 @@ export function PwaInstallControl() {
     );
   }
 
+  const hasNativePrompt = Boolean(deferredPrompt);
+
   return (
     <>
       <button
         type="button"
         onClick={handleInstallClick}
         className="pwa-install-btn"
-        aria-label="Install Kerala Lottery Intelligence app"
-        aria-haspopup={deferredPrompt ? undefined : "dialog"}
-        aria-expanded={deferredPrompt ? undefined : showInstructions}
+        aria-label={
+          hasNativePrompt
+            ? "Install Kerala Lottery Intelligence app now"
+            : "How to install Kerala Lottery Intelligence app"
+        }
+        aria-haspopup={hasNativePrompt ? undefined : "dialog"}
+        aria-expanded={hasNativePrompt ? undefined : showInstructions}
         title={
-          deferredPrompt
-            ? "Install Kerala Lottery Intelligence as a standalone app"
-            : "View instructions to install Kerala Lottery Intelligence on Android, iOS, or Desktop"
+          hasNativePrompt
+            ? "Prompt native browser installation for Kerala Lottery Intelligence"
+            : "View step-by-step instructions to install on Android, iOS, or Desktop"
         }
       >
         <svg
@@ -144,7 +171,7 @@ export function PwaInstallControl() {
           <polyline points="7 10 12 15 17 10" />
           <line x1="12" y1="15" x2="12" y2="3" />
         </svg>
-        <span>Install app</span>
+        <span>{hasNativePrompt ? "Install App" : promptDismissed ? "How to Install" : "Install App"}</span>
       </button>
 
       {showInstructions && (
