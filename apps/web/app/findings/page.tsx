@@ -52,6 +52,43 @@ interface ResearchFinding {
   limitation: string;
   createdAt: string;
   deterministicHash: string;
+  drawCount?: number;
+  sourceDocumentCount?: number;
+  totalResults?: number;
+  corpusLabel?: string;
+  corpusRole?: "ACTIVE_CORPUS" | "FROZEN_V1_BASELINE" | "HISTORICAL_SNAPSHOT";
+  isCurrentActiveCorpus?: boolean;
+  requiresRefresh?: boolean;
+  lastEvaluatedCorpusVersion?: string;
+  supersededByFindingId?: string;
+}
+
+interface CorpusMetadataSummary {
+  activeCorpus: {
+    version: string;
+    corpusId: string;
+    draws: number;
+    totalResults: number;
+    latestDrawDate: string;
+    latestDrawNumber: string;
+    description: string;
+  };
+  v1Baseline: {
+    version: string;
+    corpusId: string;
+    draws: number;
+    totalResults: number;
+    latestDrawDate: string;
+    latestDrawNumber: string;
+    description: string;
+  };
+  lastEvaluatedCorpusVersion: string;
+  lastEvaluatedCorpusLabel: string;
+  isActiveCorpusEvaluated: boolean;
+  activeCorpusFindingCount: number;
+  v1BaselineFindingCount: number;
+  historicalSnapshotFindingCount: number;
+  totalFindingCount: number;
 }
 
 interface EvidenceBundle {
@@ -154,12 +191,16 @@ interface PublicationReport {
 
 export default function FindingsPage() {
   const [findings, setFindings] = useState<ResearchFinding[]>([]);
+  const [corpusMetadata, setCorpusMetadata] = useState<CorpusMetadataSummary | null>(null);
   const [selectedFindingId, setSelectedFindingId] = useState<string | null>(null);
   const [selectedEvidence, setSelectedEvidence] = useState<EvidenceBundle | null>(null);
   const [selectedLineage, setSelectedLineage] = useState<ResearchFindingLineage | null>(null);
   const [selectedReport, setSelectedReport] = useState<PublicationReport | null>(null);
   const [activeTab, setActiveTab] = useState<"lineage" | "evidence" | "methodology" | "report">("lineage");
   const [claimTypeFilter, setClaimTypeFilter] = useState<string>("ALL");
+  const [corpusScopeFilter, setCorpusScopeFilter] = useState<
+    "ACTIVE_CORPUS" | "FROZEN_V1_BASELINE" | "HISTORICAL_SNAPSHOT" | "ALL"
+  >("ACTIVE_CORPUS");
   const [loading, setLoading] = useState<boolean>(true);
   const [loadingDetails, setLoadingDetails] = useState<boolean>(false);
   const [showAllShas, setShowAllShas] = useState<boolean>(false);
@@ -172,10 +213,16 @@ export default function FindingsPage() {
         const res = await fetch("/api/v1/findings?pageSize=50");
         if (res.ok) {
           const json = await res.json();
-          const items = json.data || [];
+          const items: ResearchFinding[] = json.data || [];
           setFindings(items);
+          if (json.corpusMetadata) {
+            setCorpusMetadata(json.corpusMetadata);
+          }
           if (items.length > 0) {
-            setSelectedFindingId(items[0].findingId);
+            const firstActive = items.find((f) => f.corpusRole === "ACTIVE_CORPUS") || items[0];
+            if (firstActive) {
+              setSelectedFindingId(firstActive.findingId);
+            }
           }
         }
       } catch (err) {
@@ -215,9 +262,24 @@ export default function FindingsPage() {
   const selectedFinding = findings.find((f) => f.findingId === selectedFindingId);
 
   const filteredFindings = findings.filter((f) => {
+    if (corpusScopeFilter !== "ALL" && f.corpusRole !== corpusScopeFilter) return false;
     if (claimTypeFilter !== "ALL" && f.claimType !== claimTypeFilter) return false;
     return true;
   });
+
+  const handleScopeChange = (
+    nextScope: "ACTIVE_CORPUS" | "FROZEN_V1_BASELINE" | "HISTORICAL_SNAPSHOT" | "ALL"
+  ) => {
+    setCorpusScopeFilter(nextScope);
+    const matching = findings.filter((f) => {
+      if (nextScope !== "ALL" && f.corpusRole !== nextScope) return false;
+      if (claimTypeFilter !== "ALL" && f.claimType !== claimTypeFilter) return false;
+      return true;
+    });
+    if (matching[0] && !matching.some((m) => m.findingId === selectedFindingId)) {
+      setSelectedFindingId(matching[0].findingId);
+    }
+  };
 
   const handleCopyMarkdown = () => {
     if (!selectedReport) return;
@@ -225,6 +287,24 @@ export default function FindingsPage() {
     setCopiedReport(true);
     setTimeout(() => setCopiedReport(false), 2000);
   };
+
+  const activeDraws = corpusMetadata?.activeCorpus.draws ?? 118;
+  const activeResults = corpusMetadata?.activeCorpus.totalResults ?? 45218;
+  const activeVersionLabel = corpusMetadata?.activeCorpus.version ?? "active-research-118draws";
+  const activeCorpusId = corpusMetadata?.activeCorpus.corpusId ?? "corpus_055e805237802b5e";
+  const activeLatestDraw = corpusMetadata?.activeCorpus.latestDrawNumber ?? "KR-772nd";
+  const activeLatestDate = corpusMetadata?.activeCorpus.latestDrawDate ?? "2026-10-17";
+
+  const v1Draws = corpusMetadata?.v1Baseline.draws ?? 114;
+  const v1Results = corpusMetadata?.v1Baseline.totalResults ?? 43712;
+  const v1VersionLabel = corpusMetadata?.v1Baseline.version ?? "v1.0-research-114draws";
+  const v1CorpusId = corpusMetadata?.v1Baseline.corpusId ?? "corpus_981356dd505db164";
+  const v1LatestDraw = corpusMetadata?.v1Baseline.latestDrawNumber ?? "SS-541st";
+  const v1LatestDate = corpusMetadata?.v1Baseline.latestDrawDate ?? "2026-10-13";
+
+  const activeFindingCount =
+    corpusMetadata?.activeCorpusFindingCount ??
+    findings.filter((f) => f.corpusRole === "ACTIVE_CORPUS").length;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.75rem", paddingBottom: "3rem" }}>
@@ -245,15 +325,17 @@ export default function FindingsPage() {
                   fontWeight: 700
                 }}
               >
-                Milestone 9D
+                Milestone 9D • Active Research Corpus
               </span>
-              <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Publication-Grade Evidence</span>
+              <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
+                Publication-Grade Evidence ({activeVersionLabel})
+              </span>
             </div>
             <h1 style={{ fontSize: "1.75rem", fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>
               Research Provenance & Scientific Findings
             </h1>
           </div>
-          <div style={{ display: "flex", gap: "0.5rem" }}>
+          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
             <span
               style={{
                 display: "inline-flex",
@@ -269,6 +351,22 @@ export default function FindingsPage() {
               }}
             >
               <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "var(--accent-green)" }} />
+              Active Corpus Evaluated ({activeDraws} Draws)
+            </span>
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.4rem",
+                padding: "0.35rem 0.75rem",
+                borderRadius: "9999px",
+                background: "rgba(56, 189, 248, 0.12)",
+                color: "var(--accent-cyan)",
+                fontSize: "0.8rem",
+                fontWeight: 600,
+                border: "1px solid rgba(56, 189, 248, 0.25)"
+              }}
+            >
               10-Stage Lineage Verified
             </span>
             <span
@@ -306,41 +404,49 @@ export default function FindingsPage() {
         </div>
 
         {/* Metric Summary Cards */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem", marginTop: "0.5rem" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem", marginTop: "0.5rem" }}>
           <div style={{ padding: "1rem", borderRadius: "0.5rem", background: "var(--card-bg)", border: "1px solid var(--border-color)" }}>
-            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase" }}>Registered Findings</div>
+            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase" }}>
+              Active Corpus Findings
+            </div>
             <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--accent-cyan)", marginTop: "0.25rem" }}>
-              {findings.length}
+              {activeFindingCount} Baselines
             </div>
             <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
-              3 Canonical Baselines
+              {findings.length} Total Across 3 Corpus Versions
             </div>
           </div>
           <div style={{ padding: "1rem", borderRadius: "0.5rem", background: "var(--card-bg)", border: "1px solid var(--border-color)" }}>
-            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase" }}>Evidence Integrity</div>
+            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase" }}>
+              Active Research Corpus
+            </div>
+            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--text-primary)", marginTop: "0.25rem" }}>
+              {activeDraws} PDFs / {activeResults.toLocaleString()}
+            </div>
+            <div style={{ fontSize: "0.75rem", color: "var(--accent-green)", marginTop: "0.25rem", fontFamily: "monospace" }}>
+              {activeVersionLabel} ({activeCorpusId}) • Through {activeLatestDraw} ({activeLatestDate})
+            </div>
+          </div>
+          <div style={{ padding: "1rem", borderRadius: "0.5rem", background: "var(--card-bg)", border: "1px solid var(--border-color)" }}>
+            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase" }}>
+              Frozen V1.0 Baseline
+            </div>
+            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--text-primary)", marginTop: "0.25rem" }}>
+              {v1Draws} PDFs / {v1Results.toLocaleString()}
+            </div>
+            <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.25rem", fontFamily: "monospace" }}>
+              {v1VersionLabel} ({v1CorpusId}) • Cutoff {v1LatestDraw} ({v1LatestDate})
+            </div>
+          </div>
+          <div style={{ padding: "1rem", borderRadius: "0.5rem", background: "var(--card-bg)", border: "1px solid var(--border-color)" }}>
+            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase" }}>
+              Evidence & Lineage Integrity
+            </div>
             <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--accent-green)", marginTop: "0.25rem" }}>
               100%
             </div>
             <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
-              0 Integrity Violations
-            </div>
-          </div>
-          <div style={{ padding: "1rem", borderRadius: "0.5rem", background: "var(--card-bg)", border: "1px solid var(--border-color)" }}>
-            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase" }}>Source Documents</div>
-            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--text-primary)", marginTop: "0.25rem" }}>
-              103 PDFs
-            </div>
-            <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
-              V1 Baseline Gazettes (Immutable)
-            </div>
-          </div>
-          <div style={{ padding: "1rem", borderRadius: "0.5rem", background: "var(--card-bg)", border: "1px solid var(--border-color)" }}>
-            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase" }}>V1 Baseline Corpus</div>
-            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--text-primary)", marginTop: "0.25rem" }}>
-              39,550
-            </div>
-            <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
-              Winning Results (103 Draws Baseline)
+              0 Integrity Violations • Last Evaluated: {corpusMetadata?.lastEvaluatedCorpusLabel ?? activeVersionLabel}
             </div>
           </div>
         </div>
@@ -349,29 +455,73 @@ export default function FindingsPage() {
       {/* 2. Finding Registry Table */}
       <section style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.75rem" }}>
-          <h2 style={{ fontSize: "1.2rem", fontWeight: 600, margin: 0, color: "var(--text-primary)" }}>
-            Finding Registry
-          </h2>
-          <div style={{ display: "flex", gap: "0.5rem" }}>
-            {["ALL", "STATISTICAL_RESULT", "OBSERVATION", "INTERPRETATION", "LIMITATION"].map((type) => (
+          <div>
+            <h2 style={{ fontSize: "1.2rem", fontWeight: 600, margin: 0, color: "var(--text-primary)" }}>
+              Finding Registry
+            </h2>
+            <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: "0.2rem" }}>
+              Every finding is cryptographically bound to the immutable corpus version on which it was evaluated.
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+            {[
+              { id: "ACTIVE_CORPUS", label: `Active Corpus (${activeDraws} Draws)` },
+              { id: "FROZEN_V1_BASELINE", label: `Frozen V1.0 (${v1Draws} Draws)` },
+              { id: "HISTORICAL_SNAPSHOT", label: "M9 Initial Snapshot (103 Draws)" },
+              { id: "ALL", label: `All Corpus Versions (${findings.length})` }
+            ].map((scope) => (
               <button
-                key={type}
-                onClick={() => setClaimTypeFilter(type)}
+                key={scope.id}
+                onClick={() =>
+                  handleScopeChange(
+                    scope.id as "ACTIVE_CORPUS" | "FROZEN_V1_BASELINE" | "HISTORICAL_SNAPSHOT" | "ALL"
+                  )
+                }
                 style={{
-                  padding: "0.3rem 0.6rem",
+                  padding: "0.35rem 0.7rem",
                   borderRadius: "0.25rem",
                   fontSize: "0.75rem",
                   fontWeight: 600,
                   cursor: "pointer",
-                  border: claimTypeFilter === type ? "1px solid var(--accent-cyan)" : "1px solid var(--border-color)",
-                  background: claimTypeFilter === type ? "rgba(56, 189, 248, 0.15)" : "var(--card-bg)",
-                  color: claimTypeFilter === type ? "var(--accent-cyan)" : "var(--text-secondary)"
+                  border:
+                    corpusScopeFilter === scope.id
+                      ? "1px solid var(--accent-green)"
+                      : "1px solid var(--border-color)",
+                  background:
+                    corpusScopeFilter === scope.id
+                      ? "rgba(34, 197, 94, 0.15)"
+                      : "var(--card-bg)",
+                  color:
+                    corpusScopeFilter === scope.id
+                      ? "var(--accent-green)"
+                      : "var(--text-secondary)"
                 }}
               >
-                {type}
+                {scope.label}
               </button>
             ))}
           </div>
+        </div>
+
+        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+          {["ALL", "STATISTICAL_RESULT", "OBSERVATION", "INTERPRETATION", "LIMITATION"].map((type) => (
+            <button
+              key={type}
+              onClick={() => setClaimTypeFilter(type)}
+              style={{
+                padding: "0.3rem 0.6rem",
+                borderRadius: "0.25rem",
+                fontSize: "0.75rem",
+                fontWeight: 600,
+                cursor: "pointer",
+                border: claimTypeFilter === type ? "1px solid var(--accent-cyan)" : "1px solid var(--border-color)",
+                background: claimTypeFilter === type ? "rgba(56, 189, 248, 0.15)" : "var(--card-bg)",
+                color: claimTypeFilter === type ? "var(--accent-cyan)" : "var(--text-secondary)"
+              }}
+            >
+              {type}
+            </button>
+          ))}
         </div>
 
         {loading ? (
@@ -385,6 +535,7 @@ export default function FindingsPage() {
                 <tr style={{ borderBottom: "1px solid var(--border-color)", background: "rgba(255, 255, 255, 0.02)" }}>
                   <th style={{ padding: "0.75rem 1rem", color: "var(--text-muted)" }}>Finding ID</th>
                   <th style={{ padding: "0.75rem 1rem", color: "var(--text-muted)" }}>Experiment</th>
+                  <th style={{ padding: "0.75rem 1rem", color: "var(--text-muted)" }}>Corpus Version & Scope</th>
                   <th style={{ padding: "0.75rem 1rem", color: "var(--text-muted)" }}>Claim Type</th>
                   <th style={{ padding: "0.75rem 1rem", color: "var(--text-muted)" }}>Statement</th>
                   <th style={{ padding: "0.75rem 1rem", color: "var(--text-muted)", textAlign: "right" }}>Holdout Acc</th>
@@ -395,6 +546,12 @@ export default function FindingsPage() {
               <tbody>
                 {filteredFindings.map((finding) => {
                   const isSelected = finding.findingId === selectedFindingId;
+                  const roleBadgeColor =
+                    finding.corpusRole === "ACTIVE_CORPUS"
+                      ? "var(--accent-green)"
+                      : finding.corpusRole === "FROZEN_V1_BASELINE"
+                      ? "var(--accent-cyan)"
+                      : "var(--accent-amber)";
                   return (
                     <tr
                       key={finding.findingId}
@@ -413,6 +570,16 @@ export default function FindingsPage() {
                         <span style={{ padding: "0.2rem 0.4rem", borderRadius: "0.25rem", background: "rgba(255, 255, 255, 0.05)", fontSize: "0.78rem" }}>
                           {finding.experimentId}
                         </span>
+                      </td>
+                      <td style={{ padding: "0.75rem 1rem", whiteSpace: "nowrap" }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "0.2rem" }}>
+                          <span style={{ fontSize: "0.75rem", fontWeight: 700, color: roleBadgeColor, fontFamily: "monospace" }}>
+                            {finding.corpusLabel || finding.corpusVersion}
+                          </span>
+                          <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                            {finding.drawCount ?? activeDraws} Draws ({(finding.totalResults ?? activeResults).toLocaleString()} results) • {finding.corpusVersion}
+                          </span>
+                        </div>
                       </td>
                       <td style={{ padding: "0.75rem 1rem" }}>
                         <span
@@ -439,7 +606,7 @@ export default function FindingsPage() {
                           {finding.claimType}
                         </span>
                       </td>
-                      <td style={{ padding: "0.75rem 1rem", maxWidth: "400px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: "var(--text-secondary)" }}>
+                      <td style={{ padding: "0.75rem 1rem", maxWidth: "360px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: "var(--text-secondary)" }}>
                         {finding.statement}
                       </td>
                       <td style={{ padding: "0.75rem 1rem", textAlign: "right", fontWeight: 600 }}>
@@ -466,7 +633,7 @@ export default function FindingsPage() {
           {/* Finding Header */}
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.75rem" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
                 <h3 style={{ fontSize: "1.25rem", fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>
                   {selectedFinding.findingId}
                 </h3>
@@ -482,14 +649,82 @@ export default function FindingsPage() {
                 >
                   {selectedFinding.claimType}
                 </span>
+                <span
+                  style={{
+                    padding: "0.25rem 0.6rem",
+                    borderRadius: "0.375rem",
+                    fontSize: "0.75rem",
+                    fontWeight: 700,
+                    fontFamily: "monospace",
+                    background:
+                      selectedFinding.corpusRole === "ACTIVE_CORPUS"
+                        ? "rgba(34, 197, 94, 0.15)"
+                        : selectedFinding.corpusRole === "FROZEN_V1_BASELINE"
+                        ? "rgba(56, 189, 248, 0.15)"
+                        : "rgba(234, 179, 8, 0.15)",
+                    color:
+                      selectedFinding.corpusRole === "ACTIVE_CORPUS"
+                        ? "var(--accent-green)"
+                        : selectedFinding.corpusRole === "FROZEN_V1_BASELINE"
+                        ? "var(--accent-cyan)"
+                        : "var(--accent-amber)"
+                  }}
+                >
+                  {selectedFinding.corpusLabel || selectedFinding.corpusVersion} ({selectedFinding.drawCount ?? activeDraws} Draws / {(selectedFinding.totalResults ?? activeResults).toLocaleString()} Results)
+                </span>
                 <span style={{ fontSize: "0.8rem", color: "var(--text-muted)", fontFamily: "monospace" }}>
-                  v{selectedFinding.findingVersion}
+                  Corpus ID: {selectedFinding.corpusVersion} • Dataset: {selectedFinding.datasetVersion} • v{selectedFinding.findingVersion}
                 </span>
               </div>
               <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", fontFamily: "monospace" }}>
                 Deterministic Hash: {selectedFinding.deterministicHash.slice(0, 16)}...
               </div>
             </div>
+
+            {selectedFinding.corpusRole && selectedFinding.corpusRole !== "ACTIVE_CORPUS" && (
+              <div
+                style={{
+                  padding: "0.65rem 0.9rem",
+                  borderRadius: "0.375rem",
+                  background: "rgba(56, 189, 248, 0.08)",
+                  border: "1px solid rgba(56, 189, 248, 0.25)",
+                  fontSize: "0.8rem",
+                  color: "var(--text-secondary)",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: "0.5rem"
+                }}
+              >
+                <span>
+                  <strong>Historical Corpus Provenance Notice:</strong> This finding is an immutable artifact evaluated on{" "}
+                  <code>{selectedFinding.corpusLabel}</code> ({selectedFinding.corpusVersion}: {selectedFinding.drawCount} draws,{" "}
+                  {selectedFinding.totalResults?.toLocaleString()} results). Current active corpus is{" "}
+                  <code>{activeVersionLabel}</code> ({activeCorpusId}: {activeDraws} draws).
+                </span>
+                {selectedFinding.supersededByFindingId && (
+                  <button
+                    onClick={() => {
+                      setCorpusScopeFilter("ACTIVE_CORPUS");
+                      setSelectedFindingId(selectedFinding.supersededByFindingId!);
+                    }}
+                    style={{
+                      padding: "0.25rem 0.6rem",
+                      borderRadius: "0.25rem",
+                      fontSize: "0.75rem",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      background: "rgba(34, 197, 94, 0.15)",
+                      color: "var(--accent-green)",
+                      border: "1px solid rgba(34, 197, 94, 0.35)"
+                    }}
+                  >
+                    View Active Corpus Finding ({selectedFinding.supersededByFindingId}) →
+                  </button>
+                )}
+              </div>
+            )}
 
             <p style={{ fontSize: "0.95rem", color: "var(--text-primary)", margin: "0.5rem 0 0 0", lineHeight: 1.5, background: "rgba(255, 255, 255, 0.02)", padding: "0.75rem 1rem", borderRadius: "0.375rem", borderLeft: "3px solid var(--accent-cyan)" }}>
               {selectedFinding.statement}

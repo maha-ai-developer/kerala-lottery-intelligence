@@ -34,7 +34,7 @@ describe("Milestone V1.0: Research Sandbox API Route (/api/v1/research-sandbox)"
     expect(json.validation.isValid).toBe(true);
     expect(json.featureProfile.canonicalNumber).toBe("123456");
     expect(json.historicalComparison.sampleSizeResults).toBe(45218);
-    expect(json.provenance.corpusVersion).toBe("v1.0-research-118draws");
+    expect(json.provenance.corpusVersion).toBe("active-research-118draws");
   });
 
   it("should return 400 Bad Request when required query parameters are missing", async () => {

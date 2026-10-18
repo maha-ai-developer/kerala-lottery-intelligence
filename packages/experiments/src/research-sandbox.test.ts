@@ -301,7 +301,7 @@ describe("Milestone V1.0: Research Sandbox Engine", () => {
 
     const res = engine.analyzeTicket(input);
 
-    expect(res.provenance.corpusVersion).toBe("v1.0-research-118draws");
+    expect(res.provenance.corpusVersion).toBe("active-research-118draws");
     expect(res.provenance.featureVersion).toBe("feat_v1");
     expect(res.provenance.datasetVersion).toBe("dataset_7c_canonical");
     expect(res.provenance.experimentVersion).toBe("exp_v1");

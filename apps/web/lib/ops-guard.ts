@@ -252,3 +252,33 @@ export async function withOpsSingleFlightLock<T>(
     }
   }
 }
+
+export const CATCH_UP_DISCOVERY_TTL_MS = 5 * 60 * 1000; // 5 minutes bounded server-side cache
+
+export interface CachedDiscoveryEntry {
+  result: any;
+  fetchedAt: string;
+  fetchedAtMs: number;
+  expiresAt: string;
+  expiresAtMs: number;
+}
+
+export const discoveryCache = new Map<string, CachedDiscoveryEntry>();
+export const lastVerifiedDiscoveryByMode = new Map<string, CachedDiscoveryEntry>();
+export const inFlightDiscovery = new Map<string, Promise<CachedDiscoveryEntry>>();
+
+export function resetCatchUpDiscoveryCacheForTesting(): void {
+  discoveryCache.clear();
+  lastVerifiedDiscoveryByMode.clear();
+  inFlightDiscovery.clear();
+}
+
+export function getCatchUpDiscoveryCacheSnapshotForTesting(): {
+  cacheSize: number;
+  inFlightSize: number;
+} {
+  return {
+    cacheSize: discoveryCache.size,
+    inFlightSize: inFlightDiscovery.size
+  };
+}

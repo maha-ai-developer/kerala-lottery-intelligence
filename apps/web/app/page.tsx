@@ -116,9 +116,10 @@ export default function OverviewPage() {
   const [searchResults, setSearchResults] = useState<any[] | null>(null);
   const [searching, setSearching] = useState(false);
 
-  // Step 1: Official Results Check state
+  // Step 1: Official Results & Automatic Site-Open Catch-Up Check state
   const [checkingOfficial, setCheckingOfficial] = useState(false);
   const [officialCheck, setOfficialCheck] = useState<DiscoveryCheckResult | null>(null);
+  const [catchUpReport, setCatchUpReport] = useState<any | null>(null);
   const [officialCheckError, setOfficialCheckError] = useState<string | null>(null);
 
   // Step 2: Candidate Entry state
@@ -140,6 +141,40 @@ export default function OverviewPage() {
   const [singleEvidence, setSingleEvidence] = useState<any | null>(null);
   const [multiEvidence, setMultiEvidence] = useState<any | null>(null);
   const [shortlistDecisions, setShortlistDecisions] = useState<Record<string, ShortlistStatus>>({});
+
+  const runSiteOpenCatchUpCheck = async (forceRefresh = false) => {
+    setCheckingOfficial(true);
+    setOfficialCheckError(null);
+    try {
+      const catchUpRes = await fetch("/api/ops/ingestion/catch-up", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          environment: "DEV",
+          mode: "DISCOVER",
+          source: "site-open",
+          forceRefresh
+        })
+      });
+      const catchUpJson = await catchUpRes.json();
+      if (catchUpRes.ok && catchUpJson.success) {
+        setCatchUpReport(catchUpJson);
+        if (catchUpJson.portalNotice) {
+          setOfficialCheckError(catchUpJson.portalNotice);
+        }
+      } else {
+        setOfficialCheckError(
+          catchUpJson.message || "Unable to complete official catch-up check right now."
+        );
+      }
+    } catch (err: any) {
+      setOfficialCheckError(
+        err.message || "Network error while checking official results. Preserving verified research corpus."
+      );
+    } finally {
+      setCheckingOfficial(false);
+    }
+  };
 
   useEffect(() => {
     async function loadOverviewData() {
@@ -173,22 +208,44 @@ export default function OverviewPage() {
     }
 
     loadOverviewData();
+    // Automatic non-mutating catch-up discovery on site open (last verified ingested draw -> current IST date)
+    runSiteOpenCatchUpCheck(false);
   }, []);
 
   const handleCheckOfficialResults = async () => {
     setCheckingOfficial(true);
     setOfficialCheckError(null);
     try {
-      const res = await fetch("/api/ops/ingestion/check", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ environment: "DEV", since: "2026-06-01" })
-      });
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        setOfficialCheckError(json.message || "Unable to complete official source check right now.");
-      } else {
-        setOfficialCheck(json);
+      const [checkRes, catchUpRes] = await Promise.all([
+        fetch("/api/ops/ingestion/check", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ environment: "DEV", since: "2026-06-01" })
+        }),
+        fetch("/api/ops/ingestion/catch-up", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            environment: "DEV",
+            mode: "DISCOVER",
+            source: "site-open",
+            forceRefresh: true
+          })
+        })
+      ]);
+
+      const checkJson = await checkRes.json();
+      const catchUpJson = await catchUpRes.json();
+
+      if (catchUpRes.ok && catchUpJson.success) {
+        setCatchUpReport(catchUpJson);
+      }
+      if (checkRes.ok && checkJson.success) {
+        setOfficialCheck(checkJson);
+      } else if (!catchUpRes.ok || !catchUpJson.success) {
+        setOfficialCheckError(
+          checkJson.message || catchUpJson.message || "Unable to complete official source check right now."
+        );
       }
     } catch (err: any) {
       setOfficialCheckError(err.message || "Network error while checking official results.");
@@ -566,6 +623,19 @@ export default function OverviewPage() {
                   >
                     {officialCheck.discoveryStatus}
                   </span>
+                ) : catchUpReport?.todayStatus ? (
+                  <span
+                    className={`badge ${
+                      catchUpReport.todayStatus.state === "PUBLISHED_ALREADY_INGESTED" ||
+                      catchUpReport.todayStatus.state === "PUBLISHED_INGESTED_THIS_RUN"
+                        ? "badge-emerald"
+                        : catchUpReport.todayStatus.state === "NOT_PUBLISHED_YET"
+                          ? "badge-blue"
+                          : "badge-yellow"
+                    }`}
+                  >
+                    {catchUpReport.todayStatus.state}
+                  </span>
                 ) : (
                   <span className="badge badge-blue">3:00 PM IST Publication</span>
                 )}
@@ -593,10 +663,32 @@ export default function OverviewPage() {
                     {officialCheck.statusExplanation}
                   </div>
                 </div>
+              ) : catchUpReport?.todaySchedule ? (
+                <div>
+                  <div style={{ fontSize: "1.05rem", fontWeight: 700, color: "var(--text-primary)" }}>
+                    {catchUpReport.todaySchedule.lotteryName
+                      ? `${catchUpReport.todaySchedule.lotteryName}${
+                          catchUpReport.todaySchedule.drawNumber
+                            ? ` (${catchUpReport.todaySchedule.drawNumber})`
+                            : catchUpReport.todaySchedule.lotteryCode
+                              ? ` (${catchUpReport.todaySchedule.lotteryCode})`
+                              : ""
+                        }`
+                      : "No Weekly Draw Scheduled"}
+                  </div>
+                  <div style={{ fontSize: "0.825rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
+                    Date: <strong>{catchUpReport.currentIst?.displayDate} ({catchUpReport.currentIst?.weekday})</strong> &bull; Typical Publication:{" "}
+                    <strong>{catchUpReport.todaySchedule.expectedPdfPublicationTimeIst || "16:30 IST"}</strong>
+                    {catchUpReport.todaySchedule.venue ? ` • Venue: ${catchUpReport.todaySchedule.venue}` : ""}
+                  </div>
+                  <div style={{ fontSize: "0.825rem", color: "var(--text-secondary)", marginTop: "0.45rem" }}>
+                    {catchUpReport.todayStatus?.summary}
+                  </div>
+                </div>
               ) : (
                 <div>
                   <div style={{ fontSize: "0.9rem", color: "var(--text-secondary)" }}>
-                    Click <strong>&ldquo;Check Latest Official Results&rdquo;</strong> above to check live publication status from the official Kerala State Lotteries portal (LOTIS) for today&apos;s draw.
+                    Checking live publication status from the official Kerala State Lotteries portal (LOTIS) for today&apos;s draw...
                   </div>
                   <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "0.5rem" }}>
                     Typical daily publication window: <strong>3:00 PM – 4:30 PM IST</strong>. If you already have today&apos;s official Gazette PDF, you can upload it directly on the{" "}
@@ -609,6 +701,78 @@ export default function OverviewPage() {
               )}
             </div>
           </div>
+
+          {/* Automatic Site-Open Catch-Up Discovery Summary */}
+          {catchUpReport && (
+            <div
+              style={{
+                marginTop: "1rem",
+                background: "var(--bg-surface-elevated)",
+                border: "1px solid var(--border-subtle)",
+                borderRadius: "0.6rem",
+                padding: "0.9rem 1rem"
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem", marginBottom: "0.45rem" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+                  <span style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", color: "var(--text-muted)" }}>
+                    Automatic Site-Open Catch-Up Check
+                  </span>
+                  <span className="badge badge-emerald">LAST INGESTED → TODAY (IST)</span>
+                  {catchUpReport.cacheMeta && (
+                    <span className="badge badge-blue">
+                      {catchUpReport.cacheMeta.cached ? "CACHED (5m TTL)" : "LIVE CHECK"}
+                    </span>
+                  )}
+                  <span className="badge badge-slate">READ-ONLY DISCOVERY (0 WRITES)</span>
+                </div>
+                <span className="mono" style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
+                  Checked: {catchUpReport.checkedAtIst}
+                </span>
+              </div>
+
+              <div style={{ fontSize: "0.82rem", color: "var(--text-secondary)", marginBottom: "0.45rem" }}>
+                <strong>Catch-Up Range:</strong>{" "}
+                <span className="mono">{catchUpReport.catchUpRange?.formula}</span> &bull;{" "}
+                <strong>Last Verified Ingested:</strong>{" "}
+                <span className="mono">{catchUpReport.plainLanguageSummary?.lastIngestedResult}</span> &bull;{" "}
+                <strong>New Candidates Ready for Ingestion:</strong>{" "}
+                <strong>{catchUpReport.counts?.newEligible ?? 0}</strong>
+              </div>
+
+              {Array.isArray(catchUpReport.candidates) && catchUpReport.candidates.length > 0 && (
+                <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.4rem" }}>
+                  {catchUpReport.candidates.map((cand: any) => (
+                    <span
+                      key={`${cand.drawNumber}_${cand.isoDate}`}
+                      className="mono"
+                      style={{
+                        fontSize: "0.74rem",
+                        padding: "0.25rem 0.55rem",
+                        borderRadius: "0.35rem",
+                        background: "var(--bg-surface)",
+                        border: "1px solid var(--border-subtle)"
+                      }}
+                    >
+                      <strong>{cand.drawNumber}</strong> ({cand.drawDate}):{" "}
+                      <span
+                        style={{
+                          color:
+                            cand.candidateStatus === "READY_TO_INGEST"
+                              ? "var(--accent-emerald)"
+                              : cand.candidateStatus === "ALREADY_INGESTED_VERIFIED"
+                                ? "var(--accent-blue)"
+                                : "var(--accent-amber)"
+                        }}
+                      >
+                        {cand.candidateStatus || cand.classification}
+                      </span>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* -----------------------------------------------------------------

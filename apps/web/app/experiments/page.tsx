@@ -31,6 +31,12 @@ interface ExperimentRun {
   experimentId: string;
   experimentVersion: string;
   corpusVersion: string;
+  corpusLabel?: string;
+  corpusRole?: "ACTIVE_CORPUS" | "FROZEN_V1_BASELINE" | "HISTORICAL_SNAPSHOT";
+  drawCount?: number;
+  totalResults?: number;
+  isCurrentActiveCorpus?: boolean;
+  requiresRefresh?: boolean;
   datasetVersion: string;
   featureVersion: string;
   modelVersion: string;
@@ -209,6 +215,7 @@ export default function ExperimentsPage() {
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [filterExperiment, setFilterExperiment] = useState<string>("ALL");
+  const [filterCorpus, setFilterCorpus] = useState<string>("ALL");
 
   const [apiError, setApiError] = useState<string | null>(null);
 
@@ -295,9 +302,14 @@ export default function ExperimentsPage() {
 
   const safeRuns = Array.isArray(runs) ? runs : [];
   const safeRegistry = Array.isArray(registry) ? registry : [];
-  const filteredRuns = filterExperiment === "ALL"
-    ? safeRuns
-    : safeRuns.filter((r) => r && r.experimentId === filterExperiment);
+  const filteredRuns = safeRuns.filter((r) => {
+    if (!r) return false;
+    if (filterExperiment !== "ALL" && r.experimentId !== filterExperiment) return false;
+    if (filterCorpus === "ACTIVE" && !r.isCurrentActiveCorpus) return false;
+    if (filterCorpus === "V1_BASELINE" && r.corpusRole !== "FROZEN_V1_BASELINE") return false;
+    if (filterCorpus === "HISTORICAL" && r.corpusRole !== "HISTORICAL_SNAPSHOT") return false;
+    return true;
+  });
 
   return (
     <div className="container" style={{ padding: "2rem 1.5rem" }}>
@@ -422,8 +434,26 @@ export default function ExperimentsPage() {
               <h2 style={{ fontSize: "1.25rem", fontWeight: 700, margin: 0, color: "var(--accent-emerald)" }}>
                 2. Execution Runs & Results (9B.3)
               </h2>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                <span style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>Filter:</span>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+                <span style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>Corpus Scope:</span>
+                <select
+                  value={filterCorpus}
+                  onChange={(e) => setFilterCorpus(e.target.value)}
+                  style={{
+                    background: "var(--bg-surface)",
+                    color: "var(--text-primary)",
+                    border: "1px solid var(--border-subtle)",
+                    borderRadius: "0.4rem",
+                    padding: "0.3rem 0.6rem",
+                    fontSize: "0.85rem"
+                  }}
+                >
+                  <option value="ALL">All Corpus Versions ({safeRuns.length})</option>
+                  <option value="ACTIVE">Active Corpus — 118 Draws</option>
+                  <option value="V1_BASELINE">Frozen V1.0 Baseline — 114 Draws</option>
+                  <option value="HISTORICAL">Historical M9 Snapshot — 103 Draws</option>
+                </select>
+                <span style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>Experiment:</span>
                 <select
                   value={filterExperiment}
                   onChange={(e) => setFilterExperiment(e.target.value)}
@@ -458,6 +488,7 @@ export default function ExperimentsPage() {
                       <th>Status</th>
                       <th>Run ID</th>
                       <th>Experiment</th>
+                      <th>Corpus Version</th>
                       <th>Accuracy</th>
                       <th>Log Loss</th>
                       <th>Sample Size</th>
@@ -488,6 +519,34 @@ export default function ExperimentsPage() {
                         </td>
                         <td className="mono" style={{ fontWeight: 600 }}>{r.runId}</td>
                         <td style={{ fontSize: "0.85rem" }}>{r.experimentId}</td>
+                        <td>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "0.15rem" }}>
+                            <span
+                              className={`badge ${
+                                r.isCurrentActiveCorpus
+                                  ? "badge-emerald"
+                                  : r.corpusRole === "FROZEN_V1_BASELINE"
+                                  ? "badge-blue"
+                                  : "badge-amber"
+                              }`}
+                              style={{ alignSelf: "flex-start", fontSize: "0.68rem" }}
+                            >
+                              {r.isCurrentActiveCorpus
+                                ? "ACTIVE CORPUS"
+                                : r.corpusRole === "FROZEN_V1_BASELINE"
+                                ? "FROZEN V1.0"
+                                : "M9 SNAPSHOT"}
+                            </span>
+                            <span className="mono" style={{ fontSize: "0.75rem", fontWeight: 600 }}>
+                              {r.corpusLabel || r.corpusVersion}
+                            </span>
+                            {r.drawCount != null && (
+                              <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                                {r.drawCount} draws ({r.totalResults?.toLocaleString() ?? "?"} results)
+                              </span>
+                            )}
+                          </div>
+                        </td>
                         <td>
                           <strong className="mono">
                             {r.metrics ? `${(r.metrics.accuracy * 100).toFixed(2)}%` : "N/A"}
@@ -540,9 +599,14 @@ export default function ExperimentsPage() {
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.25rem", flexWrap: "wrap", gap: "0.5rem" }}>
                 <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.3rem" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.3rem", flexWrap: "wrap" }}>
                     <span className="badge badge-emerald">{selectedRun.status}</span>
                     <span className="mono" style={{ fontSize: "1.1rem", fontWeight: 700 }}>{selectedRun.runId}</span>
+                    {selectedRun.corpusLabel && (
+                      <span className={`badge ${selectedRun.isCurrentActiveCorpus ? "badge-emerald" : selectedRun.corpusRole === "FROZEN_V1_BASELINE" ? "badge-blue" : "badge-amber"}`}>
+                        {selectedRun.corpusLabel} ({selectedRun.drawCount} draws)
+                      </span>
+                    )}
                   </div>
                   <h3 style={{ fontSize: "1.1rem", fontWeight: 700, margin: 0 }}>
                     {selectedRun.experimentId} (v{selectedRun.experimentVersion})
@@ -574,7 +638,11 @@ export default function ExperimentsPage() {
                         Version Identities
                       </strong>
                       <div className="mono" style={{ fontSize: "0.78rem", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-                        <div>Corpus: {selectedRun.corpusVersion}</div>
+                        <div>Corpus Label: <strong>{selectedRun.corpusLabel || selectedRun.corpusVersion}</strong></div>
+                        <div>Corpus Hash: {selectedRun.corpusVersion}</div>
+                        {selectedRun.drawCount != null && (
+                          <div>Corpus Scope: {selectedRun.drawCount} draws / {selectedRun.totalResults?.toLocaleString()} results</div>
+                        )}
                         <div>Dataset: {selectedRun.datasetVersion}</div>
                         <div>Feature: {selectedRun.featureVersion}</div>
                         <div>Model: {selectedRun.modelVersion}</div>

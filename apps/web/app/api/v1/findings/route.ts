@@ -19,13 +19,24 @@ export async function GET(req: NextRequest) {
     const experimentId = searchParams.get("experimentId") || undefined;
     const claimType = searchParams.get("claimType") || undefined;
     const runId = searchParams.get("runId") || undefined;
+    const corpusVersion = searchParams.get("corpusVersion") || undefined;
+    const scopeParam = searchParams.get("scope") || searchParams.get("corpusScope");
+    const scope =
+      scopeParam === "active" ||
+      scopeParam === "v1-baseline" ||
+      scopeParam === "historical" ||
+      scopeParam === "all"
+        ? scopeParam
+        : undefined;
 
     const result = await service.getFindings({
       page,
       pageSize,
       experimentId,
       claimType,
-      runId
+      runId,
+      corpusVersion,
+      scope
     });
     return apiSuccess(result);
   } catch (err) {

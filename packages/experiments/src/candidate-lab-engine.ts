@@ -296,7 +296,10 @@ export class CandidateLabEngine {
         ]
       },
       provenance: {
-        corpusVersion: `v1.0-research-${scopedCorpusDrawCount}draws`,
+        corpusVersion:
+          scopedCorpusDrawCount === 114
+            ? "v1.0-research-114draws"
+            : `active-research-${scopedCorpusDrawCount}draws`,
         featureVersion: "feat_v1",
         datasetVersion: "dataset_7c_canonical",
         experimentVersion: "exp_v1",

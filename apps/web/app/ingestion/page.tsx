@@ -268,10 +268,14 @@ export default function IngestionConsolePage() {
   useEffect(() => {
     loadRuns();
     loadStorageIntegrity(false);
-    handleCatchUpAction("DISCOVER");
+    handleCatchUpAction("DISCOVER", false, "site-open");
   }, []);
 
-  async function handleCatchUpAction(mode: "DISCOVER" | "DRY_RUN" | "INGEST") {
+  async function handleCatchUpAction(
+    mode: "DISCOVER" | "DRY_RUN" | "INGEST",
+    forceRefresh = false,
+    source: "site-open" | "operator-console" = "operator-console"
+  ) {
     if (mode === "INGEST") {
       if (selectedEnv === "PROD") {
         setActionError("PROD mutations are strictly forbidden. PROD is READ-ONLY.");
@@ -291,6 +295,8 @@ export default function IngestionConsolePage() {
         body: JSON.stringify({
           mode,
           environment: selectedEnv,
+          forceRefresh,
+          source,
           confirm: mode === "INGEST" ? true : undefined
         })
       });
@@ -299,6 +305,9 @@ export default function IngestionConsolePage() {
         throw new Error(json.message || `Catch-up (${mode}) failed`);
       }
       setCatchUpReport(json);
+      if (mode !== "INGEST" && source === "operator-console") {
+        loadRuns();
+      }
       if (mode === "INGEST") {
         setConfirmCatchUpIngest(false);
         loadRuns();
@@ -1283,6 +1292,14 @@ export default function IngestionConsolePage() {
                     Catch up published results
                   </h3>
                   <span className="badge badge-emerald">LAST INGESTED → TODAY (IST)</span>
+                  {catchUpReport?.cacheMeta && (
+                    <span className={`badge ${catchUpReport.cacheMeta.cached ? "badge-blue" : "badge-slate"}`}>
+                      {catchUpReport.cacheMeta.cached ? "CACHED (5m TTL)" : "LIVE CHECK"}
+                    </span>
+                  )}
+                  {catchUpReport?.cacheMeta?.zeroWritesVerified && (
+                    <span className="badge badge-slate">ZERO WRITES ON OPEN</span>
+                  )}
                 </div>
                 <div style={{ fontSize: "0.82rem", color: "var(--text-muted)" }}>
                   Automatically calculates the missing date range{" "}
@@ -1290,13 +1307,14 @@ export default function IngestionConsolePage() {
                     {catchUpReport?.catchUpRange?.formula || "drawDate > lastVerifiedIngestedDrawDate AND drawDate <= currentISTDate"}
                   </span>{" "}
                   from the official LOTIS portal (`lotteryagent.kerala.gov.in`).
+                  {catchUpReport?.checkedAtIst ? ` Last checked: ${catchUpReport.checkedAtIst}.` : ""}
                 </div>
               </div>
 
               <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap" }}>
                 <button
                   type="button"
-                  onClick={() => handleCatchUpAction("DISCOVER")}
+                  onClick={() => handleCatchUpAction("DISCOVER", true, "operator-console")}
                   disabled={runningCatchUp}
                   style={{
                     background: "var(--bg-surface)",
@@ -1314,7 +1332,7 @@ export default function IngestionConsolePage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleCatchUpAction("DRY_RUN")}
+                  onClick={() => handleCatchUpAction("DRY_RUN", true, "operator-console")}
                   disabled={runningCatchUp}
                   style={{
                     background: "var(--accent-blue)",
@@ -1332,6 +1350,21 @@ export default function IngestionConsolePage() {
                 </button>
               </div>
             </div>
+
+            {catchUpReport?.portalNotice && (
+              <div
+                style={{
+                  background: "rgba(245, 158, 11, 0.12)",
+                  border: "1px solid rgba(245, 158, 11, 0.4)",
+                  borderRadius: "0.5rem",
+                  padding: "0.75rem 1rem",
+                  marginBottom: "1rem",
+                  fontSize: "0.82rem"
+                }}
+              >
+                <strong>Official Source Outage Notice:</strong> {catchUpReport.portalNotice}
+              </div>
+            )}
 
             {/* Plain-Language Catch-Up Summary */}
             <div className="grid-3" style={{ marginBottom: catchUpReport?.candidates?.length ? "1rem" : 0 }}>
@@ -1396,9 +1429,9 @@ export default function IngestionConsolePage() {
                   <tbody>
                     {catchUpReport.candidates.map((item: any) => {
                       let badge = "badge-slate";
-                      if (item.classification === "NEW_ELIGIBLE") badge = "badge-emerald";
-                      else if (item.classification.startsWith("ALREADY_INGESTED")) badge = "badge-blue";
-                      else if (item.classification === "NOT_PUBLISHED_YET") badge = "badge-amber";
+                      if (item.classification === "NEW_ELIGIBLE" || item.candidateStatus === "READY_TO_INGEST") badge = "badge-emerald";
+                      else if (item.classification.startsWith("ALREADY_INGESTED") || item.candidateStatus === "ALREADY_INGESTED_VERIFIED") badge = "badge-blue";
+                      else if (item.classification === "NOT_PUBLISHED_YET" || item.candidateStatus === "NOT_YET_PUBLISHED") badge = "badge-amber";
                       else badge = "badge-rose";
 
                       return (
@@ -1450,7 +1483,7 @@ export default function IngestionConsolePage() {
                           </td>
                           <td style={{ fontSize: "0.72rem" }}>
                             <span className={`badge ${badge}`} style={{ fontSize: "0.65rem", marginBottom: "0.2rem", display: "inline-block" }}>
-                              {item.classification}
+                              {item.candidateStatus || item.classification}
                             </span>
                             <div>
                               {item.resultCount

@@ -210,16 +210,17 @@ async function main() {
       const { dataset } = buildResearchModelingDataset(corpus);
       const experiments = getRegisteredExperiments();
 
-      console.log(`Validating all registered experiments against canonical corpus (103 draws)...`);
+      console.log(`Validating all registered experiments against canonical corpus (${corpus.draws.length} draws, ${corpus.id})...`);
       const validations: StatisticalValidationArtifact[] = [];
 
       for (const exp of experiments) {
         const runs = defaultExperimentRepository.listRuns({
           experimentId: exp.experimentId,
-          status: "SUCCEEDED"
+          status: "SUCCEEDED",
+          corpusVersion: corpus.id
         });
         if (runs.length === 0) {
-          console.warn(`Warning: No completed runs found for ${exp.experimentId}. Run 'run-all' first.`);
+          console.warn(`Warning: No completed runs found for ${exp.experimentId} on corpus ${corpus.id}. Run 'run-all' first.`);
           continue;
         }
         const latestRun = runs[0]!;
@@ -319,21 +320,22 @@ async function main() {
     }
 
     case "generate-findings": {
-      console.log(`\nLoading canonical research corpus (103 draws)...`);
+      console.log(`\nLoading canonical research corpus...`);
       const corpus = loadCanonicalResearchCorpus();
       const { dataset } = buildResearchModelingDataset(corpus);
       const experiments = getRegisteredExperiments();
 
-      console.log(`Generating publication-grade Research Findings & Evidence Bundles for ${experiments.length} baselines...\n`);
+      console.log(`Generating publication-grade Research Findings & Evidence Bundles for ${experiments.length} baselines against ${corpus.draws.length} draws (${corpus.id})...\n`);
       const generatedFindings: ResearchFinding[] = [];
 
       for (const exp of experiments) {
         const runs = defaultExperimentRepository.listRuns({
           experimentId: exp.experimentId,
-          status: "SUCCEEDED"
+          status: "SUCCEEDED",
+          corpusVersion: corpus.id
         });
         if (runs.length === 0) {
-          console.warn(`Warning: No completed runs found for ${exp.experimentId}. Run 'run-all' first.`);
+          console.warn(`Warning: No completed runs found for ${exp.experimentId} on corpus ${corpus.id}. Run 'run-all' first.`);
           continue;
         }
         const run = runs[0]!;

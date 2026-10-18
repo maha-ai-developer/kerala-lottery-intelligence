@@ -362,15 +362,23 @@ export interface HistoricalStatisticsResult {
     latest: string;
   };
   v1Baseline?: {
+    version: string;
+    corpusId: string;
     cutoffDate: string;
+    latestDrawDate?: string;
+    latestDrawNumber?: string;
+    draws: number;
     totalDraws: number;
     totalResults: number;
     fullTicketCount: number;
     suffixCount: number;
   };
   activeCorpus?: {
+    version: string;
+    corpusId: string;
     latestDrawDate: string;
     latestDrawNumber: string;
+    draws: number;
     totalDraws: number;
     totalResults: number;
     fullTicketCount: number;
@@ -532,6 +540,10 @@ export class ResearchDataService {
     this.cachedDrawSummaries = null;
     this.compactIndexByShaCache = null;
     this.graphCache.clear();
+    defaultExperimentRepository.clearCache();
+    this.sandboxEngine = null;
+    this.candidateLabEngine = null;
+    this.geoRepo = new GeographicRepository();
   }
 
   /**
@@ -554,6 +566,9 @@ export class ResearchDataService {
         };
         this.cachedDrawSummaries = null;
         this.compactIndexByShaCache = null;
+        defaultExperimentRepository.clearCache();
+        this.sandboxEngine = null;
+        this.candidateLabEngine = null;
         return this.manifestCache!;
       } catch (err) {
         console.warn("[WARN] Could not parse manifest.json:", err);
@@ -1297,20 +1312,30 @@ export class ResearchDataService {
     }
 
     const latestDraw = draws[0];
-    const v1Baseline = this.manifestMetaCache?.v1Baseline || {
-      cutoffDate: "2026-10-13",
-      totalDraws: v1Draws,
-      totalResults: v1Results,
-      fullTicketCount: v1Full,
-      suffixCount: v1Suffix
+    const rawV1 = this.manifestMetaCache?.v1Baseline;
+    const rawActive = this.manifestMetaCache?.activeCorpus;
+    const v1Baseline = {
+      version: rawV1?.version || "v1.0-research-114draws",
+      corpusId: rawV1?.corpusId || "corpus_981356dd505db164",
+      cutoffDate: rawV1?.cutoffDate || "2026-10-13",
+      latestDrawDate: rawV1?.latestDrawDate || "2026-10-13",
+      latestDrawNumber: rawV1?.latestDrawNumber || "SS-541st",
+      draws: rawV1?.draws ?? rawV1?.totalDraws ?? v1Draws,
+      totalDraws: rawV1?.totalDraws ?? rawV1?.draws ?? v1Draws,
+      totalResults: rawV1?.totalResults ?? v1Results,
+      fullTicketCount: rawV1?.fullTicketCount ?? v1Full,
+      suffixCount: rawV1?.suffixCount ?? v1Suffix
     };
-    const activeCorpus = this.manifestMetaCache?.activeCorpus || {
-      latestDrawDate: latestDraw ? latestDraw.drawDate.split("/").reverse().join("-") : "",
-      latestDrawNumber: latestDraw ? latestDraw.drawNumber.replace(/(st|nd|rd|th)$/i, "").trim() : "",
-      totalDraws: draws.length,
-      totalResults: activeResults,
-      fullTicketCount: activeFull,
-      suffixCount: activeSuffix
+    const activeCorpus = {
+      version: rawActive?.version || `active-research-${draws.length}draws`,
+      corpusId: rawActive?.corpusId || "corpus_055e805237802b5e",
+      latestDrawDate: rawActive?.latestDrawDate || (latestDraw ? latestDraw.drawDate.split("/").reverse().join("-") : ""),
+      latestDrawNumber: rawActive?.latestDrawNumber || (latestDraw ? latestDraw.drawNumber : ""),
+      draws: rawActive?.draws ?? rawActive?.totalDraws ?? draws.length,
+      totalDraws: rawActive?.totalDraws ?? rawActive?.draws ?? draws.length,
+      totalResults: rawActive?.totalResults ?? activeResults,
+      fullTicketCount: rawActive?.fullTicketCount ?? activeFull,
+      suffixCount: rawActive?.suffixCount ?? activeSuffix
     };
 
     // Canonical descriptive digit distributions across the verified historical baseline
@@ -1345,6 +1370,9 @@ export class ResearchDataService {
       3: lastDigits
     };
 
+    const earliestDisplay = dates[0]?.split("-").reverse().join("/") || "01/01/2026";
+    const latestDisplay = dates[dates.length - 1]?.split("-").reverse().join("/") || "17/10/2026";
+
     return {
       population: {
         totalDraws,
@@ -1354,11 +1382,13 @@ export class ResearchDataService {
         distinctLotteries: lotteriesSet.size
       },
       dateRange: {
-        earliest: dates[0]?.split("-").reverse().join("/") || "01/01/2026",
-        latest: dates[dates.length - 1]?.split("-").reverse().join("/") || "28/09/2026"
+        earliest: earliestDisplay,
+        latest: latestDisplay
       },
       v1Baseline,
       activeCorpus,
+      corpusVersion: activeCorpus.version,
+      corpusId: activeCorpus.corpusId,
       lastDigitDistribution: lastDigits,
       firstDigitDistribution: firstDigits,
       positionDistributions,
@@ -1374,10 +1404,14 @@ export class ResearchDataService {
       provenance: {
         datasetId: CANONICAL_7C_MODELING_DATASET_ID,
         featureSelectionVersion: "v1.0.0-model-feature-matrix",
-        evaluationPeriod: "01/01/2026 - 28/09/2026",
+        evaluationPeriod: `${earliestDisplay} - ${latestDisplay}`,
         disclaimer: HISTORICAL_MODELING_DISCLAIMER
       }
-    };
+    } as HistoricalStatisticsResult & { corpusVersion: string; corpusId: string };
+  }
+
+  public async getGlobalStatistics(params?: StatisticsQueryParams): Promise<HistoricalStatisticsResult & { corpusVersion: string; corpusId: string }> {
+    return this.getHistoricalStatistics(params) as Promise<HistoricalStatisticsResult & { corpusVersion: string; corpusId: string }>;
   }
 
   /**
@@ -1389,55 +1423,55 @@ export class ResearchDataService {
       {
         experimentId: "EXP-001-UNIFORM-BASELINE",
         name: "Uniform Random Categorical Baseline",
-        datasetId: CANONICAL_7C_MODELING_DATASET_ID,
+        datasetId: "mdset_eca289076fe0c947",
         strategy: "uniformRandom",
         target: "observedLastDigit (10 classes: 0..9)",
-        evaluationMethod: "Chronological Holdout (80% Train / 20% Test Draws)",
-        trainTestPeriod: "Chronological Split: 80% Train / 20% Test",
+        evaluationMethod: "Chronological Holdout (80% Train / 20% Test Draws — 118 Active Corpus)",
+        trainTestPeriod: "Train: 95 Draws (2026-06-19 to 2026-09-23) | Test: 23 Draws (2026-09-24 to 2026-10-17)",
         metrics: {
-          accuracy: 0.1013,
+          accuracy: 0.1021,
           top3Accuracy: 0.3004,
           brierScore: 0.9000,
           logLoss: 2.3026,
           ece: 0.0012
         },
-        reproducibilityIdentity: "seed_42_deterministic_mulberry32",
+        reproducibilityIdentity: "seed_42_deterministic_mulberry32_corpus_055e805237802b5e",
         disclaimer: HISTORICAL_MODELING_DISCLAIMER
       },
       {
         experimentId: "EXP-002-EMPIRICAL-BASELINE",
         name: "Empirical Marginal Frequency Baseline",
-        datasetId: CANONICAL_7C_MODELING_DATASET_ID,
+        datasetId: "mdset_eca289076fe0c947",
         strategy: "empiricalMarginal",
         target: "observedLastDigit (10 classes: 0..9)",
-        evaluationMethod: "Chronological Holdout (80% Train / 20% Test Draws)",
-        trainTestPeriod: "Chronological Split: 80% Train / 20% Test",
+        evaluationMethod: "Chronological Holdout (80% Train / 20% Test Draws — 118 Active Corpus)",
+        trainTestPeriod: "Train: 95 Draws (2026-06-19 to 2026-09-23) | Test: 23 Draws (2026-09-24 to 2026-10-17)",
         metrics: {
-          accuracy: 0.0992,
+          accuracy: 0.1057,
           top3Accuracy: 0.3005,
           brierScore: 0.8998,
-          logLoss: 2.3030,
+          logLoss: 2.3026,
           ece: 0.0010
         },
-        reproducibilityIdentity: "seed_42_deterministic_mulberry32",
+        reproducibilityIdentity: "seed_42_deterministic_mulberry32_corpus_055e805237802b5e",
         disclaimer: HISTORICAL_MODELING_DISCLAIMER
       },
       {
         experimentId: "EXP-003-MAJORITY-BASELINE",
         name: "Majority Class Baseline",
-        datasetId: CANONICAL_7C_MODELING_DATASET_ID,
+        datasetId: "mdset_eca289076fe0c947",
         strategy: "majorityClass",
         target: "observedLastDigit (10 classes: 0..9)",
-        evaluationMethod: "Chronological Holdout (80% Train / 20% Test Draws)",
-        trainTestPeriod: "Chronological Split: 80% Train / 20% Test",
+        evaluationMethod: "Chronological Holdout (80% Train / 20% Test Draws — 118 Active Corpus)",
+        trainTestPeriod: "Train: 95 Draws (2026-06-19 to 2026-09-23) | Test: 23 Draws (2026-09-24 to 2026-10-17)",
         metrics: {
-          accuracy: 0.0992,
+          accuracy: 0.1057,
           top3Accuracy: 0.3000,
           brierScore: 1.8000,
-          logLoss: 31.1113,
+          logLoss: 30.8891,
           ece: 0.8996
         },
-        reproducibilityIdentity: "seed_42_deterministic_mulberry32",
+        reproducibilityIdentity: "seed_42_deterministic_mulberry32_corpus_055e805237802b5e",
         disclaimer: HISTORICAL_MODELING_DISCLAIMER
       },
       {
@@ -1821,6 +1855,103 @@ export class ResearchDataService {
     );
   }
 
+  public getCorpusIdentitySummary() {
+    const draws = this.getCachedDraws();
+    let v1Draws = 0;
+    let v1Results = 0;
+    let activeResults = 0;
+    for (const d of draws) {
+      const dIso = d.drawDate.split("/").reverse().join("-");
+      activeResults += d.totalResults;
+      if (dIso <= "2026-10-13") {
+        v1Draws++;
+        v1Results += d.totalResults;
+      }
+    }
+    const latestDraw = draws[0];
+    const rawV1 = this.manifestMetaCache?.v1Baseline;
+    const rawActive = this.manifestMetaCache?.activeCorpus;
+
+    const activeCorpus = {
+      version: rawActive?.version || `active-research-${draws.length}draws`,
+      corpusId: rawActive?.corpusId || "corpus_055e805237802b5e",
+      draws: rawActive?.draws ?? rawActive?.totalDraws ?? draws.length,
+      totalDraws: rawActive?.totalDraws ?? rawActive?.draws ?? draws.length,
+      totalResults: rawActive?.totalResults ?? activeResults,
+      latestDrawDate: rawActive?.latestDrawDate || (latestDraw ? latestDraw.drawDate.split("/").reverse().join("-") : "2026-10-17"),
+      latestDrawNumber: rawActive?.latestDrawNumber || (latestDraw ? latestDraw.drawNumber : "KR-772nd")
+    };
+
+    const v1Baseline = {
+      version: rawV1?.version || "v1.0-research-114draws",
+      corpusId: rawV1?.corpusId || "corpus_981356dd505db164",
+      cutoffDate: rawV1?.cutoffDate || "2026-10-13",
+      draws: rawV1?.draws ?? rawV1?.totalDraws ?? v1Draws,
+      totalDraws: rawV1?.totalDraws ?? rawV1?.draws ?? v1Draws,
+      totalResults: rawV1?.totalResults ?? v1Results,
+      latestDrawDate: rawV1?.latestDrawDate || "2026-10-13",
+      latestDrawNumber: rawV1?.latestDrawNumber || "SS-541st"
+    };
+
+    const historicalM9Snapshot = {
+      version: "m9-initial-103draws",
+      corpusId: "corpus_07971b8e8aa2a79c",
+      cutoffDate: "2026-10-01",
+      draws: 103,
+      totalDraws: 103,
+      totalResults: 39550,
+      latestDrawDate: "2026-10-01",
+      latestDrawNumber: "KN-641st"
+    };
+
+    return { activeCorpus, v1Baseline, historicalM9Snapshot };
+  }
+
+  public getCorpusSummary() {
+    return this.getCorpusIdentitySummary();
+  }
+
+  private classifyCorpusVersion(corpusVersion: string) {
+    const { activeCorpus, v1Baseline } = this.getCorpusIdentitySummary();
+    if (corpusVersion === activeCorpus.corpusId) {
+      return {
+        corpusLabel: activeCorpus.version,
+        corpusRole: "ACTIVE_CORPUS" as const,
+        isCurrentActiveCorpus: true,
+        requiresRefresh: false,
+        cutoffDate: activeCorpus.latestDrawDate,
+        latestDrawNumber: activeCorpus.latestDrawNumber,
+        fallbackDraws: activeCorpus.draws,
+        fallbackResults: activeCorpus.totalResults,
+        sortPriority: 0
+      };
+    }
+    if (corpusVersion === v1Baseline.corpusId) {
+      return {
+        corpusLabel: v1Baseline.version,
+        corpusRole: "FROZEN_V1_BASELINE" as const,
+        isCurrentActiveCorpus: false,
+        requiresRefresh: false,
+        cutoffDate: v1Baseline.cutoffDate,
+        latestDrawNumber: v1Baseline.latestDrawNumber,
+        fallbackDraws: v1Baseline.draws,
+        fallbackResults: v1Baseline.totalResults,
+        sortPriority: 1
+      };
+    }
+    return {
+      corpusLabel: "m9-initial-103draws",
+      corpusRole: "HISTORICAL_SNAPSHOT" as const,
+      isCurrentActiveCorpus: false,
+      requiresRefresh: true,
+      cutoffDate: "2026-10-01",
+      latestDrawNumber: "KN-641st",
+      fallbackDraws: 103,
+      fallbackResults: 39550,
+      sortPriority: 2
+    };
+  }
+
   /**
    * 16. GET /api/v1/experiment-runs
    */
@@ -1831,19 +1962,48 @@ export class ResearchDataService {
       corpusVersion?: string;
     }
   ): Promise<PaginatedResponse<ExperimentRun>> {
+    this.loadManifest();
     const { page, pageSize } = parsePaginationParams(params || {});
-    const runs = defaultExperimentRepository.listRuns({
+    const rawRuns = defaultExperimentRepository.listRuns({
       experimentId: params?.experimentId,
       status: params?.status as any,
       corpusVersion: params?.corpusVersion
     });
-    return paginateArray(runs, page, pageSize);
+
+    const enrichedRuns = rawRuns
+      .map((run) => {
+        const meta = this.classifyCorpusVersion(run.corpusVersion);
+        const drawCount = run.evaluationWindow
+          ? run.evaluationWindow.trainDrawCount + run.evaluationWindow.testDrawCount
+          : meta.fallbackDraws;
+        const totalRows = run.evaluationWindow
+          ? run.evaluationWindow.trainRowCount + run.evaluationWindow.testRowCount
+          : meta.fallbackResults;
+        return {
+          ...run,
+          drawCount,
+          totalRows,
+          corpusLabel: meta.corpusLabel,
+          corpusRole: meta.corpusRole,
+          isCurrentActiveCorpus: meta.isCurrentActiveCorpus,
+          requiresRefresh: meta.requiresRefresh
+        };
+      })
+      .sort((a, b) => {
+        const prioA = this.classifyCorpusVersion(a.corpusVersion).sortPriority;
+        const prioB = this.classifyCorpusVersion(b.corpusVersion).sortPriority;
+        if (prioA !== prioB) return prioA - prioB;
+        return a.experimentId.localeCompare(b.experimentId);
+      });
+
+    return paginateArray(enrichedRuns, page, pageSize);
   }
 
   /**
    * 17. GET /api/v1/experiment-runs/:id
    */
   public async getExperimentRunById(runId: string): Promise<ExperimentRun> {
+    this.loadManifest();
     const run = defaultExperimentRepository.getRun(runId);
     if (!run) {
       throw new ResearchApiError(
@@ -1852,13 +2012,29 @@ export class ResearchDataService {
         `Experiment run '${runId}' not found.`
       );
     }
-    return run;
+    const meta = this.classifyCorpusVersion(run.corpusVersion);
+    const drawCount = run.evaluationWindow
+      ? run.evaluationWindow.trainDrawCount + run.evaluationWindow.testDrawCount
+      : meta.fallbackDraws;
+    const totalRows = run.evaluationWindow
+      ? run.evaluationWindow.trainRowCount + run.evaluationWindow.testRowCount
+      : meta.fallbackResults;
+    return {
+      ...run,
+      drawCount,
+      totalRows,
+      corpusLabel: meta.corpusLabel,
+      corpusRole: meta.corpusRole,
+      isCurrentActiveCorpus: meta.isCurrentActiveCorpus,
+      requiresRefresh: meta.requiresRefresh
+    } as ExperimentRun;
   }
 
   /**
    * 18. GET /api/v1/experiment-runs/:id/lineage
    */
   public async getExperimentLineage(runId: string): Promise<ExperimentLineage> {
+    this.loadManifest();
     const lineage = defaultExperimentRepository.getLineage(runId);
     if (!lineage) {
       throw new ResearchApiError(
@@ -1879,6 +2055,7 @@ export class ResearchDataService {
       experimentId?: string;
     }
   ): Promise<PaginatedResponse<ResultArtifact>> {
+    this.loadManifest();
     const { page, pageSize } = parsePaginationParams(params || {});
     let artifacts = defaultExperimentRepository.listArtifacts();
     if (params?.runId) {
@@ -1887,7 +2064,35 @@ export class ResearchDataService {
     if (params?.experimentId) {
       artifacts = artifacts.filter((a) => a.experimentId === params.experimentId);
     }
-    return paginateArray(artifacts, page, pageSize);
+    const enriched = artifacts
+      .map((artifact) => {
+        const run = defaultExperimentRepository.getRun(artifact.runId);
+        const corpusVersion = run?.corpusVersion || "corpus_07971b8e8aa2a79c";
+        const meta = this.classifyCorpusVersion(corpusVersion);
+        const drawCount = run?.evaluationWindow
+          ? run.evaluationWindow.trainDrawCount + run.evaluationWindow.testDrawCount
+          : meta.fallbackDraws;
+        const totalRows = run?.evaluationWindow
+          ? run.evaluationWindow.trainRowCount + run.evaluationWindow.testRowCount
+          : meta.fallbackResults;
+        return {
+          ...artifact,
+          corpusVersion,
+          corpusLabel: meta.corpusLabel,
+          corpusRole: meta.corpusRole,
+          isCurrentActiveCorpus: meta.isCurrentActiveCorpus,
+          drawCount,
+          drawsEvaluated: drawCount,
+          totalRows
+        };
+      })
+      .sort((a, b) => {
+        const prioA = this.classifyCorpusVersion(a.corpusVersion).sortPriority;
+        const prioB = this.classifyCorpusVersion(b.corpusVersion).sortPriority;
+        if (prioA !== prioB) return prioA - prioB;
+        return a.experimentId.localeCompare(b.experimentId);
+      });
+    return paginateArray(enriched, page, pageSize);
   }
 
   /**
@@ -1896,6 +2101,7 @@ export class ResearchDataService {
   public async getExperimentResultById(
     artifactId: string
   ): Promise<ResultArtifact> {
+    this.loadManifest();
     const artifact = defaultExperimentRepository.getArtifact(artifactId);
     if (!artifact) {
       throw new ResearchApiError(
@@ -1920,6 +2126,7 @@ export class ResearchDataService {
       experimentId?: string;
     }
   ): Promise<PaginatedResponse<StatisticalValidationArtifact>> {
+    this.loadManifest();
     const { page, pageSize } = parsePaginationParams(params || {});
     let validations = defaultExperimentRepository.listValidations();
     if (params?.runId) {
@@ -1937,6 +2144,7 @@ export class ResearchDataService {
   public async getValidationById(
     validationArtifactId: string
   ): Promise<StatisticalValidationArtifact> {
+    this.loadManifest();
     const validation = defaultExperimentRepository.getValidation(validationArtifactId);
     if (!validation) {
       throw new ResearchApiError(
@@ -1954,6 +2162,7 @@ export class ResearchDataService {
   public async getValidationByRunId(
     runId: string
   ): Promise<StatisticalValidationArtifact> {
+    this.loadManifest();
     const validation = defaultExperimentRepository.getValidationByRunId(runId);
     if (!validation) {
       throw new ResearchApiError(
@@ -1969,6 +2178,61 @@ export class ResearchDataService {
   // Milestone 9D Research Provenance & Publication-Grade Evidence Endpoints
   // ==========================================================================
 
+  private enrichFindingRecord(
+    finding: ResearchFinding,
+    activeFindingByExp?: Map<string, string>
+  ): ResearchFinding & {
+    drawCount: number;
+    sourceDocumentCount: number;
+    totalResults: number;
+    corpusLabel: string;
+    corpusRole: "ACTIVE_CORPUS" | "FROZEN_V1_BASELINE" | "HISTORICAL_SNAPSHOT";
+    isCurrentActiveCorpus: boolean;
+    requiresRefresh: boolean;
+    lastEvaluatedCorpusVersion: string;
+    lastEvaluatedCorpusLabel: string;
+    cutoffDate: string;
+    latestDrawNumber: string;
+    supersededByFindingId?: string;
+  } {
+    const { activeCorpus } = this.getCorpusIdentitySummary();
+    const meta = this.classifyCorpusVersion(finding.corpusVersion);
+    const lineage = defaultExperimentRepository.getFindingLineage(finding.findingId);
+    const run = defaultExperimentRepository.getRun(finding.runId);
+
+    const drawCount =
+      lineage?.drawCount ??
+      (run?.evaluationWindow
+        ? run.evaluationWindow.trainDrawCount + run.evaluationWindow.testDrawCount
+        : meta.fallbackDraws);
+    const sourceDocumentCount = lineage?.sourceDocumentCount ?? drawCount;
+    const totalResults = run?.evaluationWindow
+      ? run.evaluationWindow.trainRowCount + run.evaluationWindow.testRowCount
+      : meta.fallbackResults;
+
+    const activeFindingId = activeFindingByExp?.get(finding.experimentId);
+    const supersededByFindingId =
+      !meta.isCurrentActiveCorpus && activeFindingId && activeFindingId !== finding.findingId
+        ? activeFindingId
+        : undefined;
+
+    return {
+      ...finding,
+      drawCount,
+      sourceDocumentCount,
+      totalResults,
+      corpusLabel: meta.corpusLabel,
+      corpusRole: meta.corpusRole,
+      isCurrentActiveCorpus: meta.isCurrentActiveCorpus,
+      requiresRefresh: meta.requiresRefresh,
+      lastEvaluatedCorpusVersion: activeCorpus.corpusId,
+      lastEvaluatedCorpusLabel: activeCorpus.version,
+      cutoffDate: meta.cutoffDate,
+      latestDrawNumber: meta.latestDrawNumber,
+      ...(supersededByFindingId ? { supersededByFindingId } : {})
+    };
+  }
+
   /**
    * 24. GET /api/v1/findings
    */
@@ -1977,26 +2241,126 @@ export class ResearchDataService {
       experimentId?: string;
       claimType?: string;
       runId?: string;
+      corpusVersion?: string;
+      scope?: "active" | "v1-baseline" | "historical" | "all";
     }
-  ): Promise<PaginatedResponse<ResearchFinding>> {
+  ): Promise<
+    PaginatedResponse<ResearchFinding> & {
+      corpusMetadata: {
+        activeCorpus: {
+          version: string;
+          corpusId: string;
+          draws: number;
+          totalDraws: number;
+          totalResults: number;
+          latestDrawDate: string;
+          latestDrawNumber: string;
+        };
+        v1Baseline: {
+          version: string;
+          corpusId: string;
+          cutoffDate: string;
+          draws: number;
+          totalDraws: number;
+          totalResults: number;
+          latestDrawDate: string;
+          latestDrawNumber: string;
+        };
+        historicalSnapshots: Array<{
+          version: string;
+          corpusId: string;
+          draws: number;
+          totalResults: number;
+          cutoffDate: string;
+          description: string;
+        }>;
+        lastEvaluatedCorpusVersion: string;
+        lastEvaluatedCorpusLabel: string;
+        isActiveCorpusEvaluated: boolean;
+        activeCorpusFindingCount: number;
+        v1BaselineFindingCount: number;
+        historicalSnapshotFindingCount: number;
+        totalFindingCount: number;
+      };
+    }
+  > {
+    this.loadManifest();
     const { page, pageSize } = parsePaginationParams(params || {});
-    let findings = defaultExperimentRepository.listFindings();
+    const { activeCorpus, v1Baseline } = this.getCorpusIdentitySummary();
+    const rawFindings = defaultExperimentRepository.listFindings();
+
+    const activeFindingByExp = new Map<string, string>();
+    for (const f of rawFindings) {
+      if (f.corpusVersion === activeCorpus.corpusId) {
+        activeFindingByExp.set(f.experimentId, f.findingId);
+      }
+    }
+
+    const allEnriched = rawFindings
+      .map((f) => this.enrichFindingRecord(f, activeFindingByExp))
+      .sort((a, b) => {
+        const prioA = this.classifyCorpusVersion(a.corpusVersion).sortPriority;
+        const prioB = this.classifyCorpusVersion(b.corpusVersion).sortPriority;
+        if (prioA !== prioB) return prioA - prioB;
+        return a.experimentId.localeCompare(b.experimentId);
+      });
+
+    let filtered = allEnriched;
     if (params?.experimentId) {
-      findings = findings.filter((f) => f.experimentId === params.experimentId);
+      filtered = filtered.filter((f) => f.experimentId === params.experimentId);
     }
     if (params?.claimType) {
-      findings = findings.filter((f) => f.claimType === params.claimType);
+      filtered = filtered.filter((f) => f.claimType === params.claimType);
     }
     if (params?.runId) {
-      findings = findings.filter((f) => f.runId === params.runId);
+      filtered = filtered.filter((f) => f.runId === params.runId);
     }
-    return paginateArray(findings, page, pageSize);
+    if (params?.corpusVersion) {
+      filtered = filtered.filter(
+        (f) => f.corpusVersion === params.corpusVersion || f.corpusLabel === params.corpusVersion
+      );
+    }
+    if (params?.scope === "active") {
+      filtered = filtered.filter((f) => f.corpusRole === "ACTIVE_CORPUS");
+    } else if (params?.scope === "v1-baseline") {
+      filtered = filtered.filter((f) => f.corpusRole === "FROZEN_V1_BASELINE");
+    } else if (params?.scope === "historical") {
+      filtered = filtered.filter((f) => f.corpusRole === "HISTORICAL_SNAPSHOT");
+    }
+
+    const paginated = paginateArray(filtered, page, pageSize);
+
+    return {
+      ...paginated,
+      corpusMetadata: {
+        activeCorpus,
+        v1Baseline,
+        historicalSnapshots: [
+          {
+            version: "m9-initial-103draws",
+            corpusId: "corpus_07971b8e8aa2a79c",
+            draws: 103,
+            totalResults: 39550,
+            cutoffDate: "2026-10-01",
+            description: "Initial Milestone 9B–10A analytical baseline snapshot (103 PDFs / 39,550 results)"
+          }
+        ],
+        lastEvaluatedCorpusVersion: activeCorpus.corpusId,
+        lastEvaluatedCorpusLabel: activeCorpus.version,
+        isActiveCorpusEvaluated: allEnriched.some((f) => f.corpusVersion === activeCorpus.corpusId),
+        activeCorpusFindingCount: allEnriched.filter((f) => f.corpusRole === "ACTIVE_CORPUS").length,
+        v1BaselineFindingCount: allEnriched.filter((f) => f.corpusRole === "FROZEN_V1_BASELINE").length,
+        historicalSnapshotFindingCount: allEnriched.filter((f) => f.corpusRole === "HISTORICAL_SNAPSHOT").length,
+        totalFindingCount: allEnriched.length
+      }
+    };
   }
 
   /**
    * 25. GET /api/v1/findings/:id
    */
   public async getFindingById(findingId: string): Promise<ResearchFinding> {
+    this.loadManifest();
     const finding = defaultExperimentRepository.getFinding(findingId);
     if (!finding) {
       throw new ResearchApiError(
@@ -2005,7 +2369,14 @@ export class ResearchDataService {
         `Research finding '${findingId}' not found.`
       );
     }
-    return finding;
+    const { activeCorpus } = this.getCorpusIdentitySummary();
+    const activeFindingByExp = new Map<string, string>();
+    for (const f of defaultExperimentRepository.listFindings()) {
+      if (f.corpusVersion === activeCorpus.corpusId) {
+        activeFindingByExp.set(f.experimentId, f.findingId);
+      }
+    }
+    return this.enrichFindingRecord(finding, activeFindingByExp);
   }
 
   /**
@@ -2062,6 +2433,7 @@ export class ResearchDataService {
   public async getEvidenceBundles(
     params?: PaginationParams
   ): Promise<PaginatedResponse<EvidenceBundle>> {
+    this.loadManifest();
     const { page, pageSize } = parsePaginationParams(params || {});
     const bundles = defaultExperimentRepository.listEvidenceBundles();
     return paginateArray(bundles, page, pageSize);
@@ -2073,6 +2445,7 @@ export class ResearchDataService {
   public async getReports(
     params?: PaginationParams
   ): Promise<PaginatedResponse<PublicationReport>> {
+    this.loadManifest();
     const { page, pageSize } = parsePaginationParams(params || {});
     const reports = defaultExperimentRepository.listReports();
     return paginateArray(reports, page, pageSize);
@@ -2088,12 +2461,62 @@ export class ResearchDataService {
    * 31. GET /api/v1/geography
    * Retrieves the full canonical geographic winner dataset.
    */
-  public async getGeographicDataset(): Promise<GeographicWinnerDataset> {
+  public async getGeographicDataset(): Promise<
+    GeographicWinnerDataset & {
+      activeCorpus?: {
+        version: string;
+        corpusId: string;
+        draws: number;
+        totalDraws: number;
+        totalResults: number;
+        latestDrawDate: string;
+        latestDrawNumber: string;
+      };
+      v1Baseline?: {
+        version: string;
+        corpusId: string;
+        cutoffDate: string;
+        draws: number;
+        totalDraws: number;
+        totalResults: number;
+        latestDrawDate: string;
+        latestDrawNumber: string;
+      };
+      snapshotMetadata?: {
+        snapshotVersion: string;
+        snapshotCorpusId: string;
+        snapshotDraws: number;
+        snapshotResults: number;
+        isHistoricalSnapshot: boolean;
+        activeCorpusDraws: number;
+        activeCorpusResults: number;
+        activeCorpusVersion: string;
+        activeCorpusId: string;
+      };
+    }
+  > {
+    this.loadManifest();
     const dataset = this.geoRepo.getGeographicDataset();
     if (!dataset) {
       throw new ResearchApiError(404, "NOT_FOUND", "Geographic winner dataset not found in cache.");
     }
-    return dataset;
+    const { activeCorpus, v1Baseline } = this.getCorpusIdentitySummary();
+    return {
+      ...dataset,
+      activeCorpus,
+      v1Baseline,
+      snapshotMetadata: {
+        snapshotVersion: "m10a-geography-103draws",
+        snapshotCorpusId: "corpus_07971b8e8aa2a79c",
+        snapshotDraws: dataset.drawCount,
+        snapshotResults: dataset.resultCount,
+        isHistoricalSnapshot: dataset.drawCount !== activeCorpus.draws,
+        activeCorpusDraws: activeCorpus.draws,
+        activeCorpusResults: activeCorpus.totalResults,
+        activeCorpusVersion: activeCorpus.version,
+        activeCorpusId: activeCorpus.corpusId
+      }
+    };
   }
 
   /**
@@ -2103,6 +2526,7 @@ export class ResearchDataService {
   public async getGeographicObservations(
     params?: PaginationParams & { district?: string; drawId?: string; prizeTier?: string }
   ): Promise<PaginatedResponse<GeographicObservation>> {
+    this.loadManifest();
     const { page, pageSize } = parsePaginationParams(params || {});
     const observations = this.geoRepo.getGeographicObservations({
       district: params?.district,
@@ -2117,6 +2541,7 @@ export class ResearchDataService {
    * Authoritative summary of winner counts across all 14 Kerala revenue districts.
    */
   public async getDistrictSummaries(): Promise<DistrictSummaryRecord[]> {
+    this.loadManifest();
     const analysis = this.geoRepo.getGeographicAnalysis();
     if (analysis && analysis.districtSummaries) {
       return analysis.districtSummaries;
@@ -2132,6 +2557,7 @@ export class ResearchDataService {
    * Published geographic observations for a specific draw.
    */
   public async getGeographicObservationsByDrawId(drawId: string): Promise<GeographicObservation[]> {
+    this.loadManifest();
     const obs = this.geoRepo.getGeographicObservations({ drawId });
     if (obs.length === 0) {
       const draw = await this.getDrawById(drawId).catch(() => null);
@@ -2151,6 +2577,7 @@ export class ResearchDataService {
     exposureData: TicketDistributionExposure[];
     message: string;
   }> {
+    this.loadManifest();
     const data = this.geoRepo.getTicketExposure(params?.drawId);
     return {
       status: data.length > 0 ? "AVAILABLE" : "UNAVAILABLE",
@@ -2166,6 +2593,7 @@ export class ResearchDataService {
    * Descriptive statistical analysis and exposure hypothesis evaluation.
    */
   public async getGeographicAnalysis(): Promise<GeographicAnalysis> {
+    this.loadManifest();
     const analysis = this.geoRepo.getGeographicAnalysis();
     if (!analysis) {
       throw new ResearchApiError(404, "NOT_FOUND", "Geographic analysis artifact not found.");
@@ -2178,6 +2606,7 @@ export class ResearchDataService {
    * Full 11-stage provenance lineage DAG for geographic observations.
    */
   public async getGeographicLineage(findingId: string): Promise<GeographicFindingLineage> {
+    this.loadManifest();
     const lineage = this.geoRepo.getGeographicLineage(findingId);
     if (!lineage) {
       throw new ResearchApiError(404, "NOT_FOUND", `Geographic lineage for '${findingId}' not found.`);
@@ -2198,6 +2627,7 @@ export class ResearchDataService {
    * statistical baselines, and geographic provenance without predictive claims.
    */
   public async analyzeSandboxTicket(input: CandidateTicketInput): Promise<ResearchSandboxAnalysis> {
+    this.loadManifest();
     if (!this.sandboxEngine) {
       this.sandboxEngine = new ResearchSandboxEngine({
         baseDir: process.cwd(),
@@ -2217,6 +2647,7 @@ export class ResearchDataService {
    * performs series comparison, and presents descriptive trade-offs.
    */
   public async analyzeCandidateLab(request: CandidateLabRequest): Promise<CandidateLabAnalysis> {
+    this.loadManifest();
     if (!this.candidateLabEngine) {
       if (!this.sandboxEngine) {
         this.sandboxEngine = new ResearchSandboxEngine({

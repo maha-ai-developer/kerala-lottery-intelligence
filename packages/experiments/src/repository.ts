@@ -832,6 +832,21 @@ export class ExperimentRepository {
       (a, b) => new Date(b.generatedAt).getTime() - new Date(a.generatedAt).getTime()
     );
   }
+
+  /**
+   * Clears in-memory caches so subsequent queries reload any new artifacts from disk.
+   */
+  public clearCache(): void {
+    if (this.inMemoryOnly) return;
+    this.runsMemory.clear();
+    this.artifactsMemory.clear();
+    this.lineageMemory.clear();
+    this.validationsMemory.clear();
+    this.findingsMemory.clear();
+    this.findingsLineageMemory.clear();
+    this.evidenceMemory.clear();
+    this.reportsMemory.clear();
+  }
 }
 
 export const defaultExperimentRepository = new ExperimentRepository();

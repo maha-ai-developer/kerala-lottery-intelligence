@@ -84,10 +84,15 @@ async function verifyAllV1Gates() {
     }
     const baselineDraws = manifest.v1Baseline?.draws ?? manifest.v1Baseline?.drawsCount;
     const baselineResults = manifest.v1Baseline?.totalResults ?? manifest.v1Baseline?.totalResultsCount;
-    if (!manifest.v1Baseline || baselineDraws !== 114 || baselineResults !== 43712) {
-      throw new Error(`Expected preserved v1Baseline metadata (114 draws / 43,712 results), found ${JSON.stringify(manifest.v1Baseline)}`);
+    if (!manifest.v1Baseline || baselineDraws !== 114 || baselineResults !== 43712 || manifest.v1Baseline.version !== "v1.0-research-114draws") {
+      throw new Error(`Expected preserved v1Baseline metadata (v1.0-research-114draws, 114 draws / 43,712 results), found ${JSON.stringify(manifest.v1Baseline)}`);
     }
-    details.push(`Canonical manifest contains ${docCount} active documents and preserves V1.0 baseline (114 draws / 43,712 results).`);
+    const activeDraws = manifest.activeCorpus?.draws ?? manifest.activeCorpus?.drawsCount;
+    const activeResults = manifest.activeCorpus?.totalResults ?? manifest.activeCorpus?.totalResultsCount;
+    if (!manifest.activeCorpus || activeDraws !== 118 || activeResults !== 45218 || manifest.activeCorpus.version !== "active-research-118draws") {
+      throw new Error(`Expected activeCorpus metadata (active-research-118draws, 118 draws / 45,218 results), found ${JSON.stringify(manifest.activeCorpus)}`);
+    }
+    details.push(`Canonical manifest contains ${docCount} active documents (${manifest.activeCorpus.version}) and preserves V1.0 baseline (${manifest.v1Baseline.version}: 114 draws / 43,712 results).`);
 
     const graphsDir = join(cwd, "data/processed-cache/graphs");
     const graphFiles = readdirSync(graphsDir).filter((f) => f.endsWith(".json"));
@@ -99,10 +104,22 @@ async function verifyAllV1Gates() {
     let totalWinningResults = 0;
     let fullTicketCount = 0;
     let suffixCount = 0;
+    let v1BaselineDrawsCount = 0;
+    let v1BaselineResultsCount = 0;
 
     for (const file of graphFiles) {
       const g = JSON.parse(readFileSync(join(graphsDir, file), "utf-8"));
       const wins = (g.nodes || []).filter((n: any) => n.type === "WinningResult");
+      const drawNode = (g.nodes || []).find((n: any) => n.type === "Draw");
+      const drawDateStr = String(drawNode?.properties?.drawDate || "");
+      let isoDate = drawDateStr;
+      const m = drawDateStr.match(/^(\d{2})[./-](\d{2})[./-](\d{4})$/);
+      if (m) isoDate = `${m[3]}-${m[2]}-${m[1]}`;
+      if (isoDate && isoDate <= "2026-10-13") {
+        v1BaselineDrawsCount++;
+        v1BaselineResultsCount += wins.length;
+      }
+
       totalWinningResults += wins.length;
       for (const w of wins) {
         if (w.properties?.isSuffix) {
@@ -112,6 +129,11 @@ async function verifyAllV1Gates() {
         }
       }
     }
+
+    if (v1BaselineDrawsCount !== 114 || v1BaselineResultsCount !== 43712) {
+      throw new Error(`Preserved V1.0 baseline check failed: expected 114 draws / 43,712 results for <= 2026-10-13, found ${v1BaselineDrawsCount} draws / ${v1BaselineResultsCount} results`);
+    }
+    details.push(`Preserved V1.0 baseline slice verified: ${v1BaselineDrawsCount} draws, ${v1BaselineResultsCount.toLocaleString()} results.`);
 
     if (totalWinningResults !== 45218) {
       throw new Error(`Expected exactly 45,218 winning results in live corpus, found ${totalWinningResults} (stale baseline rejected)`);
@@ -123,7 +145,7 @@ async function verifyAllV1Gates() {
       throw new Error(`Expected exactly 43,504 suffix results in live corpus, found ${suffixCount}`);
     }
 
-    details.push(`Winning results exact balance: ${totalWinningResults.toLocaleString()} total (${fullTicketCount.toLocaleString()} full-ticket, ${suffixCount.toLocaleString()} suffix).`);
+    details.push(`Active corpus winning results exact balance: ${totalWinningResults.toLocaleString()} total (${fullTicketCount.toLocaleString()} full-ticket, ${suffixCount.toLocaleString()} suffix).`);
     recordGate("Gate 01", "Research Corpus Integrity", "PASS", details);
   } catch (err: any) {
     recordGate("Gate 01", "Research Corpus Integrity", "FAIL", [err.message]);

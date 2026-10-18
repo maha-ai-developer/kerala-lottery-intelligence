@@ -36,6 +36,7 @@ export interface IngestedDocumentRecord {
 
 export interface CorpusBaselineMetadata {
   version: string;
+  corpusId?: string;
   draws: number;
   totalResults: number;
   fullTicketCount: number;
@@ -115,7 +116,8 @@ export class DocumentCacheManager {
 
   private static computeCorpusMetadata(
     docs: IngestedDocumentRecord[],
-    versionPrefix = "v1.0-research"
+    versionPrefix = "v1.0-research",
+    corpusId?: string
   ): CorpusBaselineMetadata | undefined {
     if (docs.length === 0) return undefined;
     let totalResults = 0;
@@ -141,6 +143,7 @@ export class DocumentCacheManager {
 
     return {
       version: `${versionPrefix}-${docs.length}draws`,
+      ...(corpusId ? { corpusId } : {}),
       draws: docs.length,
       totalResults,
       fullTicketCount,
@@ -178,10 +181,33 @@ export class DocumentCacheManager {
       return Boolean(iso && iso <= "2026-10-13");
     });
     if (v1Docs.length > 0) {
-      this.manifest.v1Baseline = DocumentCacheManager.computeCorpusMetadata(v1Docs, "v1.0-research");
+      const v1CorpusId =
+        v1Docs.length === 114 ? "corpus_981356dd505db164" : undefined;
+      this.manifest.v1Baseline = DocumentCacheManager.computeCorpusMetadata(
+        v1Docs,
+        "v1.0-research",
+        v1CorpusId
+      );
     }
     if (validDocs.length > 0) {
-      this.manifest.activeCorpus = DocumentCacheManager.computeCorpusMetadata(validDocs, "v1.0-research");
+      const isFrozenV1 =
+        validDocs.length === 114 &&
+        validDocs.every((d) => {
+          const iso = normalizeDateToIso(d.drawDate);
+          return Boolean(iso && iso <= "2026-10-13");
+        });
+      const activePrefix = isFrozenV1 ? "v1.0-research" : "active-research";
+      const activeCorpusId =
+        isFrozenV1
+          ? "corpus_981356dd505db164"
+          : validDocs.length === 118
+          ? "corpus_055e805237802b5e"
+          : undefined;
+      this.manifest.activeCorpus = DocumentCacheManager.computeCorpusMetadata(
+        validDocs,
+        activePrefix,
+        activeCorpusId
+      );
     }
 
     writeFileSync(this.manifestPath, JSON.stringify(this.manifest, null, 2) + "\n", "utf-8");
@@ -236,6 +262,8 @@ export class DocumentCacheManager {
       }
     }
 
+    this.persistManifest(this.manifest.updatedAt);
+
     const indexPath = join(this.baseDir, "winning-results-index.json");
     writeFileSync(indexPath, JSON.stringify(tuples), "utf-8");
 
@@ -245,6 +273,33 @@ export class DocumentCacheManager {
       try {
         copyFileSync(this.manifestPath, join(webCacheDir, "manifest.json"));
         copyFileSync(indexPath, join(webCacheDir, "winning-results-index.json"));
+
+        const srcExpDir = join(defaultCacheDir, "experiments");
+        const dstExpDir = join(webCacheDir, "experiments");
+        if (existsSync(srcExpDir)) {
+          const subdirs = [
+            "runs",
+            "artifacts",
+            "lineage",
+            "validations",
+            "findings",
+            "findings-lineage",
+            "evidence",
+            "reports"
+          ];
+          for (const sub of subdirs) {
+            const sDir = join(srcExpDir, sub);
+            const dDir = join(dstExpDir, sub);
+            if (existsSync(sDir)) {
+              if (!existsSync(dDir)) {
+                mkdirSync(dDir, { recursive: true });
+              }
+              for (const f of readdirSync(sDir)) {
+                copyFileSync(join(sDir, f), join(dDir, f));
+              }
+            }
+          }
+        }
       } catch {
         // Ignore mirror copy failure if read-only in container
       }

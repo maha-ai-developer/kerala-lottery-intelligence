@@ -23,7 +23,8 @@ import {
   evaluateFeatureMatrix,
   buildModelFeatureMatrix,
   buildModelingDataset,
-  createObservedLastDigitTarget
+  createObservedLastDigitTarget,
+  parseDrawDateToIso
 } from "@kerala-lottery/statistics";
 
 import {
@@ -77,10 +78,7 @@ export function loadGraphsFromCache(
     throw new Error(`Graphs directory not found at: ${graphsDir}`);
   }
 
-  let files = readdirSync(graphsDir).filter((f) => f.endsWith(".json"));
-  if (options?.v1BaselineOnly) {
-    files = files.filter((f) => !f.startsWith("0377f83e"));
-  }
+  const files = readdirSync(graphsDir).filter((f) => f.endsWith(".json"));
   const graphs: LotteryKnowledgeGraph[] = [];
 
   for (const file of files) {
@@ -89,6 +87,14 @@ export function loadGraphsFromCache(
         readFileSync(join(graphsDir, file), "utf-8")
       ) as LotteryKnowledgeGraph;
       if (content && content.documentSha256 && Array.isArray(content.nodes) && Array.isArray(content.edges)) {
+        if (options?.v1BaselineOnly) {
+          const drawNode = content.nodes.find((n) => n.type === "Draw");
+          const rawDate = String(drawNode?.properties?.drawDate ?? "");
+          const isoDate = parseDrawDateToIso(rawDate);
+          if (!isoDate || isoDate > "2026-10-13") {
+            continue;
+          }
+        }
         graphs.push(content);
       }
     } catch {

@@ -1705,6 +1705,7 @@
   },
   "v1Baseline": {
     "version": "v1.0-research-114draws",
+    "corpusId": "corpus_981356dd505db164",
     "draws": 114,
     "totalResults": 43712,
     "fullTicketCount": 1658,
@@ -1714,7 +1715,8 @@
     "latestDrawNumber": "SS-541st"
   },
   "activeCorpus": {
-    "version": "v1.0-research-118draws",
+    "version": "active-research-118draws",
+    "corpusId": "corpus_055e805237802b5e",
     "draws": 118,
     "totalResults": 45218,
     "fullTicketCount": 1714,

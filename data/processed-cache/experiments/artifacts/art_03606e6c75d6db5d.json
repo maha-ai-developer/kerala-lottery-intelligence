@@ -1,0 +1,557 @@
+{
+  "artifactId": "art_03606e6c75d6db5d",
+  "runId": "run_98cec5487d4f4450",
+  "experimentId": "EXP-002-EMPIRICAL-BASELINE",
+  "experimentVersion": "1.0.0",
+  "datasetVersion": "mdset_eca289076fe0c947",
+  "corpusVersion": "corpus_055e805237802b5e",
+  "metrics": {
+    "accuracy": 0.10565575595635716,
+    "balancedAccuracy": 0.1,
+    "logLoss": 2.3028457716264743,
+    "sampleSize": 8982
+  },
+  "confusionMatrix": {
+    "classes": [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9"
+    ],
+    "matrix": {
+      "0": {
+        "0": 0,
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 917,
+        "8": 0,
+        "9": 0
+      },
+      "1": {
+        "0": 0,
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 900,
+        "8": 0,
+        "9": 0
+      },
+      "2": {
+        "0": 0,
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 920,
+        "8": 0,
+        "9": 0
+      },
+      "3": {
+        "0": 0,
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 862,
+        "8": 0,
+        "9": 0
+      },
+      "4": {
+        "0": 0,
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 929,
+        "8": 0,
+        "9": 0
+      },
+      "5": {
+        "0": 0,
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 923,
+        "8": 0,
+        "9": 0
+      },
+      "6": {
+        "0": 0,
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 872,
+        "8": 0,
+        "9": 0
+      },
+      "7": {
+        "0": 0,
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 949,
+        "8": 0,
+        "9": 0
+      },
+      "8": {
+        "0": 0,
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 774,
+        "8": 0,
+        "9": 0
+      },
+      "9": {
+        "0": 0,
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 936,
+        "8": 0,
+        "9": 0
+      }
+    },
+    "totalSamples": 8982
+  },
+  "predictionsSample": [
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_1_result_335755_KF",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "335755",
+      "predictedClass": "7",
+      "observedTarget": "5",
+      "isHit": false
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_cons_result_335755_KA",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "335755",
+      "predictedClass": "7",
+      "observedTarget": "5",
+      "isHit": false
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_cons_result_335755_KB",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "335755",
+      "predictedClass": "7",
+      "observedTarget": "5",
+      "isHit": false
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_cons_result_335755_KC",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "335755",
+      "predictedClass": "7",
+      "observedTarget": "5",
+      "isHit": false
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_cons_result_335755_KD",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "335755",
+      "predictedClass": "7",
+      "observedTarget": "5",
+      "isHit": false
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_cons_result_335755_KE",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "335755",
+      "predictedClass": "7",
+      "observedTarget": "5",
+      "isHit": false
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_cons_result_335755_KG",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "335755",
+      "predictedClass": "7",
+      "observedTarget": "5",
+      "isHit": false
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_cons_result_335755_KH",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "335755",
+      "predictedClass": "7",
+      "observedTarget": "5",
+      "isHit": false
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_cons_result_335755_KJ",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "335755",
+      "predictedClass": "7",
+      "observedTarget": "5",
+      "isHit": false
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_cons_result_335755_KK",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "335755",
+      "predictedClass": "7",
+      "observedTarget": "5",
+      "isHit": false
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_cons_result_335755_KL",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "335755",
+      "predictedClass": "7",
+      "observedTarget": "5",
+      "isHit": false
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_cons_result_335755_KM",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "335755",
+      "predictedClass": "7",
+      "observedTarget": "5",
+      "isHit": false
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_2_result_874154_KH",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "874154",
+      "predictedClass": "7",
+      "observedTarget": "4",
+      "isHit": false
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_3_result_809651_KB",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "809651",
+      "predictedClass": "7",
+      "observedTarget": "1",
+      "isHit": false
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_4_result_0585",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "0585",
+      "predictedClass": "7",
+      "observedTarget": "5",
+      "isHit": false
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_4_result_1158",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "1158",
+      "predictedClass": "7",
+      "observedTarget": "8",
+      "isHit": false
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_4_result_1953",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "1953",
+      "predictedClass": "7",
+      "observedTarget": "3",
+      "isHit": false
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_4_result_2357",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "2357",
+      "predictedClass": "7",
+      "observedTarget": "7",
+      "isHit": true
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_4_result_2997",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "2997",
+      "predictedClass": "7",
+      "observedTarget": "7",
+      "isHit": true
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_4_result_3522",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "3522",
+      "predictedClass": "7",
+      "observedTarget": "2",
+      "isHit": false
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_4_result_3687",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "3687",
+      "predictedClass": "7",
+      "observedTarget": "7",
+      "isHit": true
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_4_result_4789",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "4789",
+      "predictedClass": "7",
+      "observedTarget": "9",
+      "isHit": false
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_4_result_5810",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "5810",
+      "predictedClass": "7",
+      "observedTarget": "0",
+      "isHit": false
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_4_result_6219",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "6219",
+      "predictedClass": "7",
+      "observedTarget": "9",
+      "isHit": false
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_4_result_6224",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "6224",
+      "predictedClass": "7",
+      "observedTarget": "4",
+      "isHit": false
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_4_result_6802",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "6802",
+      "predictedClass": "7",
+      "observedTarget": "2",
+      "isHit": false
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_4_result_6923",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "6923",
+      "predictedClass": "7",
+      "observedTarget": "3",
+      "isHit": false
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_4_result_7031",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "7031",
+      "predictedClass": "7",
+      "observedTarget": "1",
+      "isHit": false
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_4_result_7747",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "7747",
+      "predictedClass": "7",
+      "observedTarget": "7",
+      "isHit": true
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_4_result_8259",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "8259",
+      "predictedClass": "7",
+      "observedTarget": "9",
+      "isHit": false
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_4_result_8973",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "8973",
+      "predictedClass": "7",
+      "observedTarget": "3",
+      "isHit": false
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_4_result_9488",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "9488",
+      "predictedClass": "7",
+      "observedTarget": "8",
+      "isHit": false
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_4_result_9619",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "9619",
+      "predictedClass": "7",
+      "observedTarget": "9",
+      "isHit": false
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_5_result_4164",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "4164",
+      "predictedClass": "7",
+      "observedTarget": "4",
+      "isHit": false
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_5_result_4517",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "4517",
+      "predictedClass": "7",
+      "observedTarget": "7",
+      "isHit": true
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_5_result_6487",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "6487",
+      "predictedClass": "7",
+      "observedTarget": "7",
+      "isHit": true
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_5_result_9015",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "9015",
+      "predictedClass": "7",
+      "observedTarget": "5",
+      "isHit": false
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_5_result_9271",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "9271",
+      "predictedClass": "7",
+      "observedTarget": "1",
+      "isHit": false
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_5_result_9292",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "9292",
+      "predictedClass": "7",
+      "observedTarget": "2",
+      "isHit": false
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_6_result_0476",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "0476",
+      "predictedClass": "7",
+      "observedTarget": "6",
+      "isHit": false
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_6_result_0587",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "0587",
+      "predictedClass": "7",
+      "observedTarget": "7",
+      "isHit": true
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_6_result_0646",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "0646",
+      "predictedClass": "7",
+      "observedTarget": "6",
+      "isHit": false
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_6_result_0959",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "0959",
+      "predictedClass": "7",
+      "observedTarget": "9",
+      "isHit": false
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_6_result_0989",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "0989",
+      "predictedClass": "7",
+      "observedTarget": "9",
+      "isHit": false
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_6_result_1406",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "1406",
+      "predictedClass": "7",
+      "observedTarget": "6",
+      "isHit": false
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_6_result_1780",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "1780",
+      "predictedClass": "7",
+      "observedTarget": "0",
+      "isHit": false
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_6_result_2143",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "2143",
+      "predictedClass": "7",
+      "observedTarget": "3",
+      "isHit": false
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_6_result_2595",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "2595",
+      "predictedClass": "7",
+      "observedTarget": "5",
+      "isHit": false
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_6_result_2811",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "2811",
+      "predictedClass": "7",
+      "observedTarget": "1",
+      "isHit": false
+    },
+    {
+      "resultId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_tier_6_result_2940",
+      "sourceDrawId": "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb_draw_KR-770th",
+      "canonicalNumber": "2940",
+      "predictedClass": "7",
+      "observedTarget": "0",
+      "isHit": false
+    }
+  ],
+  "deterministicHash": "4d58aa40452930c3",
+  "createdAt": "2026-10-18T10:14:52.037Z",
+  "disclaimer": "NON-PREDICTIVE MODELING FOUNDATION NOTICE: This experiment evaluates reproducible mathematical baselines on historical Kerala State Lottery publications for empirical statistical study only. State lotteries operate as physically stochastic, independent trials where historical digit distributions have zero predictive validity for future drawings. Any gambling or predictive claims are strictly prohibited and scientifically unfounded.",
+  "descriptiveOnly": true
+}

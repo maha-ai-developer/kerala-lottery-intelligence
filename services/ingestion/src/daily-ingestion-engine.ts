@@ -532,6 +532,7 @@ export class DailyIngestionEngine {
           `Graph cache hydration failed cross-document validation: ${batchReport.errors.map((e) => e.message).join("; ")}`
         );
       }
+      this.cacheManager.syncCompactIndexAndWebMirror();
       return {
         success: true,
         expectedValidDocuments: validRecords.length,

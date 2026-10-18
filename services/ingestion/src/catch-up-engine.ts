@@ -67,6 +67,14 @@ export type CatchUpFinalDisposition =
   | "CONFLICTING"
   | "UNAVAILABLE";
 
+export type CatchUpCandidateStatus =
+  | "ALREADY_INGESTED_VERIFIED"
+  | "READY_TO_INGEST"
+  | "PUBLISHED_UNVERIFIED"
+  | "NOT_YET_PUBLISHED"
+  | "CONFLICTING_OR_QUARANTINED"
+  | "REJECTED_INVALID";
+
 export interface CatchUpCandidateRecord {
   drawNumber: string;
   lotteryName: string;
@@ -85,6 +93,7 @@ export interface CatchUpCandidateRecord {
   devCloudStorageStatus: "PRESENT" | "MISSING" | "UNVERIFIED" | "NOT_APPLICABLE";
   devFirestoreStatus: "PRESENT" | "MISSING" | "UNVERIFIED" | "NOT_APPLICABLE";
   classification: CatchUpCandidateClassification;
+  candidateStatus?: CatchUpCandidateStatus;
   validationStatus:
     | "VALID"
     | "INVALID"
@@ -428,6 +437,7 @@ export class OfficialResultCatchUpEngine {
             devCloudStorageStatus,
             devFirestoreStatus,
             classification: "ALREADY_INGESTED_BY_DRAW_IDENTITY",
+            candidateStatus: "ALREADY_INGESTED_VERIFIED",
             validationStatus: "VALID",
             finalDisposition: "ALREADY_PRESENT",
             actionTaken: "SKIPPED_EXISTING",
@@ -452,6 +462,7 @@ export class OfficialResultCatchUpEngine {
             devCloudStorageStatus: "UNVERIFIED",
             devFirestoreStatus: "UNVERIFIED",
             classification: "NEW_ELIGIBLE",
+            candidateStatus: "PUBLISHED_UNVERIFIED",
             validationStatus: "UNVERIFIED",
             finalDisposition: "READY_TO_INGEST",
             actionTaken: "NONE",
@@ -494,6 +505,7 @@ export class OfficialResultCatchUpEngine {
           devCloudStorageStatus: "MISSING",
           devFirestoreStatus: "MISSING",
           classification: "INVALID_SCHEME_OR_PARSE_ERROR",
+          candidateStatus: "REJECTED_INVALID",
           validationStatus: "INVALID",
           finalDisposition: "REJECTED",
           actionTaken: "REJECTED",
@@ -635,6 +647,15 @@ export class OfficialResultCatchUpEngine {
                 ? "CONFLICTING"
                 : "REJECTED";
 
+      const candidateStatus: CatchUpCandidateStatus =
+        actionTaken === "INGESTED" || classification.startsWith("ALREADY_INGESTED")
+          ? "ALREADY_INGESTED_VERIFIED"
+          : classification === "NEW_ELIGIBLE"
+            ? "READY_TO_INGEST"
+            : classification === "CONFLICT_DIFF_HASH"
+              ? "CONFLICTING_OR_QUARANTINED"
+              : "REJECTED_INVALID";
+
       // Extract top 3 prizes from cached graph if ingested, or from dryAudit prizeTierSummary
       const graphRecord = this.cacheManager.getGraph(sha256);
       const findTopPrize = (rankNum: number) => {
@@ -687,6 +708,7 @@ export class OfficialResultCatchUpEngine {
         devCloudStorageStatus,
         devFirestoreStatus,
         classification,
+        candidateStatus,
         validationStatus: finalAudit?.validationStatus || "INVALID",
         finalDisposition,
         actionTaken,
@@ -758,6 +780,7 @@ export class OfficialResultCatchUpEngine {
         devCloudStorageStatus: "NOT_APPLICABLE",
         devFirestoreStatus: "NOT_APPLICABLE",
         classification: "NOT_PUBLISHED_YET",
+        candidateStatus: "NOT_YET_PUBLISHED",
         validationStatus: "PENDING",
         finalDisposition: "UNAVAILABLE",
         actionTaken: "NONE",

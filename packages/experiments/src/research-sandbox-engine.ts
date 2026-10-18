@@ -724,8 +724,10 @@ export class ResearchSandboxEngine {
     }
 
     const totalDraws = sampleSizeDraws || 104;
+    const corpusVersionLabel =
+      totalDraws === 114 ? "v1.0-research-114draws" : `active-research-${totalDraws}draws`;
     return {
-      corpusVersion: `v1.0-research-${totalDraws}draws`,
+      corpusVersion: corpusVersionLabel,
       sampleSizeResults,
       sampleSizeDraws,
       fullTicketSampleSize,
@@ -966,6 +968,7 @@ export class ResearchSandboxEngine {
 
     // If validation failed, return error response without calculating features
     if (!validation.isValid) {
+      const fallbackDraws = new Set(this.corpusRecords?.map((r) => r.drawId) || []).size || 104;
       return {
         analysisId,
         analysisTimestamp: timestamp,
@@ -987,7 +990,8 @@ export class ResearchSandboxEngine {
           ]
         },
         provenance: {
-          corpusVersion: `v1.0-research-${new Set(this.corpusRecords?.map((r) => r.drawId) || []).size || 104}draws`,
+          corpusVersion:
+            fallbackDraws === 114 ? "v1.0-research-114draws" : `active-research-${fallbackDraws}draws`,
           featureVersion: "feat_v1",
           datasetVersion: "dataset_7c_canonical",
           experimentVersion: "exp_v1",
@@ -1059,7 +1063,10 @@ export class ResearchSandboxEngine {
         ]
       },
       provenance: {
-        corpusVersion: `v1.0-research-${historicalComparison.sampleSizeDraws}draws`,
+        corpusVersion:
+          historicalComparison.sampleSizeDraws === 114
+            ? "v1.0-research-114draws"
+            : `active-research-${historicalComparison.sampleSizeDraws}draws`,
         featureVersion: "feat_v1",
         datasetVersion: "dataset_7c_canonical",
         experimentVersion: "exp_v1",
