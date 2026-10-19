@@ -16,7 +16,9 @@
     "firebase": "^11.3.1",
     "@kerala-lottery/domain": "*",
     "@kerala-lottery/validation": "*",
-    "@kerala-lottery/statistics": "*"
+    "@kerala-lottery/statistics": "*",
+    "@kerala-lottery/data": "*",
+    "@kerala-lottery/service-ingestion": "*"
   },
   "devDependencies": {
     "@types/node": "^22.13.0",

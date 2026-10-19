@@ -1,0 +1,171 @@
+{
+  "validationId": "val_860932afd0336081",
+  "runId": "run_16ede199fdf305a6",
+  "experimentId": "EXP-002-EMPIRICAL-BASELINE",
+  "experimentVersion": "1.0.0",
+  "datasetVersion": "mdset_34da8489a9e874a6",
+  "corpusVersion": "corpus_07971b8e8aa2a79c",
+  "validationMethod": "STATISTICAL_INFERENCE_V1",
+  "validationVersion": "1.0.0",
+  "createdAt": "2026-10-02T11:12:53.843Z",
+  "confidenceIntervals": {
+    "accuracy": {
+      "wilsonScoreInterval": {
+        "lower": 0.09281657694882332,
+        "upper": 0.10604680309389207,
+        "confidenceLevel": 0.95,
+        "method": "WILSON_SCORE"
+      },
+      "bootstrapInterval": {
+        "lower": 0.09261146496815287,
+        "upper": 0.10636942675159236,
+        "confidenceLevel": 0.95,
+        "method": "BOOTSTRAP_PERCENTILE"
+      }
+    },
+    "logLoss": {
+      "normalInterval": {
+        "lower": 2.2520802165688285,
+        "upper": 2.3539727091738816,
+        "confidenceLevel": 0.95,
+        "method": "NORMAL_APPROXIMATION"
+      }
+    }
+  },
+  "effectSizes": {
+    "cohensH": -0.002552115664970933,
+    "relativeAccuracyRatio": 0.9923566878980891,
+    "absoluteAccuracyDifference": -0.0007643312101910937
+  },
+  "uncertainty": {
+    "standardError": 0.003374462935888862,
+    "sampleSize": 7850,
+    "confidenceLevel": 0.95,
+    "marginOfError": 0.006613825821507463,
+    "degreesOfFreedom": 7849
+  },
+  "nullModelComparison": {
+    "nullModelType": "DISCRETE_UNIFORM_NULL",
+    "iterations": 1000,
+    "seed": 42,
+    "mean": 0.10006394904458607,
+    "stdDev": 0.003465028713085095,
+    "min": 0.0889171974522293,
+    "max": 0.1135031847133758,
+    "quantiles": {
+      "p01": 0.09222929936305732,
+      "p05": 0.09426751592356689,
+      "p25": 0.0978343949044586,
+      "p50": 0.1,
+      "p75": 0.10229299363057325,
+      "p95": 0.10585987261146497,
+      "p99": 0.10815286624203822
+    },
+    "observedValue": 0.09923566878980891,
+    "zScore": -0.23903993974113347,
+    "empiricalPValue": 0.5944055944055944
+  },
+  "multipleTestingCorrection": {
+    "familyId": "EXP_FAMILY_CANONICAL_BASELINES",
+    "designation": "CONFIRMATORY",
+    "method": "HOLM_BONFERRONI",
+    "baseAlpha": 0.050000000000000044,
+    "adjustedAlpha": 0.050000000000000044,
+    "rawPValue": 0.5944055944055944,
+    "adjustedPValue": 1,
+    "isSignificant": false,
+    "totalHypothesesInFamily": 3,
+    "rankInFamily": 3
+  },
+  "temporalRobustness": {
+    "strategy": "EXPANDING_WINDOW_WALK_FORWARD",
+    "windowsCount": 3,
+    "windowResults": [
+      {
+        "windowIndex": 1,
+        "trainDrawCount": 61,
+        "testDrawCount": 14,
+        "trainRowCount": 23380,
+        "testRowCount": 5298,
+        "trainDateRange": {
+          "earliestIso": "2026-06-19",
+          "latestIso": "2026-08-19"
+        },
+        "testDateRange": {
+          "earliestIso": "2026-08-20",
+          "latestIso": "2026-09-03"
+        },
+        "accuracy": 0.09815024537561344,
+        "logLoss": 2.3025850929939544,
+        "zeroLeakageConfirmed": true
+      },
+      {
+        "windowIndex": 2,
+        "trainDrawCount": 75,
+        "testDrawCount": 14,
+        "trainRowCount": 28678,
+        "testRowCount": 5292,
+        "trainDateRange": {
+          "earliestIso": "2026-06-19",
+          "latestIso": "2026-09-03"
+        },
+        "testDateRange": {
+          "earliestIso": "2026-09-04",
+          "latestIso": "2026-09-17"
+        },
+        "accuracy": 0.10128495842781557,
+        "logLoss": 2.3025850929939553,
+        "zeroLeakageConfirmed": true
+      },
+      {
+        "windowIndex": 3,
+        "trainDrawCount": 89,
+        "testDrawCount": 14,
+        "trainRowCount": 33970,
+        "testRowCount": 5580,
+        "trainDateRange": {
+          "earliestIso": "2026-06-19",
+          "latestIso": "2026-09-17"
+        },
+        "testDateRange": {
+          "earliestIso": "2026-09-18",
+          "latestIso": "2026-10-01"
+        },
+        "accuracy": 0.1032258064516129,
+        "logLoss": 2.30258509299393,
+        "zeroLeakageConfirmed": true
+      }
+    ],
+    "meanAccuracy": 0.10088700341834729,
+    "stdDevAccuracy": 0.002561075204132216,
+    "minAccuracy": 0.09815024537561344,
+    "maxAccuracy": 0.1032258064516129,
+    "stabilityScore": 0.9746144189305314,
+    "zeroLeakageConfirmed": true
+  },
+  "interpretationContract": {
+    "observation": "Observed test accuracy across N=7,850 holdout results is 9.92% with cross-entropy log loss of 2.3030.",
+    "statisticalEvidence": {
+      "pValue": 0.5944055944055944,
+      "adjustedPValue": 1,
+      "confidenceInterval": [
+        0.09281657694882332,
+        0.10604680309389207
+      ],
+      "effectSize": -0.002552115664970933,
+      "effectSizeMetric": "COHENS_H",
+      "hypothesisTest": "Holm-Bonferroni adjusted discrete uniform null hypothesis test (EXP_FAMILY_CANONICAL_BASELINES)"
+    },
+    "uncertainty": {
+      "standardError": 0.003374462935888862,
+      "sampleSize": 7850,
+      "confidenceLevel": 0.95,
+      "marginOfError": 0.006613825821507463
+    },
+    "interpretation": "Observed accuracy does not statistically deviate from uniform random physical chance (p_adj = 1.0000 > 0.05). Consistent with independent physical lottery draw trials.",
+    "limitation": "Evaluated retrospectively on canonical historical gazetted publications. State lottery draws are independent physical random processes; historical digit frequencies possess zero predictive validity for future drawings."
+  },
+  "deterministicHash": "1a092ebb9bde113d",
+  "nonPredictiveNotice": "SCIENTIFIC RESEARCH INTEGRITY NOTICE: This validation evaluates retrospective statistical robustness, confidence intervals, null-hypothesis significance tests, and multiple-comparison controls strictly for scientific integrity. Physical Kerala State Lottery draws are independent stochastic trials. Past digit distributions possess zero predictive power for future draws. All predictive, gambling, or betting claims are scientifically unfounded.",
+  "descriptiveOnly": true
+}

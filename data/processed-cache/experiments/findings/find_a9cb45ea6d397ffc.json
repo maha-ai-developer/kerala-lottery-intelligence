@@ -1,0 +1,56 @@
+{
+  "findingId": "find_a9cb45ea6d397ffc",
+  "findingVersion": "1.0.0",
+  "statement": "Uniform Random Categorical Baseline (EXP-001-UNIFORM-BASELINE) achieved 10.21% holdout accuracy against discrete uniform null mean of 10.01% (Holm-Bonferroni adjusted p = 0.7612, Z = 0.65, isSignificant = false).",
+  "claimType": "STATISTICAL_RESULT",
+  "corpusVersion": "corpus_055e805237802b5e",
+  "datasetVersion": "mdset_eca289076fe0c947",
+  "experimentId": "EXP-001-UNIFORM-BASELINE",
+  "experimentVersion": "1.0.0",
+  "runId": "run_6d921406721cfbce",
+  "validationId": "val_f67770385a310c2f",
+  "methodology": "EXPANDING_WINDOW_HOLM_BONFERRONI_V1",
+  "methodologyVersion": "1.0.0",
+  "parameters": {
+    "confidenceLevel": 0.95,
+    "familyId": "EXP_FAMILY_CANONICAL_BASELINES",
+    "totalHypothesesInFamily": 3,
+    "nullModelType": "DISCRETE_UNIFORM_NULL",
+    "nullModelIterations": 1000,
+    "seed": 42,
+    "walkForwardWindows": 3
+  },
+  "evidence": {
+    "observedAccuracy": 0.10209307503896682,
+    "nullDistributionMean": 0.10005065686929415,
+    "nullDistributionStdDev": 0.0031448903394931766,
+    "zScore": 0.6494401868402891,
+    "rawPValue": 0.25374625374625376,
+    "adjustedPValue": 0.7612387612387612,
+    "isSignificant": false,
+    "cohensH": 0.006944819076348141,
+    "relativeAccuracyRatio": 1.020930750389668,
+    "walkForwardStabilityScore": 0.9816225646201412,
+    "holdoutDrawCount": 23,
+    "holdoutRowCount": 8982
+  },
+  "uncertainty": {
+    "standardError": 0.003194679372563377,
+    "sampleSize": 8982,
+    "confidenceLevel": 0.95,
+    "marginOfError": 0.0062614565123772364,
+    "degreesOfFreedom": 8981,
+    "wilsonScore95CI": [
+      0.09600075207530356,
+      0.10852560945054215
+    ],
+    "bootstrap95CI": [
+      0.09652638610554443,
+      0.10910710309507905
+    ]
+  },
+  "interpretation": "Observed accuracy does not statistically deviate from uniform random physical chance (p_adj = 0.7612 > 0.05). Consistent with independent physical lottery draw trials.",
+  "limitation": "Evaluated retrospectively on canonical historical gazetted publications. State lottery draws are independent physical random processes; historical digit frequencies possess zero predictive validity for future drawings.",
+  "createdAt": "2026-10-18T10:15:48.634Z",
+  "deterministicHash": "8d621729f8e6e14cf8bb686ff6d560137870667f27ce332ade8cd0ee8fd51542"
+}

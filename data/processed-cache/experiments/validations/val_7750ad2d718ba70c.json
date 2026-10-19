@@ -1,0 +1,171 @@
+{
+  "validationId": "val_7750ad2d718ba70c",
+  "runId": "run_77f6d583bda1e245",
+  "experimentId": "EXP-002-EMPIRICAL-BASELINE",
+  "experimentVersion": "1.0.0",
+  "datasetVersion": "mdset_e51f5aa9258cae41",
+  "corpusVersion": "corpus_981356dd505db164",
+  "validationMethod": "STATISTICAL_INFERENCE_V1",
+  "validationVersion": "1.0.0",
+  "createdAt": "2026-10-14T04:10:13.772Z",
+  "confidenceIntervals": {
+    "accuracy": {
+      "wilsonScoreInterval": {
+        "lower": 0.09883033488982407,
+        "upper": 0.11179145459549719,
+        "confidenceLevel": 0.95,
+        "method": "WILSON_SCORE"
+      },
+      "bootstrapInterval": {
+        "lower": 0.09851301115241635,
+        "upper": 0.11210501858736059,
+        "confidenceLevel": 0.95,
+        "method": "BOOTSTRAP_PERCENTILE"
+      }
+    },
+    "logLoss": {
+      "normalInterval": {
+        "lower": 2.254264421135802,
+        "upper": 2.3515625710642594,
+        "confidenceLevel": 0.95,
+        "method": "NORMAL_APPROXIMATION"
+      }
+    }
+  },
+  "effectSizes": {
+    "cohensH": 0.016925687962324965,
+    "relativeAccuracyRatio": 1.0513475836431225,
+    "absoluteAccuracyDifference": 0.005134758364312264
+  },
+  "uncertainty": {
+    "standardError": 0.003305984789153464,
+    "sampleSize": 8608,
+    "confidenceLevel": 0.95,
+    "marginOfError": 0.006479611120178034,
+    "degreesOfFreedom": 8607
+  },
+  "nullModelComparison": {
+    "nullModelType": "DISCRETE_UNIFORM_NULL",
+    "iterations": 1000,
+    "seed": 42,
+    "mean": 0.10003334107806681,
+    "stdDev": 0.0032813388992357392,
+    "min": 0.08782527881040893,
+    "max": 0.1112918215613383,
+    "quantiles": {
+      "p01": 0.09212360594795539,
+      "p05": 0.09467936802973978,
+      "p25": 0.09781598513011153,
+      "p50": 0.10013940520446096,
+      "p75": 0.10211431226765799,
+      "p95": 0.10571561338289963,
+      "p99": 0.1079228624535316
+    },
+    "observedValue": 0.10513475836431227,
+    "zScore": 1.5546755281612736,
+    "empiricalPValue": 0.06593406593406594
+  },
+  "multipleTestingCorrection": {
+    "familyId": "EXP_FAMILY_CANONICAL_BASELINES",
+    "designation": "CONFIRMATORY",
+    "method": "HOLM_BONFERRONI",
+    "baseAlpha": 0.050000000000000044,
+    "adjustedAlpha": 0.01666666666666668,
+    "rawPValue": 0.06593406593406594,
+    "adjustedPValue": 0.19780219780219782,
+    "isSignificant": false,
+    "totalHypothesesInFamily": 3,
+    "rankInFamily": 1
+  },
+  "temporalRobustness": {
+    "strategy": "EXPANDING_WINDOW_WALK_FORWARD",
+    "windowsCount": 3,
+    "windowResults": [
+      {
+        "windowIndex": 1,
+        "trainDrawCount": 68,
+        "testDrawCount": 15,
+        "trainRowCount": 26032,
+        "testRowCount": 5668,
+        "trainDateRange": {
+          "earliestIso": "2026-06-19",
+          "latestIso": "2026-08-27"
+        },
+        "testDateRange": {
+          "earliestIso": "2026-08-28",
+          "latestIso": "2026-09-11"
+        },
+        "accuracy": 0.10391672547635851,
+        "logLoss": 2.302585092993923,
+        "zeroLeakageConfirmed": true
+      },
+      {
+        "windowIndex": 2,
+        "trainDrawCount": 83,
+        "testDrawCount": 15,
+        "trainRowCount": 31700,
+        "testRowCount": 5956,
+        "trainDateRange": {
+          "earliestIso": "2026-06-19",
+          "latestIso": "2026-09-11"
+        },
+        "testDateRange": {
+          "earliestIso": "2026-09-12",
+          "latestIso": "2026-09-26"
+        },
+        "accuracy": 0.10241773002014776,
+        "logLoss": 2.3025850929939007,
+        "zeroLeakageConfirmed": true
+      },
+      {
+        "windowIndex": 3,
+        "trainDrawCount": 98,
+        "testDrawCount": 16,
+        "trainRowCount": 37656,
+        "testRowCount": 6056,
+        "trainDateRange": {
+          "earliestIso": "2026-06-19",
+          "latestIso": "2026-09-26"
+        },
+        "testDateRange": {
+          "earliestIso": "2026-09-27",
+          "latestIso": "2026-10-13"
+        },
+        "accuracy": 0.101221928665786,
+        "logLoss": 2.3025850929938936,
+        "zeroLeakageConfirmed": true
+      }
+    ],
+    "meanAccuracy": 0.10251879472076408,
+    "stdDevAccuracy": 0.001350238133756763,
+    "minAccuracy": 0.101221928665786,
+    "maxAccuracy": 0.10391672547635851,
+    "stabilityScore": 0.9868293600462775,
+    "zeroLeakageConfirmed": true
+  },
+  "interpretationContract": {
+    "observation": "Observed test accuracy across N=8,608 holdout results is 10.51% with cross-entropy log loss of 2.3029.",
+    "statisticalEvidence": {
+      "pValue": 0.06593406593406594,
+      "adjustedPValue": 0.19780219780219782,
+      "confidenceInterval": [
+        0.09883033488982407,
+        0.11179145459549719
+      ],
+      "effectSize": 0.016925687962324965,
+      "effectSizeMetric": "COHENS_H",
+      "hypothesisTest": "Holm-Bonferroni adjusted discrete uniform null hypothesis test (EXP_FAMILY_CANONICAL_BASELINES)"
+    },
+    "uncertainty": {
+      "standardError": 0.003305984789153464,
+      "sampleSize": 8608,
+      "confidenceLevel": 0.95,
+      "marginOfError": 0.006479611120178034
+    },
+    "interpretation": "Observed accuracy does not statistically deviate from uniform random physical chance (p_adj = 0.1978 > 0.05). Consistent with independent physical lottery draw trials.",
+    "limitation": "Evaluated retrospectively on canonical historical gazetted publications. State lottery draws are independent physical random processes; historical digit frequencies possess zero predictive validity for future drawings."
+  },
+  "deterministicHash": "22fd7dde83ee5b16",
+  "nonPredictiveNotice": "SCIENTIFIC RESEARCH INTEGRITY NOTICE: This validation evaluates retrospective statistical robustness, confidence intervals, null-hypothesis significance tests, and multiple-comparison controls strictly for scientific integrity. Physical Kerala State Lottery draws are independent stochastic trials. Past digit distributions possess zero predictive power for future draws. All predictive, gambling, or betting claims are scientifically unfounded.",
+  "descriptiveOnly": true
+}

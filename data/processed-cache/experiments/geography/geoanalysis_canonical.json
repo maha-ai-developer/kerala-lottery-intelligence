@@ -1,0 +1,396 @@
+{
+  "analysisId": "geoanalysis_bd5d4f36983c6d86",
+  "exposureStatus": "UNAVAILABLE",
+  "hypothesisStatement": "EXPOSURE_UNAVAILABLE: Authoritative ticket exposure denominator is not available in public gazettes. Exposure-adjusted geographic null cannot be evaluated.",
+  "totalObservedMajorWinners": 380,
+  "districtSummaries": [
+    {
+      "district": "Thiruvananthapuram",
+      "explicitPdfObservations": 21,
+      "derivedObservations": 12,
+      "totalObservedWinners": 33,
+      "byPrizeTier": {
+        "firstPrize": 9,
+        "consolation": 0,
+        "secondPrize": 16,
+        "thirdPrize": 6,
+        "fourthPrize": 1,
+        "fifthPrize": 1,
+        "sixthThroughNinth": 0
+      },
+      "byLottery": {
+        "KARUNYA PLUS": 3,
+        "THIRUVONAM BUMPER LOTTERY": 7,
+        "SUVARNA KERALAM": 5,
+        "STHREE-SAKTHI": 2,
+        "KARUNYA": 4,
+        "DHANALEKSHMI": 4,
+        "BHAGYATHARA": 3,
+        "SAMRUDHI": 4,
+        "MONSOON BUMPER": 1
+      },
+      "earliestDrawDate": "2026-06-23",
+      "latestDrawDate": "2026-10-01"
+    },
+    {
+      "district": "Kollam",
+      "explicitPdfObservations": 15,
+      "derivedObservations": 13,
+      "totalObservedWinners": 28,
+      "byPrizeTier": {
+        "firstPrize": 9,
+        "consolation": 0,
+        "secondPrize": 11,
+        "thirdPrize": 6,
+        "fourthPrize": 2,
+        "fifthPrize": 0,
+        "sixthThroughNinth": 0
+      },
+      "byLottery": {
+        "DHANALEKSHMI": 4,
+        "BHAGYATHARA": 3,
+        "THIRUVONAM BUMPER LOTTERY": 2,
+        "KARUNYA PLUS": 3,
+        "STHREE-SAKTHI": 5,
+        "KARUNYA": 3,
+        "SUVARNA KERALAM": 6,
+        "MONSOON BUMPER": 2
+      },
+      "earliestDrawDate": "2026-06-20",
+      "latestDrawDate": "2026-09-30"
+    },
+    {
+      "district": "Pathanamthitta",
+      "explicitPdfObservations": 6,
+      "derivedObservations": 7,
+      "totalObservedWinners": 13,
+      "byPrizeTier": {
+        "firstPrize": 3,
+        "consolation": 0,
+        "secondPrize": 4,
+        "thirdPrize": 5,
+        "fourthPrize": 1,
+        "fifthPrize": 0,
+        "sixthThroughNinth": 0
+      },
+      "byLottery": {
+        "SUVARNA KERALAM": 2,
+        "DHANALEKSHMI": 5,
+        "STHREE-SAKTHI": 1,
+        "MONSOON BUMPER": 1,
+        "SAMRUDHI": 1,
+        "BHAGYATHARA": 1,
+        "KARUNYA PLUS": 1,
+        "KARUNYA": 1
+      },
+      "earliestDrawDate": "2026-06-20",
+      "latestDrawDate": "2026-09-11"
+    },
+    {
+      "district": "Alappuzha",
+      "explicitPdfObservations": 15,
+      "derivedObservations": 16,
+      "totalObservedWinners": 31,
+      "byPrizeTier": {
+        "firstPrize": 5,
+        "consolation": 0,
+        "secondPrize": 16,
+        "thirdPrize": 10,
+        "fourthPrize": 0,
+        "fifthPrize": 0,
+        "sixthThroughNinth": 0
+      },
+      "byLottery": {
+        "DHANALEKSHMI": 4,
+        "STHREE-SAKTHI": 5,
+        "BHAGYATHARA": 4,
+        "THIRUVONAM BUMPER LOTTERY": 6,
+        "SUVARNA KERALAM": 2,
+        "KARUNYA PLUS": 3,
+        "KARUNYA": 3,
+        "SAMRUDHI": 3,
+        "MONSOON BUMPER": 1
+      },
+      "earliestDrawDate": "2026-06-20",
+      "latestDrawDate": "2026-09-30"
+    },
+    {
+      "district": "Kottayam",
+      "explicitPdfObservations": 18,
+      "derivedObservations": 11,
+      "totalObservedWinners": 29,
+      "byPrizeTier": {
+        "firstPrize": 8,
+        "consolation": 0,
+        "secondPrize": 8,
+        "thirdPrize": 12,
+        "fourthPrize": 0,
+        "fifthPrize": 1,
+        "sixthThroughNinth": 0
+      },
+      "byLottery": {
+        "STHREE-SAKTHI": 8,
+        "THIRUVONAM BUMPER LOTTERY": 4,
+        "SAMRUDHI": 6,
+        "DHANALEKSHMI": 3,
+        "BHAGYATHARA": 2,
+        "SUVARNA KERALAM": 4,
+        "KARUNYA": 1,
+        "MONSOON BUMPER": 1
+      },
+      "earliestDrawDate": "2026-06-30",
+      "latestDrawDate": "2026-09-29"
+    },
+    {
+      "district": "Idukki",
+      "explicitPdfObservations": 11,
+      "derivedObservations": 11,
+      "totalObservedWinners": 22,
+      "byPrizeTier": {
+        "firstPrize": 3,
+        "consolation": 0,
+        "secondPrize": 10,
+        "thirdPrize": 9,
+        "fourthPrize": 0,
+        "fifthPrize": 0,
+        "sixthThroughNinth": 0
+      },
+      "byLottery": {
+        "KARUNYA PLUS": 4,
+        "THIRUVONAM BUMPER LOTTERY": 1,
+        "DHANALEKSHMI": 2,
+        "STHREE-SAKTHI": 1,
+        "KARUNYA": 1,
+        "BHAGYATHARA": 5,
+        "SUVARNA KERALAM": 5,
+        "SAMRUDHI": 1,
+        "MONSOON BUMPER": 2
+      },
+      "earliestDrawDate": "2026-06-22",
+      "latestDrawDate": "2026-10-01"
+    },
+    {
+      "district": "Ernakulam",
+      "explicitPdfObservations": 25,
+      "derivedObservations": 10,
+      "totalObservedWinners": 35,
+      "byPrizeTier": {
+        "firstPrize": 12,
+        "consolation": 0,
+        "secondPrize": 6,
+        "thirdPrize": 12,
+        "fourthPrize": 4,
+        "fifthPrize": 1,
+        "sixthThroughNinth": 0
+      },
+      "byLottery": {
+        "SAMRUDHI": 4,
+        "THIRUVONAM BUMPER LOTTERY": 8,
+        "SUVARNA KERALAM": 4,
+        "KARUNYA PLUS": 3,
+        "DHANALEKSHMI": 6,
+        "STHREE-SAKTHI": 4,
+        "BHAGYATHARA": 2,
+        "KARUNYA": 3,
+        "MONSOON BUMPER": 1
+      },
+      "earliestDrawDate": "2026-06-24",
+      "latestDrawDate": "2026-09-27"
+    },
+    {
+      "district": "Thrissur",
+      "explicitPdfObservations": 20,
+      "derivedObservations": 22,
+      "totalObservedWinners": 42,
+      "byPrizeTier": {
+        "firstPrize": 17,
+        "consolation": 0,
+        "secondPrize": 10,
+        "thirdPrize": 11,
+        "fourthPrize": 3,
+        "fifthPrize": 1,
+        "sixthThroughNinth": 0
+      },
+      "byLottery": {
+        "THIRUVONAM BUMPER LOTTERY": 6,
+        "DHANALEKSHMI": 4,
+        "BHAGYATHARA": 4,
+        "SAMRUDHI": 5,
+        "KARUNYA": 7,
+        "KARUNYA PLUS": 7,
+        "STHREE-SAKTHI": 4,
+        "SUVARNA KERALAM": 3,
+        "MONSOON BUMPER": 2
+      },
+      "earliestDrawDate": "2026-06-19",
+      "latestDrawDate": "2026-09-26"
+    },
+    {
+      "district": "Palakkad",
+      "explicitPdfObservations": 30,
+      "derivedObservations": 31,
+      "totalObservedWinners": 61,
+      "byPrizeTier": {
+        "firstPrize": 15,
+        "consolation": 0,
+        "secondPrize": 16,
+        "thirdPrize": 26,
+        "fourthPrize": 2,
+        "fifthPrize": 2,
+        "sixthThroughNinth": 0
+      },
+      "byLottery": {
+        "SAMRUDHI": 9,
+        "THIRUVONAM BUMPER LOTTERY": 14,
+        "KARUNYA": 6,
+        "KARUNYA PLUS": 7,
+        "BHAGYATHARA": 10,
+        "SUVARNA KERALAM": 5,
+        "STHREE-SAKTHI": 3,
+        "DHANALEKSHMI": 3,
+        "MONSOON BUMPER": 4
+      },
+      "earliestDrawDate": "2026-06-19",
+      "latestDrawDate": "2026-09-27"
+    },
+    {
+      "district": "Malappuram",
+      "explicitPdfObservations": 14,
+      "derivedObservations": 5,
+      "totalObservedWinners": 19,
+      "byPrizeTier": {
+        "firstPrize": 5,
+        "consolation": 0,
+        "secondPrize": 8,
+        "thirdPrize": 5,
+        "fourthPrize": 0,
+        "fifthPrize": 1,
+        "sixthThroughNinth": 0
+      },
+      "byLottery": {
+        "THIRUVONAM BUMPER LOTTERY": 2,
+        "SUVARNA KERALAM": 2,
+        "STHREE-SAKTHI": 3,
+        "BHAGYATHARA": 3,
+        "KARUNYA PLUS": 3,
+        "SAMRUDHI": 4,
+        "DHANALEKSHMI": 1,
+        "KARUNYA": 1
+      },
+      "earliestDrawDate": "2026-07-05",
+      "latestDrawDate": "2026-09-26"
+    },
+    {
+      "district": "Kozhikode",
+      "explicitPdfObservations": 0,
+      "derivedObservations": 21,
+      "totalObservedWinners": 21,
+      "byPrizeTier": {
+        "firstPrize": 3,
+        "consolation": 0,
+        "secondPrize": 6,
+        "thirdPrize": 10,
+        "fourthPrize": 1,
+        "fifthPrize": 1,
+        "sixthThroughNinth": 0
+      },
+      "byLottery": {
+        "STHREE-SAKTHI": 4,
+        "THIRUVONAM BUMPER LOTTERY": 5,
+        "BHAGYATHARA": 4,
+        "SAMRUDHI": 2,
+        "KARUNYA PLUS": 2,
+        "DHANALEKSHMI": 1,
+        "KARUNYA": 2,
+        "SUVARNA KERALAM": 1
+      },
+      "earliestDrawDate": "2026-06-28",
+      "latestDrawDate": "2026-09-29"
+    },
+    {
+      "district": "Wayanad",
+      "explicitPdfObservations": 0,
+      "derivedObservations": 7,
+      "totalObservedWinners": 7,
+      "byPrizeTier": {
+        "firstPrize": 2,
+        "consolation": 0,
+        "secondPrize": 3,
+        "thirdPrize": 2,
+        "fourthPrize": 0,
+        "fifthPrize": 0,
+        "sixthThroughNinth": 0
+      },
+      "byLottery": {
+        "KARUNYA PLUS": 1,
+        "KARUNYA": 2,
+        "SUVARNA KERALAM": 1,
+        "STHREE-SAKTHI": 2,
+        "MONSOON BUMPER": 1
+      },
+      "earliestDrawDate": "2026-07-14",
+      "latestDrawDate": "2026-09-24"
+    },
+    {
+      "district": "Kannur",
+      "explicitPdfObservations": 14,
+      "derivedObservations": 13,
+      "totalObservedWinners": 27,
+      "byPrizeTier": {
+        "firstPrize": 9,
+        "consolation": 0,
+        "secondPrize": 8,
+        "thirdPrize": 8,
+        "fourthPrize": 1,
+        "fifthPrize": 1,
+        "sixthThroughNinth": 0
+      },
+      "byLottery": {
+        "KARUNYA PLUS": 5,
+        "SAMRUDHI": 6,
+        "THIRUVONAM BUMPER LOTTERY": 5,
+        "DHANALEKSHMI": 1,
+        "KARUNYA": 2,
+        "SUVARNA KERALAM": 3,
+        "STHREE-SAKTHI": 3,
+        "BHAGYATHARA": 2
+      },
+      "earliestDrawDate": "2026-06-21",
+      "latestDrawDate": "2026-10-01"
+    },
+    {
+      "district": "Kasaragod",
+      "explicitPdfObservations": 7,
+      "derivedObservations": 5,
+      "totalObservedWinners": 12,
+      "byPrizeTier": {
+        "firstPrize": 3,
+        "consolation": 0,
+        "secondPrize": 4,
+        "thirdPrize": 4,
+        "fourthPrize": 0,
+        "fifthPrize": 1,
+        "sixthThroughNinth": 0
+      },
+      "byLottery": {
+        "DHANALEKSHMI": 4,
+        "BHAGYATHARA": 2,
+        "THIRUVONAM BUMPER LOTTERY": 1,
+        "KARUNYA PLUS": 3,
+        "SUVARNA KERALAM": 2
+      },
+      "earliestDrawDate": "2026-07-02",
+      "latestDrawDate": "2026-09-30"
+    }
+  ],
+  "limitations": [
+    "The 103-PDF corpus provides a descriptive historical distribution of published winner geography, but does not provide the denominator required to estimate exposure-adjusted district winning probability.",
+    "Official Kerala Government Gazette result publications publish only the winning ticket numbers and issuing office locations for top-tier prizes.",
+    "District-level ticket sales volume and returned unsold ticket counterfoils are NOT published in the public gazette result sheets.",
+    "In the absence of authoritative ticket exposure denominators, raw winner counts represent retrospective descriptive observations and CANNOT be used to calculate district winning probabilities.",
+    "No inferences regarding lottery physical machinery randomness or district luck can be drawn from raw winner frequencies without exposure normalization."
+  ],
+  "nonPredictiveNotice": "NON-PREDICTIVE GEOGRAPHIC RESEARCH NOTICE: This geographic analysis records retrospective issuing office locations published in official Kerala State Lottery gazettes. Lottery drawings operate as physically independent stochastic trials. Past location frequencies possess strictly zero predictive power for future drawings. All gambling recommendations, lucky district labels, and betting scores are scientifically unfounded and strictly prohibited.",
+  "createdAt": "2026-10-02T12:00:00.000Z",
+  "deterministicHash": "bd5d4f36983c6d8653ba0f47722b371219ead81429764a89b9acd7de3c8d9525"
+}

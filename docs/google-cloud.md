@@ -10,7 +10,7 @@ The platform leverages Google Cloud Platform services provisioned under project:
 ## 1. Google Cloud Storage (PDF & Source Evidence)
 
 ### Buckets
-- Development: `kerala-lottery-intelligence-documents-dev`
+- Development: `kerala-lottery-intel-dev-documents` (or `kerala-lottery-intel-dev.firebasestorage.app`)
 - Production: `kerala-lottery-intelligence.firebasestorage.app` (or dedicated GCS bucket `kerala-lottery-intelligence-source-documents`)
 
 ### Folder Hierarchy

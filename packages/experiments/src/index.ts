@@ -1,14 +1,15 @@
 /**
  * Kerala State Lottery Intelligence & Experiment Platform
- * Experiment Engine & Walk-Forward Backtesting Framework
+ * Milestone 9B: Continuous Research & Experimentation Engine
  * 
  * CORE PRINCIPLE:
  * Strict scientific temporal validity.
  * Zero future leakage across predictionCutoff.
  * Every predictive experiment must compare against a random baseline.
+ * Purely descriptive and retrospective empirical analysis.
  */
 
-
+// Legacy types & utilities
 export type StrategyName =
   | "uniformRandom"
   | "frequency"
@@ -94,3 +95,40 @@ export function generateUniformRandomCandidate(
   const val = Math.floor(rng() * max);
   return val.toString().padStart(digitLength, "0");
 }
+
+// 9B Continuous Research Exports
+export * from "./types";
+export * from "./registry";
+export * from "./runner";
+export * from "./repository";
+export * from "./orchestrator";
+
+// 9C Scientific Validation Exports
+export * from "./validation-types";
+export * from "./inference";
+export * from "./null-models";
+export * from "./multiple-testing";
+export * from "./walk-forward";
+export * from "./validation-engine";
+
+// 9D Research Provenance & Publication Evidence Exports
+export * from "./findings-types";
+export * from "./findings-engine";
+export * from "./report-generator";
+
+// 10A Winning Geography, Ticket Distribution & Geographic Provenance Exports
+export * from "./geographic-types";
+export * from "./district-normalization";
+export * from "./geographic-extraction-engine";
+export * from "./geographic-analysis-engine";
+export * from "./geographic-repository";
+
+// V1.0 Research Platform: Research Sandbox Exports
+export * from "./research-sandbox-types";
+export * from "./research-sandbox-engine";
+
+// V1.0 Research Platform: Multi-Candidate Comparison & Backtesting Lab Exports
+export * from "./candidate-lab-types";
+export * from "./candidate-lab-engine";
+
+

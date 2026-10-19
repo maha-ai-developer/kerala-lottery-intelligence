@@ -39,8 +39,8 @@ The Kerala State Lottery Intelligence & Experiment Platform follows a strict lay
                 (develop branch)       (main branch)
                        │                     │
                        ▼                     ▼
-             [ App Hosting DEV ]    [ App Hosting PROD ]
-            kerala-lottery-...-dev  kerala-lottery-...-prod
+              [ App Hosting DEV ]    [ App Hosting PROD ]
+             kerala-lottery-intel-dev  kerala-lottery-intelligence
                        │                     │
                        └──────────┬──────────┘
                                   ▼
@@ -66,27 +66,30 @@ The Kerala State Lottery Intelligence & Experiment Platform follows a strict lay
 
 Development and production environments must be completely isolated to ensure development experiments never connect to production Firestore or affect production user data.
 
+Web API keys identify the Firebase project, while Firestore/Storage authorization is enforced by Security Rules and privileged server access is controlled by IAM/service credentials.
+
 | Environment | Git Branch | Target Firebase Project | Intended Usage |
 | :--- | :--- | :--- | :--- |
-| **Development** | `develop` | `kerala-lottery-intelligence-dev` | Feature development, sandbox experiments, fictional test phones, CI testing |
-| **Production** | `main` | `kerala-lottery-intelligence-prod` | Live production service, verified datasets, real carrier SMS auth |
-| *Current Local* | `main` | `kerala-lottery-intelligence` | Initial bootstrap and verification environment |
+| **Development** | `develop` | `kerala-lottery-intel-dev` | Feature development, sandbox experiments, fictional test phones, CI testing |
+| **Production** | `main` | `kerala-lottery-intelligence` | Live production service, verified datasets, real carrier SMS auth |
 
 ---
 
 ## 3. Firebase Projects Required
 
-To fulfill the two-project isolation model, the following projects must be configured in the Google Cloud / Firebase Console:
+To fulfill the two-project isolation model, the following projects are configured in the Google Cloud / Firebase Console:
 
-1. **`kerala-lottery-intelligence-dev`** (Development)
+1. **`kerala-lottery-intel-dev`** (Development)
+   - Project Number: `608186999779`
    - Firestore Mode: Native Mode, location `asia-south1` (Mumbai).
    - Blaze plan required for App Hosting.
-2. **`kerala-lottery-intelligence-prod`** (Production)
+2. **`kerala-lottery-intelligence`** (Production)
+   - Project Number: `660682986882`
    - Firestore Mode: Native Mode, location `asia-south1` (Mumbai).
    - Blaze plan required for App Hosting.
 
 > [!NOTE]
-> The current codebase defaults to `kerala-lottery-intelligence` for local testing and compatibility. Do not delete or rename this project. Create the `-dev` and `-prod` instances when ready to provision isolated cloud environments.
+> The DEV project is `kerala-lottery-intel-dev` (targeting the `develop` branch) and the official PROD project is `kerala-lottery-intelligence` (targeting the `main` branch). Bare CLI operations default safely to `kerala-lottery-intel-dev`.
 
 ---
 
@@ -134,10 +137,10 @@ It enforces role-based access control with four roles:
 ### Manual Command to Deploy Rules:
 ```bash
 # Deploy rules to development
-npx -y firebase-tools@latest deploy --only firestore:rules --project kerala-lottery-intelligence-dev
+npx -y firebase-tools@latest deploy --only firestore:rules --project kerala-lottery-intel-dev
 
 # Deploy rules to production
-npx -y firebase-tools@latest deploy --only firestore:rules --project kerala-lottery-intelligence-prod
+npx -y firebase-tools@latest deploy --only firestore:rules --project kerala-lottery-intelligence
 ```
 
 ---
@@ -163,7 +166,7 @@ This command:
 Firebase App Hosting automatically deploys the Next.js application from GitHub commits.
 
 ### Manual Setup Steps in Firebase Console:
-1. In Firebase Console, select your target project (`kerala-lottery-intelligence-prod` or `-dev`).
+1. In Firebase Console, select your target project (`kerala-lottery-intelligence` for PROD or `kerala-lottery-intel-dev` for DEV).
 2. In the left navigation, open **Hosting & Serverless** > **App Hosting**.
 3. Click **Get Started** / **Create Backend**.
 4. Connect your GitHub account and select repository:
@@ -200,13 +203,13 @@ Firebase App Hosting automatically deploys the Next.js application from GitHub c
 | :--- | :--- | :--- | :--- | :--- |
 | `NEXT_PUBLIC_APP_ENV` | Browser & Server | `BUILD`, `RUNTIME` | `production` / `development` | Deployment environment identifier |
 | `NEXT_PUBLIC_APP_VERSION` | Browser & Server | `BUILD`, `RUNTIME` | `0.1.0` | Application release version |
-| `NEXT_PUBLIC_GIT_COMMIT_SHA` | Browser & Server | `BUILD`, `RUNTIME` | `051cced` | Deployed git commit hash |
-| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | Browser & Server | `BUILD`, `RUNTIME` | `kerala-lottery-intelligence` | Firebase project identifier |
-| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`| Browser & Server | `BUILD`, `RUNTIME` | `kerala-lottery-intelligence.firebaseapp.com` | Auth redirect domain |
-| `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`| Browser & Server | `BUILD`, `RUNTIME`| `kerala-lottery-intelligence.firebasestorage.app` | Cloud Storage bucket |
+| `NEXT_PUBLIC_GIT_COMMIT_SHA` | Browser & Server | `BUILD`, `RUNTIME` | *(Environment / CI build SHA)* | Deployed git commit hash |
+| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | Browser & Server | `BUILD`, `RUNTIME` | `kerala-lottery-intel-dev` / `kerala-lottery-intelligence` | Firebase project identifier |
+| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`| Browser & Server | `BUILD`, `RUNTIME` | `<project-id>.firebaseapp.com` | Auth redirect domain |
+| `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`| Browser & Server | `BUILD`, `RUNTIME`| `<project-id>.firebasestorage.app` | Cloud Storage bucket |
 | `NEXT_PUBLIC_FIREBASE_API_KEY` | Browser & Server | `BUILD`, `RUNTIME` | *(Project Web API Key)* | Public Firebase Client SDK key |
-| `NEXT_PUBLIC_FIREBASE_APP_ID` | Browser & Server | `BUILD`, `RUNTIME` | `1:660682986882:web:...` | Firebase Web App ID |
-| `GCP_PROJECT_ID` | Server only | `RUNTIME` | `kerala-lottery-intelligence` | Cloud project for backend SDKs |
+| `NEXT_PUBLIC_FIREBASE_APP_ID` | Browser & Server | `BUILD`, `RUNTIME` | `1:<project-number>:web:...` | Firebase Web App ID |
+| `GCP_PROJECT_ID` | Server only | `RUNTIME` | `kerala-lottery-intel-dev` / `kerala-lottery-intelligence` | Cloud project for backend SDKs |
 | `GCS_BUCKET_DOCUMENTS` | Server only | `RUNTIME` | `...-documents` | Raw document storage bucket |
 | `GEMINI_API_KEY` | Secret Manager | Server Secret | `secret:gemini-api-key` | AI Gateway API Key |
 
@@ -255,8 +258,8 @@ npm run build --workspace=apps/web
 ## 13. GitHub Workflow & Branch Mapping
 
 The repository uses Git with two principal branches:
-- `main`: Production-ready code deployed to `kerala-lottery-intelligence-prod`.
-- `develop`: Integration branch deployed to `kerala-lottery-intelligence-dev`.
+- `main`: Production-ready code deployed to `kerala-lottery-intelligence`.
+- `develop`: Integration branch deployed to `kerala-lottery-intel-dev`.
 
 ### Safe Manual Git Push Commands:
 Push branches using Git's credential helper or interactive authentication (never pass raw PATs in shell history):
@@ -277,9 +280,9 @@ Once GitHub is connected to App Hosting:
 1. Feature work is completed on a feature branch.
 2. Pull request merged into `develop`.
 3. Firebase App Hosting detects commit on `develop` and automatically triggers buildpack build for `apps/web`.
-4. Artifact deployed to Cloud Run in `kerala-lottery-intelligence-dev`.
+4. Artifact deployed to Cloud Run in `kerala-lottery-intel-dev`.
 5. When verified, `develop` is merged into `main`.
-6. App Hosting builds and rolls out production release in `kerala-lottery-intelligence-prod`.
+6. App Hosting builds and rolls out production release in `kerala-lottery-intelligence`.
 
 ---
 

@@ -1,0 +1,78 @@
+{
+  "runId": "run_5752bf00b3ed5294",
+  "experimentId": "EXP-003-MAJORITY-BASELINE",
+  "experimentVersion": "1.0.0",
+  "corpusVersion": "corpus_07971b8e8aa2a79c",
+  "datasetVersion": "mdset_34da8489a9e874a6",
+  "featureVersion": "fmat_92060a6d3cd6caa2",
+  "modelVersion": "mdef_baseline_majority_e7c57581352349b9",
+  "status": "SUCCEEDED",
+  "startedAt": "2026-10-02T10:02:17.739Z",
+  "completedAt": "2026-10-02T10:02:43.955Z",
+  "metrics": {
+    "accuracy": 0.09923566878980891,
+    "balancedAccuracy": 0.1,
+    "logLoss": 31.111297820180432,
+    "sampleSize": 7850
+  },
+  "evaluationWindow": {
+    "trainDrawCount": 83,
+    "testDrawCount": 20,
+    "trainRowCount": 31700,
+    "testRowCount": 7850,
+    "trainDateRange": {
+      "earliest": "19/06/2026",
+      "latest": "11/09/2026",
+      "earliestIso": "2026-06-19",
+      "latestIso": "2026-09-11"
+    },
+    "testDateRange": {
+      "earliest": "12/09/2026",
+      "latest": "01/10/2026",
+      "earliestIso": "2026-09-12",
+      "latestIso": "2026-10-01"
+    }
+  },
+  "reproducibilityMetadata": {
+    "seed": 42,
+    "codeVersion": "9B.1.0-continuous-research",
+    "inputFingerprint": "b907d055a79c9cbb",
+    "parameters": {
+      "tieBreaking": "LEXICOGRAPHICAL_ASCENDING",
+      "seed": 42,
+      "trainDrawCount": 83,
+      "testDrawCount": 20,
+      "modelParameters": {
+        "modelType": "MAJORITY",
+        "allowedValues": [
+          "0",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8",
+          "9"
+        ],
+        "kClasses": 10,
+        "tieBreakingStrategy": "LEXICOGRAPHICAL_ASCENDING",
+        "zeroProbabilityPolicy": "CLIPPED_EPSILON_1E_15",
+        "epsilon": 1e-15,
+        "majorityClass": "7",
+        "trainingRowCount": 31700
+      }
+    },
+    "evaluationFormulae": {
+      "accuracy": "correct_predictions / total_samples",
+      "balancedAccuracy": "mean_recall_across_classes",
+      "logLoss": "-1/N * sum(log(max(eps, min(1-eps, p_observed))))"
+    },
+    "runtimeEnvironment": {
+      "nodeVersion": "v22.23.2",
+      "platform": "linux"
+    }
+  },
+  "descriptiveOnly": true
+}

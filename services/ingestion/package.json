@@ -7,9 +7,14 @@
   "dependencies": {
     "@kerala-lottery/domain": "*",
     "@kerala-lottery/documents": "*",
-    "@kerala-lottery/validation": "*"
+    "@kerala-lottery/validation": "*",
+    "@kerala-lottery/data": "*",
+    "@kerala-lottery/knowledge": "*",
+    "@kerala-lottery/statistics": "*",
+    "@kerala-lottery/experiments": "*"
   },
   "scripts": {
+    "cache:hydrate": "npx tsx scripts/daily-ingestion.ts --hydrate-cache",
     "typecheck": "tsc --noEmit"
   }
 }

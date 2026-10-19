@@ -71,6 +71,14 @@ describe.skipIf(!isEmulatorActive)("Firestore Security Rules Authorization Verif
       const unauthedDb = testEnv.unauthenticatedContext().firestore();
       await assertFails(setDoc(doc(unauthedDb, "auditLogs", "log-01"), { event: "TEST" }));
     });
+
+    it("denies unauthenticated read and write to ingestion runs and locks", async () => {
+      const unauthedDb = testEnv.unauthenticatedContext().firestore();
+      await assertFails(getDoc(doc(unauthedDb, "ingestion_runs", "run-01")));
+      await assertFails(setDoc(doc(unauthedDb, "ingestion_runs", "run-01"), { status: "SUCCEEDED" }));
+      await assertFails(getDoc(doc(unauthedDb, "ingestion_locks", "daily_ingestion_lock")));
+      await assertFails(setDoc(doc(unauthedDb, "ingestion_locks", "daily_ingestion_lock"), { ownerRunId: "hacker" }));
+    });
   });
 
   // --------------------------------------------------------------------------
@@ -179,6 +187,34 @@ describe.skipIf(!isEmulatorActive)("Firestore Security Rules Authorization Verif
       await assertFails(setDoc(doc(viewerDb, "documents", "doc-01"), { title: "Illegal Write" }));
       await assertFails(setDoc(doc(viewerDb, "draws", "draw-01"), { drawNumber: "DL-69" }));
       await assertFails(setDoc(doc(viewerDb, "experiments", "exp-01"), { name: "Illegal Experiment" }));
+      await assertFails(setDoc(doc(viewerDb, "knowledge_nodes", "node-01"), { label: "Illegal Node" }));
+      await assertFails(setDoc(doc(viewerDb, "knowledge_edges", "edge-01"), { relation: "HAS_DRAW" }));
+      await assertFails(setDoc(doc(viewerDb, "lottery_knowledge_graphs", "graph-01"), { documentSha256: "abc" }));
+      await assertFails(setDoc(doc(viewerDb, "statistical_reports", "stat-01"), { totalObservedResults: 10 }));
+      await assertFails(setDoc(doc(viewerDb, "lottery_corpora", "corp-01"), { totalDraws: 5 }));
+      await assertFails(setDoc(doc(viewerDb, "historical_analyses", "analysis-01"), { analysisVersion: "v1" }));
+      await assertFails(setDoc(doc(viewerDb, "historical_experiments", "exp-01"), { experimentId: "exp-01" }));
+      await assertFails(setDoc(doc(viewerDb, "historical_robustness_reports", "rob-01"), { robustnessId: "rob-01" }));
+      await assertFails(setDoc(doc(viewerDb, "historical_feature_evaluations", "feval-01"), { evaluationId: "feval-01" }));
+      await assertFails(setDoc(doc(viewerDb, "historical_model_feature_matrices", "mfmat-01"), { matrixId: "mfmat-01" }));
+      await assertFails(setDoc(doc(viewerDb, "ingestion_runs", "run-01"), { status: "SUCCEEDED" }));
+      await assertFails(setDoc(doc(viewerDb, "ingestion_locks", "daily_ingestion_lock"), { ownerRunId: "viewer" }));
+
+      // Authenticated read is allowed
+      await assertSucceeds(getDoc(doc(viewerDb, "knowledge_nodes", "node-01")));
+      await assertSucceeds(getDoc(doc(viewerDb, "knowledge_edges", "edge-01")));
+      await assertSucceeds(getDoc(doc(viewerDb, "lottery_knowledge_graphs", "graph-01")));
+      await assertSucceeds(getDoc(doc(viewerDb, "statistical_reports", "stat-01")));
+      await assertSucceeds(getDoc(doc(viewerDb, "lottery_corpora", "corp-01")));
+      await assertSucceeds(getDoc(doc(viewerDb, "historical_analyses", "analysis-01")));
+      await assertSucceeds(getDoc(doc(viewerDb, "historical_experiments", "exp-01")));
+      await assertSucceeds(getDoc(doc(viewerDb, "historical_robustness_reports", "rob-01")));
+      await assertSucceeds(getDoc(doc(viewerDb, "historical_feature_evaluations", "feval-01")));
+      await assertSucceeds(getDoc(doc(viewerDb, "historical_model_feature_matrices", "mfmat-01")));
+      await assertSucceeds(getDoc(doc(viewerDb, "historical_modeling_datasets", "mdset-01")));
+      await assertSucceeds(getDoc(doc(viewerDb, "historical_model_runs", "mrun-01")));
+      await assertSucceeds(getDoc(doc(viewerDb, "ingestion_runs", "run-01")));
+      await assertSucceeds(getDoc(doc(viewerDb, "ingestion_locks", "daily_ingestion_lock")));
     });
   });
 
@@ -214,6 +250,93 @@ describe.skipIf(!isEmulatorActive)("Firestore Security Rules Authorization Verif
         setDoc(doc(researcherDb, "winningNumbers", "wn-01"), {
           canonicalNumber: "0276",
           series: "DL"
+        })
+      );
+      await assertSucceeds(
+        setDoc(doc(researcherDb, "knowledge_nodes", "node-doc-01"), {
+          type: "SourceDocument",
+          label: "Document 01"
+        })
+      );
+      await assertSucceeds(
+        setDoc(doc(researcherDb, "knowledge_edges", "edge-01"), {
+          relation: "HAS_LOTTERY",
+          sourceId: "doc-01",
+          targetId: "lottery-01"
+        })
+      );
+      await assertSucceeds(
+        setDoc(doc(researcherDb, "lottery_knowledge_graphs", "graph-doc-01"), {
+          documentSha256: "abcdef123456",
+          nodes: []
+        })
+      );
+      await assertSucceeds(
+        setDoc(doc(researcherDb, "statistical_reports", "stat-doc-01"), {
+          id: "stat-doc-01",
+          totalObservedResults: 50
+        })
+      );
+      await assertSucceeds(
+        setDoc(doc(researcherDb, "lottery_corpora", "corp-doc-01"), {
+          id: "corp-doc-01",
+          totalDraws: 5
+        })
+      );
+      await assertSucceeds(
+        setDoc(doc(researcherDb, "historical_analyses", "analysis-doc-01"), {
+          id: "analysis-doc-01",
+          analysisVersion: "v1"
+        })
+      );
+      await assertSucceeds(
+        setDoc(doc(researcherDb, "historical_experiments", "exp-doc-01"), {
+          id: "exp-doc-01",
+          experimentId: "exp-doc-01",
+          executionVersion: "v1"
+        })
+      );
+      await assertSucceeds(
+        setDoc(doc(researcherDb, "historical_robustness_reports", "rob-doc-01"), {
+          id: "rob-doc-01",
+          robustnessId: "rob-doc-01",
+          frameworkVersion: "v1"
+        })
+      );
+      await assertSucceeds(
+        setDoc(doc(researcherDb, "historical_feature_evaluations", "feval-doc-01"), {
+          id: "feval-doc-01",
+          evaluationVersion: "v1"
+        })
+      );
+      await assertSucceeds(
+        setDoc(doc(researcherDb, "historical_model_feature_matrices", "mfmat-doc-01"), {
+          id: "mfmat-doc-01",
+          featureSelectionVersion: "v1"
+        })
+      );
+      await assertSucceeds(
+        setDoc(doc(researcherDb, "historical_modeling_datasets", "mdset-doc-01"), {
+          id: "mdset-doc-01",
+          modelingVersion: "v1"
+        })
+      );
+      await assertSucceeds(
+        setDoc(doc(researcherDb, "historical_model_runs", "mrun-doc-01"), {
+          runId: "mrun-doc-01",
+          executionVersion: "v1"
+        })
+      );
+      await assertSucceeds(
+        setDoc(doc(researcherDb, "ingestion_runs", "run-doc-01"), {
+          runId: "run-doc-01",
+          status: "SUCCEEDED"
+        })
+      );
+      await assertSucceeds(
+        setDoc(doc(researcherDb, "ingestion_locks", "daily_ingestion_lock"), {
+          lockId: "daily_ingestion_lock",
+          ownerRunId: "run-doc-01"
         })
       );
     });

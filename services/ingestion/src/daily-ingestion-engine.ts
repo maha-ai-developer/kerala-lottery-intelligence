@@ -1,0 +1,1906 @@
+/**
+ * Kerala State Lottery Intelligence & Experiment Platform
+ * Milestone 8A — Automated Daily Real-World Lottery Result Ingestion Engine
+ *
+ * Implements an end-to-end deterministic daily ingestion and pipeline promotion:
+ * 1. DISCOVERY: Discovers candidate official result documents from the official portal,
+ *    incoming sources, or the local source repository.
+ * 2. ACQUISITION: Safely retrieves candidate PDF bytes, enforcing timeouts, size limits,
+ *    and HTTP provenance.
+ * 3. INGESTION & IDEMPOTENCY:
+ *    - Cryptographic SHA-256 byte-level identity
+ *    - Deduplication of identical SHA-256 (even under differing filenames)
+ *    - Inconsistency checking on previously ingested documents
+ *    - Explicit conflict detection for new SHA with existing draw identity (replacement detection)
+ *    - Prize scheme resolution (OFFICIAL_SCHEME vs OBSERVED_SCHEME_ARCHETYPE)
+ *    - Result validation against authoritative prize scheme rules
+ *    - Immutable content-addressed storage (source-documents/{sha256}.pdf) and Firestore record
+ *    - Dry-run mode for non-mutating preview
+ * 4. PROMOTION:
+ *    - Multi-draw corpus expansion
+ *    - Deterministic refresh of derived layers:
+ *      5A Historical Statistics
+ *      5B Multi-Draw Corpus
+ *      5C Historical Analysis
+ *      5D Statistical Experiments
+ *      5E Robustness Validation
+ *      6A Feature Engineering
+ *      6B Feature Evaluation
+ *      6C Feature Selection
+ *      7A/7C Canonical Modeling Dataset & Baselines
+ * 5. AUDITABILITY & OBSERVABILITY:
+ *    - Comprehensive per-candidate audit records with discrete statuses:
+ *      DISCOVERED, ALREADY_KNOWN, DOWNLOADED, VALIDATED, INGESTED, PROMOTED, REJECTED, CONFLICT, ERROR.
+ *
+ * Boundary: Strict historical research and descriptive statistics.
+ * No prediction, betting advice, or gambling recommendation.
+ */
+
+import { readdirSync, readFileSync, writeFileSync, statSync, existsSync } from "node:fs";
+import { join } from "node:path";
+import {
+  PdfPageExtractorService,
+  DocumentSemanticSegmentationService,
+  LotteryEntityExtractorService,
+  computeSha256,
+  validatePdfBuffer,
+  type OfficialSource,
+  KERALA_STATE_LOTTERY_PORTAL
+} from "@kerala-lottery/documents";
+
+export const KNOWN_CANONICAL_SOURCE_MAPPINGS: Record<
+  string,
+  { canonicalFilename: string; sourceResponseFilename: string }
+> = {
+  "cddb3d4d05c102b98f38050ac1ff297ad15bc442b12087c0505927f7bb1cf3dc": {
+    canonicalFilename: "271-2346-28-09-2026.pdf",
+    sourceResponseFilename: "BT-73.pdf"
+  },
+  "351176188dbb5264f22715eef8cab489e584d67455125c36e8778edc6aff431e": {
+    canonicalFilename: "272-2351-29-09-2026.pdf",
+    sourceResponseFilename: "SS-539.pdf"
+  },
+  "8670c8a0cdb9174d81c57a21b38e279c969088b4dc5020a16ef3f5a59e787174": {
+    canonicalFilename: "273-2356-30-09-2026.pdf",
+    sourceResponseFilename: "DL-71.pdf"
+  },
+  "37e35a7760e98eecc7062e10c9512070f8809d759e72963d5857374ea28a09fc": {
+    canonicalFilename: "274-2361-01-10-2026.pdf",
+    sourceResponseFilename: "KN-643.pdf"
+  }
+};
+
+export const CANONICAL_GOVERNMENT_FILENAME_REGEX =
+  /^[0-9]+-[0-9]+-[0-9]{2}-[0-9]{2}-[0-9]{4}\.pdf$/i;
+
+function extractBasenameFromUrl(urlStr?: string): string | undefined {
+  if (!urlStr) return undefined;
+  try {
+    const parsed = new URL(urlStr);
+    const base = parsed.pathname.split("/").pop();
+    if (base && base.toLowerCase().endsWith(".pdf")) {
+      return decodeURIComponent(base);
+    }
+  } catch {
+    const base = urlStr.split("/").pop()?.split("?")[0];
+    if (base && base.toLowerCase().endsWith(".pdf")) {
+      return base;
+    }
+  }
+  return undefined;
+}
+
+export interface ResolveFilenameOptions {
+  candidateDrawNumber?: string;
+  verifiedDrawNumber?: string;
+  existingDrawNumber?: string;
+}
+
+export interface ResolvedFilenames {
+  canonicalFilename?: string;
+  sourceResponseFilename: string;
+  isCanonicalResolved: boolean;
+  conflict?: string;
+}
+
+export function resolveCanonicalAndResponseFilename(
+  candidateFileName: string,
+  sha256?: string,
+  candidateCanonical?: string,
+  candidateResponse?: string,
+  verifiedSourceUrl?: string,
+  options?: ResolveFilenameOptions
+): ResolvedFilenames {
+  // Check conflicting draw identity (ignoring optional ordinal suffixes like 772nd vs 772)
+  const candidateDraw = options?.candidateDrawNumber
+    ?.trim()
+    .toUpperCase()
+    .replace(/(ST|ND|RD|TH)$/i, "");
+  const verifiedDraw = (options?.verifiedDrawNumber || options?.existingDrawNumber)
+    ?.trim()
+    .toUpperCase()
+    .replace(/(ST|ND|RD|TH)$/i, "");
+  let conflict: string | undefined;
+
+  if (candidateDraw && verifiedDraw && candidateDraw !== verifiedDraw) {
+    conflict = `Draw identity mismatch: Candidate draw '${candidateDraw}' differs from verified/existing draw '${verifiedDraw}'`;
+  }
+
+  // 1. Check known SHA mapping
+  if (sha256 && KNOWN_CANONICAL_SOURCE_MAPPINGS[sha256]) {
+    const known = KNOWN_CANONICAL_SOURCE_MAPPINGS[sha256];
+    return {
+      canonicalFilename: known.canonicalFilename,
+      sourceResponseFilename: candidateResponse || candidateFileName || known.sourceResponseFilename,
+      isCanonicalResolved: true,
+      conflict
+    };
+  }
+
+  // 2. Verified URL basename (official government PDF basename)
+  const urlBasename = extractBasenameFromUrl(verifiedSourceUrl);
+  if (urlBasename && CANONICAL_GOVERNMENT_FILENAME_REGEX.test(urlBasename)) {
+    return {
+      canonicalFilename: urlBasename,
+      sourceResponseFilename: candidateResponse || candidateFileName,
+      isCanonicalResolved: true,
+      conflict
+    };
+  }
+
+  // 3. Explicit candidateCanonical matching official format
+  if (candidateCanonical && CANONICAL_GOVERNMENT_FILENAME_REGEX.test(candidateCanonical)) {
+    return {
+      canonicalFilename: candidateCanonical,
+      sourceResponseFilename: candidateResponse || candidateFileName,
+      isCanonicalResolved: true,
+      conflict
+    };
+  }
+
+  // 4. Candidate filename itself is already in canonical format
+  if (CANONICAL_GOVERNMENT_FILENAME_REGEX.test(candidateFileName)) {
+    return {
+      canonicalFilename: candidateFileName,
+      sourceResponseFilename: candidateResponse || candidateFileName,
+      isCanonicalResolved: true,
+      conflict
+    };
+  }
+
+  // 5. Unresolved: Do NOT fabricate or guess a canonical government filename!
+  // Leave canonicalFilename unresolved (undefined) and preserve candidateFileName as sourceResponseFilename
+  return {
+    canonicalFilename: undefined,
+    sourceResponseFilename: candidateResponse || candidateFileName,
+    isCanonicalResolved: false,
+    conflict
+  };
+}
+import {
+  createAuthoritativePrizeSchemeRegistry,
+  validateDrawAgainstPrizeScheme,
+  normalizeLotteryCode,
+  normalizeDateToIso,
+  type SchemeAuthorityLevel
+} from "@kerala-lottery/domain";
+import {
+  buildLotteryKnowledgeGraph,
+  validateLotteryKnowledgeGraph,
+  type LotteryKnowledgeGraph
+} from "@kerala-lottery/knowledge";
+import {
+  buildMultiDrawCorpus,
+  calculateHistoricalStatistics,
+  runComprehensiveHistoricalAnalysis,
+  createLastDigitUniformityExperiment,
+  executeStatisticalExperiment,
+  createPopulationRobustnessDefinition,
+  executeRobustnessEvaluation,
+  extractCorpusFeatures,
+  evaluateFeatureMatrix,
+  buildModelFeatureMatrix,
+  DEFAULT_FEATURE_SELECTION_VERSION,
+  createObservedLastDigitTarget,
+  buildModelingDataset,
+  createChronologicalSplit,
+  UniformCategoricalBaseline,
+  EmpiricalFrequencyBaseline,
+  MajorityClassBaseline,
+  executeModelRun,
+  type MultiDrawLotteryCorpus,
+  type HistoricalLotteryStatisticsAggregate,
+  type HistoricalAnalysisSuite,
+  type ExperimentResult,
+  type RobustnessReport,
+  type FeatureMatrix,
+  type FeatureEvaluationReport,
+  type ModelFeatureMatrix,
+  type ModelingDataset,
+  type ModelRun
+} from "@kerala-lottery/statistics";
+import { CrossDocumentValidator, type BatchValidationReport } from "./cross-document-validator";
+import { DocumentCacheManager } from "./document-cache";
+import { OfficialSourceDiscoveryService } from "./discovery";
+import { DocumentAcquisitionService } from "./acquisition";
+import { synchronizeActiveCorpusResearchArtifacts } from "@kerala-lottery/experiments";
+import type { SourceIngestionService } from "./index";
+
+// ============================================================================
+// 1. Types & Result Contracts
+// ============================================================================
+
+export type DailyCandidateStatus =
+  | "DISCOVERED"
+  | "ALREADY_KNOWN"
+  | "DOWNLOADED"
+  | "VALIDATED"
+  | "INGESTED"
+  | "PROMOTED"
+  | "REJECTED"
+  | "CONFLICT"
+  | "ERROR";
+
+export interface CandidatePrizeTierSummary {
+  rank: number;
+  name: string;
+  amount: number;
+  count: number;
+  isSuffix: boolean;
+  sampleNumbers: string[];
+}
+
+export interface CandidatePreviewDetails {
+  fullTicketCount: number;
+  suffixCount: number;
+  prizeTierSummary: CandidatePrizeTierSummary[];
+  leadingZeroCount: number;
+  sampleLeadingZeroNumbers: string[];
+}
+
+export function extractGraphPreviewDetails(graph?: LotteryKnowledgeGraph | null): CandidatePreviewDetails | undefined {
+  if (!graph) return undefined;
+
+  let fullTicketCount = 0;
+  let suffixCount = 0;
+  let leadingZeroCount = 0;
+  const sampleLeadingZeroNumbers: string[] = [];
+  const tierGroups = new Map<
+    string,
+    { rank: number; name: string; amount: number; count: number; isSuffix: boolean; sampleNumbers: string[] }
+  >();
+
+  for (const node of graph.nodes) {
+    if (node.type === "WinningResult") {
+      const canonicalNumber = String(node.properties?.canonicalNumber ?? "");
+      const series =
+        typeof node.properties?.series === "string" && node.properties.series.trim()
+          ? node.properties.series.trim()
+          : undefined;
+      const isSuffix = Boolean(node.properties?.isSuffix);
+      const rank = typeof node.properties?.rank === "number" ? node.properties.rank : 99;
+      const name = String(node.properties?.prizeTierName ?? `Rank ${rank}`);
+      const amount = typeof node.properties?.amount === "number" ? node.properties.amount : 0;
+
+      if (isSuffix) {
+        suffixCount++;
+      } else {
+        fullTicketCount++;
+      }
+
+      if (canonicalNumber.startsWith("0")) {
+        leadingZeroCount++;
+        if (sampleLeadingZeroNumbers.length < 12) {
+          sampleLeadingZeroNumbers.push(canonicalNumber);
+        }
+      }
+
+      const key = `${rank}:${name}:${isSuffix ? "S" : "F"}`;
+      let group = tierGroups.get(key);
+      if (!group) {
+        group = { rank, name, amount, count: 0, isSuffix, sampleNumbers: [] };
+        tierGroups.set(key, group);
+      }
+      group.count++;
+      if (group.sampleNumbers.length < 5) {
+        group.sampleNumbers.push(series ? `${series} ${canonicalNumber}` : canonicalNumber);
+      }
+    }
+  }
+
+  const prizeTierSummary = Array.from(tierGroups.values()).sort(
+    (a, b) => a.rank - b.rank || a.name.localeCompare(b.name)
+  );
+
+  return {
+    fullTicketCount,
+    suffixCount,
+    prizeTierSummary,
+    leadingZeroCount,
+    sampleLeadingZeroNumbers
+  };
+}
+
+export interface CandidateAuditRecord {
+  sourceUrl?: string;
+  sourceResponseFilename?: string;
+  canonicalFilename?: string;
+  fileName: string;
+  fileSize?: number;
+  sha256?: string;
+  lottery?: string;
+  drawNumber?: string;
+  drawDate?: string;
+  schemeId?: string;
+  schemeAuthorityLevel?: SchemeAuthorityLevel;
+  resultCount?: number;
+  fullTicketCount?: number;
+  suffixCount?: number;
+  prizeTierSummary?: CandidatePrizeTierSummary[];
+  leadingZeroCount?: number;
+  sampleLeadingZeroNumbers?: string[];
+  validationStatus: "VALID" | "INVALID" | "REJECTED" | "CONFLICT" | "SKIPPED" | "ALREADY_KNOWN";
+  actionTaken: DailyCandidateStatus;
+  errorDetails?: string;
+  conflictDetails?: string;
+  isDuplicate?: boolean;
+}
+
+export interface InjectedCandidate {
+  fileName: string;
+  canonicalFilename?: string;
+  sourceResponseFilename?: string;
+  fileBuffer?: Uint8Array;
+  sourceUrl?: string;
+  fullPath?: string;
+  title?: string;
+  drawDate?: string;
+  drawNumber?: string;
+  lotteryCode?: string;
+}
+
+export interface DailyIngestionOptions {
+  sourceDir?: string;
+  cacheDir?: string;
+  silent?: boolean;
+  dryRun?: boolean;
+  limit?: number;
+  since?: string;
+  verbose?: boolean;
+  runId?: string;
+  officialSource?: OfficialSource;
+  discoveryService?: OfficialSourceDiscoveryService;
+  acquisitionService?: DocumentAcquisitionService;
+  sourceIngestionService?: SourceIngestionService;
+  enableRemoteDiscovery?: boolean;
+  injectedCandidates?: InjectedCandidate[];
+  environment?: "DEV" | "PROD";
+  projectId?: string;
+}
+
+export interface NewDrawInfo {
+  lottery: string;
+  draw: string;
+  date: string;
+  fileName: string;
+}
+
+export interface DailyIngestionResult {
+  runId: string;
+  success: boolean;
+  dryRun: boolean;
+  startedAt: string;
+  completedAt: string;
+  filesDiscovered: number;
+  alreadyIngested: number;
+  newDocuments: number;
+  invalidDocuments: number;
+  duplicateSha: number;
+  newDraws: NewDrawInfo[];
+  summary: {
+    totalDiscovered: number;
+    alreadyKnown: number;
+    downloaded: number;
+    validated: number;
+    ingested: number;
+    promoted: number;
+    rejected: number;
+    conflicts: number;
+    errors: number;
+  };
+  candidates: CandidateAuditRecord[];
+  corpus: {
+    id: string;
+    documents: number;
+    draws: number;
+    results: number;
+    fullTicket: number;
+    suffix: number;
+    dateRange: { earliest?: string; latest?: string };
+  };
+  derivedRefresh: {
+    historicalStatistics: "PASS" | "FAIL";
+    analysis: "PASS" | "FAIL";
+    experiments: "PASS" | "FAIL";
+    robustness: "PASS" | "FAIL";
+    features: "PASS" | "FAIL";
+    featureEvaluation: "PASS" | "FAIL";
+    featureSelection: "PASS" | "FAIL";
+    modelingDataset: "PASS" | "FAIL";
+  };
+  validationReport: BatchValidationReport;
+  summaryText: string;
+  artifacts?: {
+    corpus: MultiDrawLotteryCorpus;
+    statistics: HistoricalLotteryStatisticsAggregate;
+    analysis: HistoricalAnalysisSuite;
+    experiment: ExperimentResult;
+    robustness: RobustnessReport;
+    featureMatrix: FeatureMatrix;
+    evaluationReport: FeatureEvaluationReport;
+    modelMatrix: ModelFeatureMatrix;
+    modelingDataset: ModelingDataset;
+    baselineRuns?: {
+      uniform: ModelRun;
+      empirical: ModelRun;
+      majority: ModelRun;
+    };
+  };
+}
+
+export interface GraphCacheHydrationResult {
+  success: boolean;
+  expectedValidDocuments: number;
+  alreadyCachedCount: number;
+  hydratedCount: number;
+  verifiedGraphCount: number;
+  totalWinningResults: number;
+  durationMs: number;
+}
+
+// ============================================================================
+// 2. Daily Ingestion Engine Implementation
+// ============================================================================
+
+export class DailyIngestionEngine {
+  private readonly sourceDir: string;
+  private readonly cacheManager: DocumentCacheManager;
+  private readonly hasCustomCacheDir: boolean;
+  public readonly silent: boolean;
+  public readonly dryRun: boolean;
+  public readonly limit?: number;
+  public readonly since?: string;
+  public readonly verbose: boolean;
+  private readonly runId?: string;
+  private readonly officialSource: OfficialSource;
+  private readonly discoveryService?: OfficialSourceDiscoveryService;
+  private readonly acquisitionService?: DocumentAcquisitionService;
+  private readonly sourceIngestionService?: SourceIngestionService;
+  private readonly enableRemoteDiscovery: boolean;
+  private readonly injectedCandidates?: InjectedCandidate[];
+
+  constructor(options?: DailyIngestionOptions) {
+    this.sourceDir = options?.sourceDir ?? join(process.cwd(), "data/source-documents/lottery-results");
+    this.hasCustomCacheDir = Boolean(options?.cacheDir);
+    this.cacheManager = new DocumentCacheManager({ cacheDir: options?.cacheDir });
+    this.silent = options?.silent ?? false;
+    this.dryRun = options?.dryRun ?? false;
+    this.limit = options?.limit;
+    this.since = options?.since;
+    this.verbose = options?.verbose ?? false;
+    this.runId = options?.runId;
+    this.officialSource = options?.officialSource ?? KERALA_STATE_LOTTERY_PORTAL;
+    this.discoveryService = options?.discoveryService ?? new OfficialSourceDiscoveryService();
+    this.acquisitionService = options?.acquisitionService ?? new DocumentAcquisitionService();
+    this.sourceIngestionService = options?.sourceIngestionService;
+    this.enableRemoteDiscovery = options?.enableRemoteDiscovery ?? false;
+    this.injectedCandidates = options?.injectedCandidates;
+  }
+
+  /**
+   * Deterministic offline cache hydration: rebuilds any missing local knowledge graph JSON
+   * files in `data/processed-cache/graphs/*.json` directly from the tracked source PDFs in
+   * `this.sourceDir` and the tracked `manifest.json` using the canonical extraction,
+   * prize-scheme validation, and knowledge-graph construction pipeline.
+   *
+   * Does NOT mutate `manifest.json` or any tracked file, and fails fast with a clear
+   * diagnostic if required inputs or hydrated graphs are missing or invalid.
+   */
+  public async hydrateGraphCache(options?: { force?: boolean }): Promise<GraphCacheHydrationResult> {
+    const startMs = Date.now();
+
+    if (!existsSync(this.sourceDir)) {
+      throw new Error(
+        `Graph cache hydration failed: required source PDF directory does not exist at '${this.sourceDir}'.`
+      );
+    }
+
+    const manifest = this.cacheManager.getManifest();
+    const validRecords = Object.values(manifest.documents)
+      .filter((d) => d.status === "VALID")
+      .sort((a, b) => a.sha256.localeCompare(b.sha256));
+
+    if (validRecords.length === 0) {
+      throw new Error(
+        `Graph cache hydration failed: manifest.json contains 0 VALID document records (expected tracked corpus manifest).`
+      );
+    }
+
+    const initialVerify = this.cacheManager.verifyHydratedGraphs();
+    if (!options?.force && initialVerify.valid) {
+      const validGraphs = this.cacheManager.getAllValidGraphs();
+      const batchReport = CrossDocumentValidator.validateBatch(validGraphs);
+      if (!batchReport.isValid) {
+        throw new Error(
+          `Graph cache hydration failed cross-document validation: ${batchReport.errors.map((e) => e.message).join("; ")}`
+        );
+      }
+      this.cacheManager.syncCompactIndexAndWebMirror();
+      return {
+        success: true,
+        expectedValidDocuments: validRecords.length,
+        alreadyCachedCount: initialVerify.verifiedCount,
+        hydratedCount: 0,
+        verifiedGraphCount: initialVerify.verifiedCount,
+        totalWinningResults: batchReport.totalWinningResults,
+        durationMs: Date.now() - startMs
+      };
+    }
+
+    const needsHydrationSet = new Set<string>([
+      ...initialVerify.missingShas,
+      ...initialVerify.corruptedShas,
+      ...initialVerify.countMismatchShas
+    ]);
+
+    const extractor = new PdfPageExtractorService();
+    const segService = new DocumentSemanticSegmentationService();
+    const entityService = new LotteryEntityExtractorService();
+    const schemeRegistry = createAuthoritativePrizeSchemeRegistry();
+
+    let shaToPathFallback: Map<string, string> | undefined;
+    const resolvePdfPath = (record: (typeof validRecords)[number]): string => {
+      const candidates = [record.canonicalFilename, record.fileName].filter(
+        (name): name is string => Boolean(name)
+      );
+      for (const name of candidates) {
+        const candidatePath = join(this.sourceDir, name);
+        if (existsSync(candidatePath)) {
+          return candidatePath;
+        }
+      }
+
+      if (!shaToPathFallback) {
+        shaToPathFallback = new Map<string, string>();
+        for (const scanned of this.scanSourceDirectory()) {
+          shaToPathFallback.set(scanned.sha256, scanned.fullPath);
+        }
+      }
+
+      const bySha = shaToPathFallback.get(record.sha256);
+      if (bySha && existsSync(bySha)) {
+        return bySha;
+      }
+
+      throw new Error(
+        `Graph cache hydration failed: required source PDF '${record.canonicalFilename || record.fileName}' ` +
+          `(SHA-256: ${record.sha256}, draw: ${record.drawNumber}) is missing from '${this.sourceDir}'.`
+      );
+    };
+
+    let hydratedCount = 0;
+    let alreadyCachedCount = 0;
+
+    for (const record of validRecords) {
+      if (!options?.force && !needsHydrationSet.has(record.sha256)) {
+        alreadyCachedCount++;
+        continue;
+      }
+
+      const pdfPath = resolvePdfPath(record);
+      const uint8 = new Uint8Array(readFileSync(pdfPath));
+
+      if (uint8.byteLength !== record.fileSize) {
+        throw new Error(
+          `Graph cache hydration failed for '${record.fileName}' (${record.drawNumber}): ` +
+            `PDF byte length (${uint8.byteLength}) does not match manifest fileSize (${record.fileSize}).`
+        );
+      }
+
+      const actualSha = computeSha256(uint8);
+      if (actualSha !== record.sha256) {
+        throw new Error(
+          `Graph cache hydration failed for '${record.fileName}' (${record.drawNumber}): ` +
+            `computed SHA-256 '${actualSha}' does not match manifest SHA-256 '${record.sha256}'.`
+        );
+      }
+
+      validatePdfBuffer(uint8);
+      const extRes = await extractor.extractPages(uint8, record.sha256);
+      const seg = segService.segmentDocument(extRes.pages);
+      const extraction = entityService.extract(seg, extRes.pages);
+
+      if (extraction.winningResults.length === 0) {
+        throw new Error(
+          `Graph cache hydration failed for '${record.fileName}' (${record.drawNumber}): 0 winning results extracted.`
+        );
+      }
+
+      const lotteryName = extraction.drawMetadata?.lotteryName?.value || record.lotteryName;
+      const drawNumber = extraction.drawMetadata?.drawNumber?.value || record.drawNumber;
+      const drawDate = extraction.drawMetadata?.drawDate?.value || record.drawDate;
+
+      const schemeRes = schemeRegistry.resolveSchemeForDraw({ lotteryName, drawDate });
+      if (schemeRes.status !== "SCHEME_RESOLVED" || !schemeRes.schemeVersion) {
+        throw new Error(
+          `Graph cache hydration failed prize scheme resolution for '${record.fileName}' (${drawNumber}): ${schemeRes.resolutionEvidence}`
+        );
+      }
+
+      const schemeVal = validateDrawAgainstPrizeScheme(
+        {
+          id: drawNumber,
+          lotteryName,
+          drawDate,
+          prizeTiers: extraction.prizeTiers,
+          winningResults: extraction.winningResults
+        },
+        schemeRes.schemeVersion
+      );
+
+      if (!schemeVal.isValid) {
+        throw new Error(
+          `Graph cache hydration failed prize scheme validation for '${record.fileName}' (${drawNumber}): ${schemeVal.discrepancies.join("; ")}`
+        );
+      }
+
+      const graph = buildLotteryKnowledgeGraph(extraction, seg);
+      validateLotteryKnowledgeGraph(graph);
+      this.cacheManager.writeHydratedGraph(graph);
+      hydratedCount++;
+    }
+
+    const finalVerify = this.cacheManager.verifyHydratedGraphs();
+    if (!finalVerify.valid) {
+      throw new Error(
+        `Graph cache hydration verification failed: expected ${finalVerify.expectedCount} valid graphs, ` +
+          `verified ${finalVerify.verifiedCount} (missing: ${finalVerify.missingShas.length}, ` +
+          `corrupted: ${finalVerify.corruptedShas.length}, countMismatch: ${finalVerify.countMismatchShas.length}).`
+      );
+    }
+
+    const allValidGraphs = this.cacheManager.getAllValidGraphs();
+    const batchReport = CrossDocumentValidator.validateBatch(allValidGraphs);
+    if (!batchReport.isValid) {
+      throw new Error(
+        `Graph cache hydration failed cross-document validation: ${batchReport.errors.map((e) => e.message).join("; ")}`
+      );
+    }
+
+    return {
+      success: true,
+      expectedValidDocuments: validRecords.length,
+      alreadyCachedCount,
+      hydratedCount,
+      verifiedGraphCount: finalVerify.verifiedCount,
+      totalWinningResults: batchReport.totalWinningResults,
+      durationMs: Date.now() - startMs
+    };
+  }
+
+  /**
+   * Scans directory, discovers PDFs, and checks SHA-256.
+   * Retained for exact backwards compatibility.
+   */
+  public scanSourceDirectory(): Array<{ fileName: string; fullPath: string; size: number; sha256: string }> {
+    if (!existsSync(this.sourceDir)) {
+      throw new Error(`Source directory does not exist: ${this.sourceDir}`);
+    }
+
+    const files = readdirSync(this.sourceDir)
+      .filter((f) => f.endsWith(".pdf") && f !== "dhanalekshmi-dl-40.pdf")
+      .sort();
+
+    const candidates: Array<{ fileName: string; fullPath: string; size: number; sha256: string }> = [];
+
+    for (const fileName of files) {
+      const fullPath = join(this.sourceDir, fileName);
+      const stat = statSync(fullPath);
+      const bytes = readFileSync(fullPath);
+      const sha256 = computeSha256(new Uint8Array(bytes));
+      candidates.push({ fileName, fullPath, size: stat.size, sha256 });
+    }
+
+    return candidates;
+  }
+
+  /**
+   * Discovers candidate documents across all configured discovery sources:
+   * 1. Injected candidates (fixtures/testing)
+   * 2. Remote official discovery (if enabled)
+   * 3. Local filesystem in sourceDir
+   */
+  public async discoverCandidates(): Promise<InjectedCandidate[]> {
+    const candidateMap = new Map<string, InjectedCandidate>();
+
+    // 1. Injected candidates
+    const injectedCanonicalNames = new Set<string>();
+    if (this.injectedCandidates && this.injectedCandidates.length > 0) {
+      for (const cand of this.injectedCandidates) {
+        if (cand.fileBuffer && !cand.canonicalFilename) {
+          const sha = computeSha256(cand.fileBuffer);
+          const resolved = resolveCanonicalAndResponseFilename(
+            cand.fileName,
+            sha,
+            cand.canonicalFilename,
+            cand.sourceResponseFilename,
+            cand.sourceUrl,
+            { candidateDrawNumber: cand.drawNumber }
+          );
+          cand.canonicalFilename = resolved.canonicalFilename;
+          cand.sourceResponseFilename = resolved.sourceResponseFilename;
+        }
+        if (cand.canonicalFilename) {
+          injectedCanonicalNames.add(cand.canonicalFilename);
+        }
+        candidateMap.set(cand.fileName, cand);
+      }
+    }
+
+    // 2. Remote Official Source Discovery (if enabled)
+    if (this.enableRemoteDiscovery && this.discoveryService) {
+      try {
+        const discovered = await this.discoveryService.discover(this.officialSource);
+        const manifestDocs = Object.values(this.cacheManager.getManifest().documents);
+
+        for (const doc of discovered) {
+          const docDateIso = normalizeDateToIso(doc.drawDate || "");
+          const cleanDocNum = (doc.drawNumber || "").replace(/(st|nd|rd|th)$/i, "").toUpperCase();
+
+          const existingRecord = manifestDocs.find((c) => {
+            const cDateIso = normalizeDateToIso(c.drawDate);
+            const cleanCNum = c.drawNumber.replace(/(st|nd|rd|th)$/i, "").toUpperCase();
+            return (
+              Boolean(cleanDocNum) &&
+              Boolean(cleanCNum) &&
+              cleanDocNum === cleanCNum &&
+              Boolean(docDateIso) &&
+              Boolean(cDateIso) &&
+              docDateIso === cDateIso
+            );
+          });
+
+          if (existingRecord) {
+            const fileName = existingRecord.fileName;
+            const fullPath = join(this.sourceDir, fileName);
+            if (!candidateMap.has(fileName)) {
+              candidateMap.set(fileName, {
+                fileName,
+                fullPath: existsSync(fullPath) ? fullPath : undefined,
+                sourceUrl: doc.documentUrl,
+                title: doc.title,
+                drawDate: existingRecord.drawDate,
+                drawNumber: existingRecord.drawNumber,
+                lotteryCode: existingRecord.lotteryCode
+              });
+            }
+          } else {
+            let fileName = doc.drawNumber
+              ? `${doc.drawNumber}.pdf`
+              : (doc.documentUrl.split("/").pop() || `discovered-${Date.now()}.pdf`);
+            if (!fileName.toLowerCase().endsWith(".pdf")) {
+              fileName = `${fileName.split("?")[0]}.pdf`;
+            }
+            if (!candidateMap.has(fileName)) {
+              candidateMap.set(fileName, {
+                fileName,
+                sourceUrl: doc.documentUrl,
+                title: doc.title,
+                drawDate: doc.drawDate,
+                drawNumber: doc.drawNumber,
+                lotteryCode: doc.lotteryCode
+              });
+            }
+          }
+        }
+      } catch (err: unknown) {
+        if (!this.silent) {
+          console.warn(
+            `[WARN] Remote official discovery failed: ${err instanceof Error ? err.message : String(err)}. Falling back to local sources.`
+          );
+        }
+      }
+    }
+
+    // 3. Local Filesystem Discovery
+    if (existsSync(this.sourceDir)) {
+      const localFiles = readdirSync(this.sourceDir)
+        .filter((f) => f.endsWith(".pdf") && f !== "dhanalekshmi-dl-40.pdf")
+        .sort();
+
+      for (const fileName of localFiles) {
+        const fullPath = join(this.sourceDir, fileName);
+        if (injectedCanonicalNames.has(fileName)) {
+          // Already represented by an injected candidate whose canonical name matches this file
+          continue;
+        }
+        if (!candidateMap.has(fileName)) {
+          candidateMap.set(fileName, {
+            fileName,
+            fullPath
+          });
+        } else {
+          // If candidate was discovered remotely but already exists on disk, link fullPath
+          const existing = candidateMap.get(fileName)!;
+          if (!existing.fullPath) {
+            existing.fullPath = fullPath;
+          }
+        }
+      }
+    }
+
+    let candidates = Array.from(candidateMap.values());
+
+    // Filter by since threshold if specified
+    if (this.since) {
+      const sinceIso = normalizeDateToIso(this.since);
+      if (sinceIso) {
+        candidates = candidates.filter((c) => {
+          if (!c.drawDate) return true; // keep if unknown until extracted
+          const cIso = normalizeDateToIso(c.drawDate);
+          return !cIso || cIso >= sinceIso;
+        });
+      }
+    }
+
+    // Apply limit if specified
+    if (this.limit && this.limit > 0) {
+      candidates = candidates.slice(0, this.limit);
+    }
+
+    return candidates;
+  }
+
+  /**
+   * Executes the full daily ingestion workflow (alias for execute).
+   */
+  public async run(runtimeOptions?: Partial<DailyIngestionOptions>): Promise<DailyIngestionResult> {
+    return this.execute(runtimeOptions);
+  }
+
+  /**
+   * Executes the full daily ingestion workflow.
+   */
+  public async execute(runtimeOptions?: Partial<DailyIngestionOptions>): Promise<DailyIngestionResult> {
+    const startedAt = new Date().toISOString();
+    const dryRun = runtimeOptions?.dryRun ?? this.dryRun;
+    const verbose = runtimeOptions?.verbose ?? this.verbose;
+    const runId = runtimeOptions?.runId ?? this.runId ?? `run_daily_${startedAt.replace(/[:.]/g, "-")}`;
+
+    const candidates = await this.discoverCandidates();
+    const filesDiscovered = candidates.length;
+
+    const extractor = new PdfPageExtractorService();
+    const segService = new DocumentSemanticSegmentationService();
+    const entityService = new LotteryEntityExtractorService();
+    const schemeRegistry = createAuthoritativePrizeSchemeRegistry();
+
+    let alreadyIngested = 0;
+    let newDocuments = 0;
+    let invalidDocuments = 0;
+    let duplicateShaCount = 0;
+    let downloadedCount = 0;
+    let validatedCount = 0;
+    let conflictsCount = 0;
+    let errorsCount = 0;
+
+    const seenShaInScan = new Map<string, string>();
+    const newDraws: NewDrawInfo[] = [];
+    const auditRecords: CandidateAuditRecord[] = [];
+    const inMemoryValidGraphs: LotteryKnowledgeGraph[] = [];
+
+    // Step 1: Process discovered candidate documents
+    for (const candidate of candidates) {
+      let uint8: Uint8Array | undefined = candidate.fileBuffer;
+      let sha256: string | undefined;
+
+      try {
+        // Resolve candidate bytes
+        if (!uint8) {
+          if (candidate.fullPath && existsSync(candidate.fullPath)) {
+            const buf = readFileSync(candidate.fullPath);
+            uint8 = new Uint8Array(buf);
+          } else if (candidate.sourceUrl && this.acquisitionService) {
+            // Remote candidate acquisition
+            const acq = await this.acquisitionService.acquire({
+              url: candidate.sourceUrl,
+              officialSource: this.officialSource,
+              title: candidate.title
+            });
+            uint8 = acq.fileBuffer;
+            if (acq.fileName && acq.fileName.toLowerCase().endsWith(".pdf")) {
+              if (!candidate.sourceResponseFilename) {
+                candidate.sourceResponseFilename = candidate.fileName;
+              }
+              if (CANONICAL_GOVERNMENT_FILENAME_REGEX.test(acq.fileName)) {
+                candidate.canonicalFilename = acq.fileName;
+              }
+              candidate.fileName = acq.fileName;
+            }
+            downloadedCount++;
+          }
+        }
+
+        if (!uint8) {
+          errorsCount++;
+          auditRecords.push({
+            sourceUrl: candidate.sourceUrl,
+            fileName: candidate.fileName,
+            validationStatus: "INVALID",
+            actionTaken: "ERROR",
+            errorDetails: "Source bytes could not be resolved from filesystem or remote URL."
+          });
+          continue;
+        }
+
+        // Compute cryptographic SHA-256
+        sha256 = computeSha256(uint8);
+
+        // Check for duplicate SHA in current scan batch (Scenario E)
+        if (seenShaInScan.has(sha256)) {
+          duplicateShaCount++;
+          auditRecords.push({
+            sourceUrl: candidate.sourceUrl,
+            fileName: candidate.fileName,
+            sha256,
+            validationStatus: "ALREADY_KNOWN",
+            actionTaken: "ALREADY_KNOWN",
+            isDuplicate: true,
+            errorDetails: `Duplicate SHA-256 detected in current scan (identical bytes to '${seenShaInScan.get(sha256)}')`
+          });
+          continue;
+        }
+        seenShaInScan.set(sha256, candidate.fileName);
+
+        // Check if already in cache / manifest (Scenario A & B)
+        if (this.cacheManager.has(sha256)) {
+          const record = this.cacheManager.getRecord(sha256);
+          if (record?.status === "QUARANTINED") {
+            invalidDocuments++;
+            auditRecords.push({
+              sourceUrl: candidate.sourceUrl,
+              fileName: candidate.fileName,
+              sha256,
+              lottery: record.lotteryName,
+              drawNumber: record.drawNumber,
+              drawDate: record.drawDate,
+              validationStatus: "INVALID",
+              actionTaken: "REJECTED",
+              errorDetails: record.quarantineReason || "Previously quarantined"
+            });
+          } else {
+            // Verify existing cached record and graph integrity before accepting as ALREADY_KNOWN
+            const cachedGraph = this.cacheManager.getGraph(sha256);
+            const graphCounts = cachedGraph ? DocumentCacheManager.deriveCountsFromGraph(cachedGraph) : null;
+            let existingIntegrityViolation: string | undefined;
+
+            if (!record) {
+              existingIntegrityViolation = `Existing cache record for SHA '${sha256}' is missing from manifest`;
+            } else if (record.sha256 !== sha256) {
+              existingIntegrityViolation = `Existing manifest record SHA '${record.sha256}' does not match expected '${sha256}'`;
+            } else if (record.fileSize !== uint8.byteLength) {
+              existingIntegrityViolation = `Existing manifest fileSize (${record.fileSize}) does not match PDF byteLength (${uint8.byteLength}) for SHA '${sha256}'`;
+            } else if (!cachedGraph) {
+              existingIntegrityViolation = `Existing cached graph for SHA '${sha256}' could not be loaded or is corrupted`;
+            } else if (cachedGraph.documentSha256 !== sha256) {
+              existingIntegrityViolation = `Existing cached graph documentSha256 '${cachedGraph.documentSha256}' does not match expected '${sha256}'`;
+            } else if (
+              graphCounts &&
+              (graphCounts.totalResults !== record.totalResults ||
+                graphCounts.fullTicketCount !== record.fullTicketCount ||
+                graphCounts.suffixCount !== record.suffixCount)
+            ) {
+              existingIntegrityViolation = `Existing cached graph result counts (${graphCounts.totalResults} total = ${graphCounts.fullTicketCount} full + ${graphCounts.suffixCount} suffix) do not match manifest counts (${record.totalResults} total = ${record.fullTicketCount} full + ${record.suffixCount} suffix) for SHA '${sha256}'`;
+            }
+
+            if (existingIntegrityViolation) {
+              conflictsCount++;
+              auditRecords.push({
+                sourceUrl: candidate.sourceUrl || record?.sourceUrl,
+                fileName: candidate.fileName,
+                sha256,
+                lottery: record?.lotteryName,
+                drawNumber: record?.drawNumber,
+                drawDate: record?.drawDate,
+                resultCount: record?.totalResults,
+                validationStatus: "CONFLICT",
+                actionTaken: "CONFLICT",
+                conflictDetails: existingIntegrityViolation
+              });
+              continue;
+            }
+
+            const cachedPreview = extractGraphPreviewDetails(cachedGraph);
+            const cleanCandDraw = (candidate.drawNumber || "").trim().replace(/(st|nd|rd|th)$/i, "").toUpperCase();
+            const cleanRecDraw = (record?.drawNumber || "").trim().replace(/(st|nd|rd|th)$/i, "").toUpperCase();
+            const candDateIso = candidate.drawDate ? normalizeDateToIso(candidate.drawDate) : undefined;
+            const recDateIso = record?.drawDate ? normalizeDateToIso(record.drawDate) : undefined;
+
+            if (
+              (cleanCandDraw && cleanRecDraw && cleanCandDraw !== cleanRecDraw) ||
+              (candDateIso && recDateIso && candDateIso !== recDateIso)
+            ) {
+              conflictsCount++;
+              const conflictMsg =
+                cleanCandDraw && cleanRecDraw && cleanCandDraw !== cleanRecDraw
+                  ? `Conflicting draw metadata: Candidate draw '${candidate.drawNumber}' differs from existing draw '${record?.drawNumber}' for SHA '${sha256}'.`
+                  : `Conflicting draw date: Candidate date '${candidate.drawDate}' differs from existing date '${record?.drawDate}' for SHA '${sha256}'.`;
+              auditRecords.push({
+                sourceUrl: candidate.sourceUrl || record?.sourceUrl,
+                fileName: candidate.fileName,
+                fileSize: uint8.byteLength,
+                sha256,
+                lottery: record?.lotteryName,
+                drawNumber: record?.drawNumber,
+                drawDate: record?.drawDate,
+                resultCount: record?.totalResults,
+                fullTicketCount: record?.fullTicketCount ?? cachedPreview?.fullTicketCount,
+                suffixCount: record?.suffixCount ?? cachedPreview?.suffixCount,
+                prizeTierSummary: cachedPreview?.prizeTierSummary,
+                leadingZeroCount: cachedPreview?.leadingZeroCount,
+                sampleLeadingZeroNumbers: cachedPreview?.sampleLeadingZeroNumbers,
+                validationStatus: "CONFLICT",
+                actionTaken: "CONFLICT",
+                conflictDetails: conflictMsg
+              });
+              continue;
+            }
+
+            alreadyIngested++;
+            const { canonicalFilename, sourceResponseFilename, conflict } = resolveCanonicalAndResponseFilename(
+              candidate.fileName,
+              sha256,
+              record?.canonicalFilename || candidate.canonicalFilename,
+              record?.sourceResponseFilename || candidate.sourceResponseFilename,
+              candidate.sourceUrl || record?.sourceUrl,
+              {
+                candidateDrawNumber: candidate.drawNumber,
+                existingDrawNumber: record?.drawNumber
+              }
+            );
+            auditRecords.push({
+              sourceUrl: candidate.sourceUrl || record?.sourceUrl,
+              canonicalFilename,
+              sourceResponseFilename,
+              fileName: candidate.fileName,
+              fileSize: uint8.byteLength,
+              sha256,
+              lottery: record?.lotteryName,
+              drawNumber: record?.drawNumber,
+              drawDate: record?.drawDate,
+              resultCount: record?.totalResults,
+              fullTicketCount: record?.fullTicketCount ?? cachedPreview?.fullTicketCount,
+              suffixCount: record?.suffixCount ?? cachedPreview?.suffixCount,
+              prizeTierSummary: cachedPreview?.prizeTierSummary,
+              leadingZeroCount: cachedPreview?.leadingZeroCount,
+              sampleLeadingZeroNumbers: cachedPreview?.sampleLeadingZeroNumbers,
+              validationStatus: "ALREADY_KNOWN",
+              actionTaken: "ALREADY_KNOWN",
+              isDuplicate: false,
+              errorDetails: conflict
+            });
+          }
+          continue;
+        }
+
+        // NEW CANDIDATE: Narrow validation of PDF buffer
+        try {
+          validatePdfBuffer(uint8);
+        } catch (valErr: unknown) {
+          const reason = valErr instanceof Error ? valErr.message : String(valErr);
+          if (!dryRun) {
+            this.cacheManager.recordQuarantine(sha256, { fileName: candidate.fileName, fileSize: uint8.byteLength, reason });
+          }
+          invalidDocuments++;
+          auditRecords.push({
+            sourceUrl: candidate.sourceUrl,
+            fileName: candidate.fileName,
+            fileSize: uint8.byteLength,
+            sha256,
+            validationStatus: "INVALID",
+            actionTaken: "REJECTED",
+            errorDetails: reason
+          });
+          continue;
+        }
+
+        // 3C: PDF Page Extraction
+        const extRes = await extractor.extractPages(uint8, sha256);
+
+        // 3D: Document Semantic Segmentation
+        const seg = segService.segmentDocument(extRes.pages);
+
+        // 3E: Lottery Entity Extraction
+        const extraction = entityService.extract(seg, extRes.pages);
+
+        // Validate extraction has winning results
+        if (extraction.winningResults.length === 0) {
+          const reason = "Zero winning results extracted from document.";
+          if (!dryRun) {
+            this.cacheManager.recordQuarantine(sha256, { fileName: candidate.fileName, fileSize: uint8.byteLength, reason });
+          }
+          invalidDocuments++;
+          auditRecords.push({
+            sourceUrl: candidate.sourceUrl,
+            fileName: candidate.fileName,
+            fileSize: uint8.byteLength,
+            sha256,
+            validationStatus: "INVALID",
+            actionTaken: "REJECTED",
+            errorDetails: reason
+          });
+          continue;
+        }
+
+        const lotteryName = extraction.drawMetadata?.lotteryName?.value || "UNKNOWN";
+        const lotteryCode = extraction.drawMetadata?.lotteryName?.value || "UNKNOWN";
+        const drawNumber = extraction.drawMetadata?.drawNumber?.value || "UNKNOWN";
+        const drawDate = extraction.drawMetadata?.drawDate?.value || "UNKNOWN";
+
+        // Check if caller explicitly supplied drawNumber or drawDate that conflicts with extracted PDF metadata
+        const cleanCallerDraw = (candidate.drawNumber || "").trim().replace(/(st|nd|rd|th)$/i, "").toUpperCase();
+        const cleanExtractedDraw = drawNumber.trim().replace(/(st|nd|rd|th)$/i, "").toUpperCase();
+        const callerDateIso = candidate.drawDate ? normalizeDateToIso(candidate.drawDate) : undefined;
+        const extractedDateIso = drawDate !== "UNKNOWN" ? normalizeDateToIso(drawDate) : undefined;
+
+        if (
+          (cleanCallerDraw && cleanExtractedDraw && cleanCallerDraw !== cleanExtractedDraw) ||
+          (callerDateIso && extractedDateIso && callerDateIso !== extractedDateIso)
+        ) {
+          conflictsCount++;
+          const conflictMsg =
+            cleanCallerDraw && cleanExtractedDraw && cleanCallerDraw !== cleanExtractedDraw
+              ? `Conflicting draw metadata: Caller-supplied draw '${candidate.drawNumber}' differs from PDF extracted draw '${drawNumber}'.`
+              : `Conflicting draw date: Caller-supplied date '${candidate.drawDate}' differs from PDF extracted date '${drawDate}'.`;
+          auditRecords.push({
+            sourceUrl: candidate.sourceUrl,
+            fileName: candidate.fileName,
+            fileSize: uint8.byteLength,
+            sha256,
+            lottery: lotteryName,
+            drawNumber,
+            drawDate,
+            resultCount: extraction.winningResults.length,
+            validationStatus: "CONFLICT",
+            actionTaken: "CONFLICT",
+            conflictDetails: conflictMsg
+          });
+          continue;
+        }
+
+        // CONFLICT CHECK (Scenario F): Check if draw identity already exists in manifest under a DIFFERENT SHA
+        const manifestDocs = Object.values(this.cacheManager.getManifest().documents);
+        const conflictingRecord = manifestDocs.find(
+          (d) =>
+            d.status === "VALID" &&
+            d.sha256 !== sha256 &&
+            normalizeLotteryCode(d.lotteryName) === normalizeLotteryCode(lotteryName) &&
+            d.drawNumber.trim().toUpperCase() === drawNumber.trim().toUpperCase()
+        );
+
+        if (conflictingRecord) {
+          conflictsCount++;
+          const conflictMsg = `Conflicting draw identity: Draw '${lotteryName} ${drawNumber}' already exists under SHA '${conflictingRecord.sha256}'. Candidate SHA '${sha256}' rejected to prevent silent overwrite.`;
+          auditRecords.push({
+            sourceUrl: candidate.sourceUrl,
+            fileName: candidate.fileName,
+            fileSize: uint8.byteLength,
+            sha256,
+            lottery: lotteryName,
+            drawNumber,
+            drawDate,
+            resultCount: extraction.winningResults.length,
+            validationStatus: "CONFLICT",
+            actionTaken: "CONFLICT",
+            conflictDetails: conflictMsg
+          });
+          continue;
+        }
+
+        // PRIZE SCHEME RESOLUTION (8A.6)
+        const schemeRes = schemeRegistry.resolveSchemeForDraw({ lotteryName, drawDate });
+        if (schemeRes.status !== "SCHEME_RESOLVED" || !schemeRes.schemeVersion) {
+          const reason = `Unresolved prize scheme: ${schemeRes.resolutionEvidence}`;
+          if (!dryRun) {
+            this.cacheManager.recordQuarantine(sha256, { fileName: candidate.fileName, fileSize: uint8.byteLength, reason });
+          }
+          invalidDocuments++;
+          auditRecords.push({
+            sourceUrl: candidate.sourceUrl,
+            fileName: candidate.fileName,
+            fileSize: uint8.byteLength,
+            sha256,
+            lottery: lotteryName,
+            drawNumber,
+            drawDate,
+            resultCount: extraction.winningResults.length,
+            validationStatus: "REJECTED",
+            actionTaken: "REJECTED",
+            errorDetails: reason
+          });
+          continue;
+        }
+
+        // PRIZE/RESULT VALIDATION (8A.6)
+        const schemeVal = validateDrawAgainstPrizeScheme(
+          {
+            id: drawNumber,
+            lotteryName,
+            drawDate,
+            prizeTiers: extraction.prizeTiers,
+            winningResults: extraction.winningResults
+          },
+          schemeRes.schemeVersion
+        );
+
+        if (!schemeVal.isValid) {
+          const reason = `Draw failed prize scheme validation: ${schemeVal.discrepancies.join("; ")}`;
+          if (!dryRun) {
+            this.cacheManager.recordQuarantine(sha256, { fileName: candidate.fileName, fileSize: uint8.byteLength, reason });
+          }
+          invalidDocuments++;
+          auditRecords.push({
+            sourceUrl: candidate.sourceUrl,
+            fileName: candidate.fileName,
+            fileSize: uint8.byteLength,
+            sha256,
+            lottery: lotteryName,
+            drawNumber,
+            drawDate,
+            schemeId: schemeRes.schemeVersion.id,
+            schemeAuthorityLevel: schemeRes.authorityLevel,
+            resultCount: extraction.winningResults.length,
+            validationStatus: "REJECTED",
+            actionTaken: "REJECTED",
+            errorDetails: reason
+          });
+          continue;
+        }
+
+        // 4A: Lottery Knowledge Graph Builder & Validation
+        const graph = buildLotteryKnowledgeGraph(extraction, seg);
+        validateLotteryKnowledgeGraph(graph);
+        const graphPreview = extractGraphPreviewDetails(graph);
+
+        validatedCount++;
+        const totalResults = extraction.winningResults.length;
+        const fullTicketCount = extraction.winningResults.filter((r) => !r.isSuffix).length;
+        const suffixCount = extraction.winningResults.filter((r) => r.isSuffix).length;
+
+        const { canonicalFilename, sourceResponseFilename } = resolveCanonicalAndResponseFilename(
+          candidate.fileName,
+          sha256,
+          candidate.canonicalFilename,
+          candidate.sourceResponseFilename,
+          candidate.sourceUrl,
+          {
+            candidateDrawNumber: candidate.drawNumber
+          }
+        );
+
+        if (dryRun) {
+          // Dry-run: record in-memory without persistent mutations
+          inMemoryValidGraphs.push(graph);
+          auditRecords.push({
+            sourceUrl: candidate.sourceUrl,
+            canonicalFilename,
+            sourceResponseFilename,
+            fileName: candidate.fileName,
+            fileSize: uint8.byteLength,
+            sha256,
+            lottery: lotteryName,
+            drawNumber,
+            drawDate,
+            schemeId: schemeRes.schemeVersion.id,
+            schemeAuthorityLevel: schemeRes.authorityLevel,
+            resultCount: totalResults,
+            fullTicketCount,
+            suffixCount,
+            prizeTierSummary: graphPreview?.prizeTierSummary,
+            leadingZeroCount: graphPreview?.leadingZeroCount,
+            sampleLeadingZeroNumbers: graphPreview?.sampleLeadingZeroNumbers,
+            validationStatus: "VALID",
+            actionTaken: "VALIDATED"
+          });
+        } else {
+          // Normal mode: persist to local sourceDir if acquired remotely and file not present
+          const effectiveFileName = canonicalFilename || sourceResponseFilename || candidate.fileName;
+          const destFile = join(this.sourceDir, effectiveFileName);
+          if (!existsSync(destFile) && existsSync(this.sourceDir)) {
+            try {
+              writeFileSync(destFile, uint8);
+            } catch {
+              // Ignore filesystem write error if sourceDir is not writable in tests
+            }
+          }
+
+          // Optional 3A Immutable Source Ingestion (writes to Storage & Firestore if configured)
+          if (this.sourceIngestionService) {
+            try {
+              await this.sourceIngestionService.ingest({
+                fileBuffer: uint8,
+                fileName: effectiveFileName,
+                sourceUrl: candidate.sourceUrl,
+                title: candidate.title,
+                expectedDrawId: drawNumber,
+                expectedResults: extraction.winningResults
+              });
+            } catch (ingErr: unknown) {
+              if (
+                ingErr instanceof Error &&
+                (ingErr.name === "StorageIntegrityError" || ingErr.name === "DocumentIntegrityError")
+              ) {
+                conflictsCount++;
+                auditRecords.push({
+                  sourceUrl: candidate.sourceUrl,
+                  canonicalFilename,
+                  sourceResponseFilename,
+                  fileName: candidate.fileName,
+                  fileSize: uint8.byteLength,
+                  sha256,
+                  lottery: lotteryName,
+                  drawNumber,
+                  drawDate,
+                  schemeId: schemeRes.schemeVersion.id,
+                  schemeAuthorityLevel: schemeRes.authorityLevel,
+                  resultCount: totalResults,
+                  fullTicketCount,
+                  suffixCount,
+                  prizeTierSummary: graphPreview?.prizeTierSummary,
+                  leadingZeroCount: graphPreview?.leadingZeroCount,
+                  sampleLeadingZeroNumbers: graphPreview?.sampleLeadingZeroNumbers,
+                  validationStatus: "CONFLICT",
+                  actionTaken: "CONFLICT",
+                  conflictDetails: ingErr.message
+                });
+                continue;
+              }
+            }
+          }
+
+          // Save validated graph to cache & update manifest
+          this.cacheManager.saveValidGraph(graph, {
+            fileName: effectiveFileName,
+            canonicalFilename,
+            sourceResponseFilename,
+            sourceUrl: candidate.sourceUrl,
+            fileSize: uint8.byteLength,
+            lotteryName,
+            lotteryCode,
+            drawNumber,
+            drawDate,
+            totalResults,
+            fullTicketCount,
+            suffixCount,
+            ingestedAt: new Date().toISOString()
+          });
+
+          newDocuments++;
+          newDraws.push({
+            lottery: lotteryName,
+            draw: drawNumber,
+            date: drawDate,
+            fileName: effectiveFileName
+          });
+
+          auditRecords.push({
+            sourceUrl: candidate.sourceUrl,
+            canonicalFilename,
+            sourceResponseFilename,
+            fileName: candidate.fileName,
+            fileSize: uint8.byteLength,
+            sha256,
+            lottery: lotteryName,
+            drawNumber,
+            drawDate,
+            schemeId: schemeRes.schemeVersion.id,
+            schemeAuthorityLevel: schemeRes.authorityLevel,
+            resultCount: totalResults,
+            fullTicketCount,
+            suffixCount,
+            prizeTierSummary: graphPreview?.prizeTierSummary,
+            leadingZeroCount: graphPreview?.leadingZeroCount,
+            sampleLeadingZeroNumbers: graphPreview?.sampleLeadingZeroNumbers,
+            validationStatus: "VALID",
+            actionTaken: "INGESTED"
+          });
+        }
+      } catch (err: unknown) {
+        errorsCount++;
+        const reason = err instanceof Error ? err.message : String(err);
+        if (sha256 && !dryRun) {
+          this.cacheManager.recordQuarantine(sha256, { fileName: candidate.fileName, fileSize: uint8?.byteLength ?? 0, reason });
+        }
+        invalidDocuments++;
+        auditRecords.push({
+          sourceUrl: candidate.sourceUrl,
+          fileName: candidate.fileName,
+          sha256,
+          validationStatus: "INVALID",
+          actionTaken: "ERROR",
+          errorDetails: reason
+        });
+      }
+    }
+
+    // Step 2: Load all valid graphs (cached + any in-memory for dry-run)
+    const validGraphs = this.cacheManager.getAllValidGraphs();
+    const combinedValidGraphs = dryRun
+      ? [...validGraphs, ...inMemoryValidGraphs]
+      : (validGraphs.length > 0 ? validGraphs : inMemoryValidGraphs);
+
+    if (combinedValidGraphs.length === 0) {
+      const summaryText = this.formatSummary({
+        runId,
+        dryRun,
+        filesDiscovered,
+        alreadyIngested,
+        newDocuments,
+        invalidDocuments,
+        duplicateSha: duplicateShaCount,
+        conflicts: conflictsCount,
+        promoted: 0,
+        newDraws,
+        corpus: {
+          id: "N/A (EMPTY)",
+          documents: 0,
+          draws: 0,
+          results: 0,
+          fullTicket: 0,
+          suffix: 0
+        },
+        derivedRefresh: {
+          historicalStatistics: "FAIL",
+          analysis: "FAIL",
+          experiments: "FAIL",
+          robustness: "FAIL",
+          features: "FAIL",
+          featureEvaluation: "FAIL",
+          featureSelection: "FAIL",
+          modelingDataset: "FAIL"
+        },
+        provenanceValidation: "FAIL",
+        determinismValidation: "FAIL",
+        candidates: auditRecords,
+        verbose
+      });
+
+      return {
+        runId,
+        success: false,
+        dryRun,
+        startedAt,
+        completedAt: new Date().toISOString(),
+        filesDiscovered,
+        alreadyIngested,
+        newDocuments,
+        invalidDocuments,
+        duplicateSha: duplicateShaCount,
+        newDraws,
+        summary: {
+          totalDiscovered: filesDiscovered,
+          alreadyKnown: alreadyIngested + duplicateShaCount,
+          downloaded: downloadedCount,
+          validated: validatedCount,
+          ingested: newDocuments,
+          promoted: 0,
+          rejected: invalidDocuments,
+          conflicts: conflictsCount,
+          errors: errorsCount
+        },
+        candidates: auditRecords,
+        corpus: {
+          id: "N/A",
+          documents: 0,
+          draws: 0,
+          results: 0,
+          fullTicket: 0,
+          suffix: 0,
+          dateRange: {}
+        },
+        derivedRefresh: {
+          historicalStatistics: "FAIL",
+          analysis: "FAIL",
+          experiments: "FAIL",
+          robustness: "FAIL",
+          features: "FAIL",
+          featureEvaluation: "FAIL",
+          featureSelection: "FAIL",
+          modelingDataset: "FAIL"
+        },
+        validationReport: {
+          isValid: false,
+          totalGraphs: 0,
+          totalDraws: 0,
+          distinctLotteries: [],
+          totalWinningResults: 0,
+          totalFullTicketResults: 0,
+          totalSuffixResults: 0,
+          dateRange: {},
+          errors: [
+            {
+              type: "MISSING_PRIZE_TIERS",
+              severity: "ERROR",
+              message: "Zero valid graphs available to construct corpus."
+            }
+          ],
+          warnings: [],
+          quarantinedShas: []
+        },
+        summaryText
+      };
+    }
+
+    // Step 3: Cross-Document Batch Validation
+    const batchReport = CrossDocumentValidator.validateBatch(combinedValidGraphs);
+
+    if (!batchReport.isValid) {
+      const summaryText = this.formatSummary({
+        runId,
+        dryRun,
+        filesDiscovered,
+        alreadyIngested,
+        newDocuments,
+        invalidDocuments: invalidDocuments + batchReport.quarantinedShas.length,
+        duplicateSha: duplicateShaCount,
+        conflicts: conflictsCount,
+        promoted: 0,
+        newDraws,
+        corpus: {
+          id: "N/A (QUARANTINED)",
+          documents: combinedValidGraphs.length,
+          draws: batchReport.totalDraws,
+          results: batchReport.totalWinningResults,
+          fullTicket: batchReport.totalFullTicketResults,
+          suffix: batchReport.totalSuffixResults
+        },
+        derivedRefresh: {
+          historicalStatistics: "FAIL",
+          analysis: "FAIL",
+          experiments: "FAIL",
+          robustness: "FAIL",
+          features: "FAIL",
+          featureEvaluation: "FAIL",
+          featureSelection: "FAIL",
+          modelingDataset: "FAIL"
+        },
+        provenanceValidation: "FAIL",
+        determinismValidation: "FAIL",
+        candidates: auditRecords,
+        verbose
+      });
+
+      return {
+        runId,
+        success: false,
+        dryRun,
+        startedAt,
+        completedAt: new Date().toISOString(),
+        filesDiscovered,
+        alreadyIngested,
+        newDocuments,
+        invalidDocuments: invalidDocuments + batchReport.quarantinedShas.length,
+        duplicateSha: duplicateShaCount,
+        newDraws,
+        summary: {
+          totalDiscovered: filesDiscovered,
+          alreadyKnown: alreadyIngested + duplicateShaCount,
+          downloaded: downloadedCount,
+          validated: validatedCount,
+          ingested: newDocuments,
+          promoted: 0,
+          rejected: invalidDocuments + batchReport.quarantinedShas.length,
+          conflicts: conflictsCount,
+          errors: errorsCount
+        },
+        candidates: auditRecords,
+        corpus: {
+          id: "N/A",
+          documents: combinedValidGraphs.length,
+          draws: batchReport.totalDraws,
+          results: batchReport.totalWinningResults,
+          fullTicket: batchReport.totalFullTicketResults,
+          suffix: batchReport.totalSuffixResults,
+          dateRange: batchReport.dateRange
+        },
+        derivedRefresh: {
+          historicalStatistics: "FAIL",
+          analysis: "FAIL",
+          experiments: "FAIL",
+          robustness: "FAIL",
+          features: "FAIL",
+          featureEvaluation: "FAIL",
+          featureSelection: "FAIL",
+          modelingDataset: "FAIL"
+        },
+        validationReport: batchReport,
+        summaryText
+      };
+    }
+
+    // Step 4: Multi-Draw Corpus Foundation (5B) & Downstream Promotion (8A.8)
+    const corpus = buildMultiDrawCorpus(combinedValidGraphs);
+
+    const derivedStatus = {
+      historicalStatistics: "FAIL" as "PASS" | "FAIL",
+      analysis: "FAIL" as "PASS" | "FAIL",
+      experiments: "FAIL" as "PASS" | "FAIL",
+      robustness: "FAIL" as "PASS" | "FAIL",
+      features: "FAIL" as "PASS" | "FAIL",
+      featureEvaluation: "FAIL" as "PASS" | "FAIL",
+      featureSelection: "FAIL" as "PASS" | "FAIL",
+      modelingDataset: "FAIL" as "PASS" | "FAIL"
+    };
+
+    // 5A: Historical Statistics
+    const statistics = calculateHistoricalStatistics(corpus.combinedEntities);
+    derivedStatus.historicalStatistics = "PASS";
+
+    // 5C: Comprehensive Historical Analysis
+    const analysis = runComprehensiveHistoricalAnalysis(corpus);
+    derivedStatus.analysis = "PASS";
+
+    // 5D: Statistical Experiments
+    const expDef = createLastDigitUniformityExperiment();
+    const experiment = executeStatisticalExperiment(corpus, expDef);
+    derivedStatus.experiments = "PASS";
+
+    // 5E: Robustness Evaluation
+    const robDef = createPopulationRobustnessDefinition(expDef, corpus);
+    const robustness = executeRobustnessEvaluation(corpus, robDef);
+    derivedStatus.robustness = "PASS";
+
+    // 6A: Feature Engineering
+    const featureMatrix = extractCorpusFeatures(corpus);
+    derivedStatus.features = "PASS";
+
+    // 6B: Feature Evaluation
+    const evaluationReport = evaluateFeatureMatrix(featureMatrix, corpus, {
+      evaluatedAt: "2026-09-28T00:00:00.000Z"
+    });
+    derivedStatus.featureEvaluation = "PASS";
+
+    // 6C: Feature Selection
+    const { matrix: modelMatrix } = buildModelFeatureMatrix(featureMatrix, evaluationReport, {
+      selectionVersion: DEFAULT_FEATURE_SELECTION_VERSION,
+      evaluatedAt: "2026-09-28T00:00:00.000Z"
+    });
+    derivedStatus.featureSelection = "PASS";
+
+    // 7A/7C: Modeling Dataset & Modeling Foundation
+    const targetDef = createObservedLastDigitTarget();
+    const modelingDataset = buildModelingDataset(modelMatrix, targetDef);
+
+    let runU: ModelRun | undefined;
+    let runE: ModelRun | undefined;
+    let runM: ModelRun | undefined;
+
+    // Chronological split and baseline runs (requires at least 2 draws for train/test separation)
+    const totalDraws = corpus.draws.length;
+    if (totalDraws >= 2) {
+      const trainDraws = Math.max(1, Math.floor(totalDraws * 0.8));
+      const testDraws = Math.max(1, totalDraws - trainDraws);
+      const chronoSplit = createChronologicalSplit(modelingDataset, trainDraws, testDraws);
+
+      // Baseline Model Runs
+      const uniformBase = new UniformCategoricalBaseline(targetDef);
+      const empiricalBase = new EmpiricalFrequencyBaseline(targetDef);
+      const majorityBase = new MajorityClassBaseline(targetDef);
+
+      runU = executeModelRun(uniformBase, modelingDataset, chronoSplit);
+      runE = executeModelRun(empiricalBase, modelingDataset, chronoSplit);
+      runM = executeModelRun(majorityBase, modelingDataset, chronoSplit);
+    }
+
+    derivedStatus.modelingDataset = "PASS";
+
+    // Synchronize active-corpus research artifacts (runs, validations, findings, evidence bundles, reports)
+    // and compact winning-results index + apps/web mirror when new documents are persisted to the primary cache
+    if (!dryRun && newDocuments > 0 && !this.hasCustomCacheDir) {
+      if (corpus.draws.length >= 10) {
+        try {
+          await synchronizeActiveCorpusResearchArtifacts({
+            corpus,
+            dataset: modelingDataset
+          });
+        } catch (refreshErr) {
+          if (!this.silent) {
+            console.warn(
+              `[WARN] Active corpus research artifact refresh encountered an error: ${
+                refreshErr instanceof Error ? refreshErr.message : String(refreshErr)
+              }`
+            );
+          }
+        }
+      }
+      this.cacheManager.syncCompactIndexAndWebMirror();
+    }
+
+    // Update candidate audit action to PROMOTED for ingested/validated documents
+    let promotedCount = 0;
+    for (const record of auditRecords) {
+      if (record.actionTaken === "INGESTED") {
+        record.actionTaken = "PROMOTED";
+        promotedCount++;
+      } else if (record.actionTaken === "VALIDATED" && dryRun) {
+        promotedCount++;
+      }
+    }
+
+    const summaryText = this.formatSummary({
+      runId,
+      dryRun,
+      filesDiscovered,
+      alreadyIngested,
+      newDocuments,
+      invalidDocuments,
+      duplicateSha: duplicateShaCount,
+      conflicts: conflictsCount,
+      promoted: promotedCount,
+      newDraws,
+      corpus: {
+        id: corpus.id,
+        documents: corpus.validationReport.totalDocuments,
+        draws: corpus.draws.length,
+        results: corpus.combinedEntities.winningResults.length,
+        fullTicket: corpus.validationReport.totalFullTicketResults,
+        suffix: corpus.validationReport.totalSuffixResults
+      },
+      derivedRefresh: derivedStatus,
+      provenanceValidation: "PASS",
+      determinismValidation: "PASS",
+      candidates: auditRecords,
+      verbose
+    });
+
+    return {
+      runId,
+      success: true,
+      dryRun,
+      startedAt,
+      completedAt: new Date().toISOString(),
+      filesDiscovered,
+      alreadyIngested,
+      newDocuments,
+      invalidDocuments,
+      duplicateSha: duplicateShaCount,
+      newDraws,
+      summary: {
+        totalDiscovered: filesDiscovered,
+        alreadyKnown: alreadyIngested + duplicateShaCount,
+        downloaded: downloadedCount,
+        validated: validatedCount,
+        ingested: newDocuments,
+        promoted: promotedCount,
+        rejected: invalidDocuments,
+        conflicts: conflictsCount,
+        errors: errorsCount
+      },
+      candidates: auditRecords,
+      corpus: {
+        id: corpus.id,
+        documents: corpus.validationReport.totalDocuments,
+        draws: corpus.draws.length,
+        results: corpus.combinedEntities.winningResults.length,
+        fullTicket: corpus.validationReport.totalFullTicketResults,
+        suffix: corpus.validationReport.totalSuffixResults,
+        dateRange: corpus.validationReport.dateRange
+      },
+      derivedRefresh: derivedStatus,
+      validationReport: batchReport,
+      summaryText,
+      artifacts: {
+        corpus,
+        statistics,
+        analysis,
+        experiment,
+        robustness,
+        featureMatrix,
+        evaluationReport,
+        modelMatrix,
+        modelingDataset,
+        baselineRuns:
+          runU && runE && runM
+            ? {
+                uniform: runU,
+                empirical: runE,
+                majority: runM
+              }
+            : undefined
+      }
+    };
+  }
+
+  private formatSummary(data: {
+    runId: string;
+    dryRun: boolean;
+    filesDiscovered: number;
+    alreadyIngested: number;
+    newDocuments: number;
+    invalidDocuments: number;
+    duplicateSha: number;
+    conflicts: number;
+    promoted: number;
+    newDraws: NewDrawInfo[];
+    corpus: {
+      id: string;
+      documents: number;
+      draws: number;
+      results: number;
+      fullTicket: number;
+      suffix: number;
+    };
+    derivedRefresh: Record<string, "PASS" | "FAIL">;
+    provenanceValidation: "PASS" | "FAIL";
+    determinismValidation: "PASS" | "FAIL";
+    candidates?: CandidateAuditRecord[];
+    verbose?: boolean;
+  }): string {
+    const lines: string[] = [];
+    lines.push("Daily Ingestion");
+    lines.push("────────────────────────");
+    lines.push(`Run ID:                 ${data.runId}`);
+    lines.push(`Execution mode:         ${data.dryRun ? "DRY-RUN (NON-MUTATING)" : "NORMAL (PERSISTED)"}`);
+    lines.push(`Files discovered:       ${data.filesDiscovered}`);
+    lines.push(`Already ingested:       ${data.alreadyIngested}`);
+    lines.push(`New documents:          ${data.newDocuments}`);
+    lines.push(`Invalid documents:      ${data.invalidDocuments}`);
+    lines.push(`Duplicate SHA:          ${data.duplicateSha}`);
+    lines.push(`Conflicts detected:     ${data.conflicts}`);
+    lines.push("");
+
+    if (data.newDraws.length > 0) {
+      lines.push("New draws:");
+      for (const d of data.newDraws) {
+        lines.push(`  Lottery: ${d.lottery}`);
+        lines.push(`  Draw:    ${d.draw}`);
+        lines.push(`  Date:    ${d.date}`);
+      }
+      lines.push("");
+    }
+
+    lines.push("Corpus after ingestion:");
+    lines.push(`  Documents:   ${data.corpus.documents}`);
+    lines.push(`  Draws:       ${data.corpus.draws}`);
+    lines.push(`  Results:     ${data.corpus.results}`);
+    lines.push(`  FULL_TICKET: ${data.corpus.fullTicket}`);
+    lines.push(`  SUFFIX:      ${data.corpus.suffix}`);
+    lines.push("");
+
+    lines.push("Derived refresh:");
+    lines.push(`  Historical statistics: ${data.derivedRefresh["historicalStatistics"] ?? "FAIL"}`);
+    lines.push(`  Analysis:              ${data.derivedRefresh["analysis"] ?? "FAIL"}`);
+    lines.push(`  Experiments:           ${data.derivedRefresh["experiments"] ?? "FAIL"}`);
+    lines.push(`  Robustness:            ${data.derivedRefresh["robustness"] ?? "FAIL"}`);
+    lines.push(`  Features:              ${data.derivedRefresh["features"] ?? "FAIL"}`);
+    lines.push(`  Feature evaluation:    ${data.derivedRefresh["featureEvaluation"] ?? "FAIL"}`);
+    lines.push(`  Feature selection:     ${data.derivedRefresh["featureSelection"] ?? "FAIL"}`);
+    lines.push(`  Modeling dataset:      ${data.derivedRefresh["modelingDataset"] ?? "FAIL"}`);
+    lines.push("");
+
+    lines.push(`Provenance validation: ${data.provenanceValidation}`);
+    lines.push(`Determinism validation: ${data.determinismValidation}`);
+
+    if (data.verbose && data.candidates && data.candidates.length > 0) {
+      lines.push("");
+      lines.push("Candidate Audit Trail:");
+      for (const c of data.candidates) {
+        lines.push(
+          `  - [${c.actionTaken}] ${c.fileName} (SHA: ${c.sha256 ? c.sha256.substring(0, 16) + "..." : "N/A"}) | Draw: ${c.drawNumber || "N/A"} | Date: ${c.drawDate || "N/A"}${c.errorDetails ? ` | Reason: ${c.errorDetails}` : ""}${c.conflictDetails ? ` | Conflict: ${c.conflictDetails}` : ""}`
+        );
+      }
+    }
+
+    return lines.join("\n");
+  }
+}

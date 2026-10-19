@@ -67,6 +67,11 @@ service cloud.firestore {
       allow write: if isResearcher();
     }
     
+    match /document_segmentations/{segmentationId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+    
     match /source_evidence/{evidenceId} {
       allow read: if isAuthenticated();
       allow write: if isResearcher();
@@ -108,6 +113,16 @@ service cloud.firestore {
       allow write: if isResearcher();
     }
 
+    match /prize_tiers/{tierId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+
+    match /winning_results/{resultId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+
     // Knowledge Graph & Legal Rules
     match /acts/{actId} {
       allow read: if isAuthenticated();
@@ -125,6 +140,75 @@ service cloud.firestore {
     }
 
     match /knowledgeGraph/{nodeId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+
+    match /knowledge_nodes/{nodeId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+
+    match /knowledge_edges/{edgeId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+
+    match /lottery_knowledge_graphs/{graphId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+
+    // Historical Statistical Observations (Milestone 5A)
+    match /statistical_reports/{reportId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+
+    // Multi-Draw Dataset Corpora (Milestone 5B)
+    match /lottery_corpora/{corpusId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+
+    // Historical Statistical Analysis Suites (Milestone 5C)
+    match /historical_analyses/{analysisId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+
+    // Historical Statistical Experiments (Milestone 5D)
+    match /historical_experiments/{experimentId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+
+    // Historical Statistical Robustness Reports (Milestone 5E)
+    match /historical_robustness_reports/{robustnessId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+
+    // Historical Feature Evaluation Reports (Milestone 6B)
+    match /historical_feature_evaluations/{evaluationId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+
+    // Historical Model Feature Matrices & Selections (Milestone 6C)
+    match /historical_model_feature_matrices/{matrixId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+
+    // Historical Modeling Datasets (Milestone 7A)
+    match /historical_modeling_datasets/{datasetId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+
+    // Historical Model Runs (Milestone 7A)
+    match /historical_model_runs/{runId} {
       allow read: if isAuthenticated();
       allow write: if isResearcher();
     }
@@ -154,6 +238,17 @@ service cloud.firestore {
 
     // Data Quality Issues
     match /dataQualityIssues/{issueId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+
+    // Operational ingestion runs & single-flight locks (Milestone 8B)
+    match /ingestion_runs/{runId} {
+      allow read: if isAuthenticated();
+      allow write: if isResearcher();
+    }
+
+    match /ingestion_locks/{lockId} {
       allow read: if isAuthenticated();
       allow write: if isResearcher();
     }

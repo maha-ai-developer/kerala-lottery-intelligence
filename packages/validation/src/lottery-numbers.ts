@@ -7,7 +7,7 @@
  * Example: "0276" must remain "0276".
  */
 
-import type { WinningNumber, PrizeResultType } from "@kerala-lottery/domain";
+import type { WinningNumber, PrizeResultType, RegionBoundingBox } from "@kerala-lottery/domain";
 
 export class ValidationError extends Error {
   constructor(message: string, public readonly code: string) {
@@ -62,17 +62,30 @@ export function normalizeLotteryNumber(raw: unknown, expectedLength?: number): s
 
 export interface CreateWinningNumberInput {
   id: string;
-  drawId: string;
-  prizeResultId: string;
+  documentSha256?: string;
+  pageId?: string;
+  pageNumber?: number;
+  sourceTextBlockOrders?: number[];
+  rawSourceText?: string;
+  boundingBox?: RegionBoundingBox;
+  parserRule?: string;
+  parserVersion?: string;
+  drawId?: string;
+  prizeResultId?: string;
+  prizeTierId?: string;
+  prizeTierName?: string;
+  rank?: number;
+  amount?: number;
   series?: string;
   rawNumber: string;
   expectedLength?: number;
   isSuffix: boolean;
   resultType: PrizeResultType;
-  sourceDocumentId: string;
-  sourcePage: number;
-  sourceText: string;
+  sourceDocumentId?: string;
+  sourcePage?: number;
+  sourceText?: string;
   confidence?: number;
+  createdAt?: string;
 }
 
 /**
@@ -80,22 +93,37 @@ export interface CreateWinningNumberInput {
  */
 export function createWinningNumber(input: CreateWinningNumberInput): WinningNumber {
   const canonical = normalizeLotteryNumber(input.rawNumber, input.expectedLength);
+  const docSha = input.documentSha256 ?? input.sourceDocumentId ?? "0000000000000000000000000000000000000000000000000000000000000000";
+  const pNum = input.pageNumber ?? input.sourcePage ?? 1;
 
   return {
     id: input.id,
+    documentSha256: docSha,
+    pageId: input.pageId ?? `${docSha}_${pNum}`,
+    pageNumber: pNum,
+    sourceTextBlockOrders: input.sourceTextBlockOrders ?? [0],
+    rawSourceText: input.rawSourceText ?? input.sourceText ?? canonical,
+    boundingBox: input.boundingBox ?? { x: 0, y: 0, width: 0, height: 0, unit: "pt" },
+    parserRule: input.parserRule ?? "rule.winning_number.v1",
+    parserVersion: input.parserVersion ?? "v1.0.0-entities",
     drawId: input.drawId,
     prizeResultId: input.prizeResultId,
+    prizeTierId: input.prizeTierId,
+    prizeTierName: input.prizeTierName,
+    rank: input.rank,
+    amount: input.amount,
     series: input.series ? input.series.trim().toUpperCase() : undefined,
     canonicalNumber: canonical,
     numberLength: canonical.length,
     isSuffix: input.isSuffix,
     suffixLength: input.isSuffix ? canonical.length : undefined,
     resultType: input.resultType,
-    sourceDocumentId: input.sourceDocumentId,
-    sourcePage: input.sourcePage,
-    sourceText: input.sourceText,
+    sourceDocumentId: input.sourceDocumentId ?? docSha,
+    sourcePage: input.sourcePage ?? pNum,
+    sourceText: input.sourceText ?? input.rawSourceText ?? canonical,
     confidence: input.confidence ?? 1.0,
     validationStatus: "VALID",
-    derivedNumericValue: parseInt(canonical, 10)
+    derivedNumericValue: parseInt(canonical, 10),
+    createdAt: input.createdAt ?? new Date().toISOString()
   };
 }

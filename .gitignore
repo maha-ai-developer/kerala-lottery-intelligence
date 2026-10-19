@@ -55,3 +55,7 @@ ui-debug.log*
 scratch/
 tmp/
 *.tmp
+data/processed-cache/*
+!data/processed-cache/manifest.json
+!data/processed-cache/winning-results-index.json
+!data/processed-cache/experiments/

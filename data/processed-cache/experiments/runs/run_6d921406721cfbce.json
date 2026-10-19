@@ -1,0 +1,87 @@
+{
+  "runId": "run_6d921406721cfbce",
+  "experimentId": "EXP-001-UNIFORM-BASELINE",
+  "experimentVersion": "1.0.0",
+  "corpusVersion": "corpus_055e805237802b5e",
+  "datasetVersion": "mdset_eca289076fe0c947",
+  "featureVersion": "fmat_4c5437d04467bfa6",
+  "modelVersion": "mdef_baseline_uniform_2ee7504d1439f770",
+  "status": "SUCCEEDED",
+  "startedAt": "2026-10-18T10:13:46.214Z",
+  "completedAt": "2026-10-18T10:14:19.113Z",
+  "metrics": {
+    "accuracy": 0.10209307503896682,
+    "balancedAccuracy": 0.1,
+    "logLoss": 2.302585092994133,
+    "sampleSize": 8982
+  },
+  "evaluationWindow": {
+    "trainDrawCount": 95,
+    "testDrawCount": 23,
+    "trainRowCount": 36236,
+    "testRowCount": 8982,
+    "trainDateRange": {
+      "earliest": "19/06/2026",
+      "latest": "23/09/2026",
+      "earliestIso": "2026-06-19",
+      "latestIso": "2026-09-23"
+    },
+    "testDateRange": {
+      "earliest": "24/09/2026",
+      "latest": "17/10/2026",
+      "earliestIso": "2026-09-24",
+      "latestIso": "2026-10-17"
+    }
+  },
+  "reproducibilityMetadata": {
+    "seed": 42,
+    "codeVersion": "9B.1.0-continuous-research",
+    "inputFingerprint": "90fca79b67fe2306",
+    "parameters": {
+      "allowedValues": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9"
+      ],
+      "seed": 42,
+      "trainDrawCount": 95,
+      "testDrawCount": 23,
+      "modelParameters": {
+        "modelType": "UNIFORM",
+        "allowedValues": [
+          "0",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8",
+          "9"
+        ],
+        "kClasses": 10,
+        "tieBreakingStrategy": "LEXICOGRAPHICAL_ASCENDING",
+        "zeroProbabilityPolicy": "CLIPPED_EPSILON_1E_15",
+        "epsilon": 1e-15
+      }
+    },
+    "evaluationFormulae": {
+      "accuracy": "correct_predictions / total_samples",
+      "balancedAccuracy": "mean_recall_across_classes",
+      "logLoss": "-1/N * sum(log(max(eps, min(1-eps, p_observed))))"
+    },
+    "runtimeEnvironment": {
+      "nodeVersion": "v22.23.2",
+      "platform": "linux"
+    }
+  },
+  "descriptiveOnly": true
+}

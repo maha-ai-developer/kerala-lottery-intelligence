@@ -8,7 +8,11 @@ export async function GET() {
     service: "@kerala-lottery/web",
     version: process.env.NEXT_PUBLIC_APP_VERSION || "0.1.0",
     environment: process.env.NEXT_PUBLIC_APP_ENV || process.env.NODE_ENV || "development",
-    commit: process.env.NEXT_PUBLIC_GIT_COMMIT_SHA || "051cced",
+    commit:
+      process.env.NEXT_PUBLIC_GIT_COMMIT_SHA ||
+      process.env.COMMIT_SHA ||
+      process.env.GITHUB_SHA ||
+      "unknown",
     timestamp: new Date().toISOString()
   };
 

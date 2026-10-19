@@ -1,0 +1,42 @@
+{
+  "activeCorpusVersion": "corpus_2dd9b930c32ea047",
+  "corpusLabel": "active-research-119draws",
+  "corpusHash": "2dd9b930c32ea047",
+  "datasetVersion": "mdset_6b4a4edc3c9edba3",
+  "featureVersion": "fmat_a1ec0cc655d44e01",
+  "totalDraws": 119,
+  "totalDocuments": 119,
+  "totalResults": 45600,
+  "fullTicketResults": 1728,
+  "suffixResults": 43872,
+  "dateRange": {
+    "earliest": "19/06/2026",
+    "latest": "18/10/2026"
+  },
+  "activeRunIds": [
+    "run_6b4bb339e1b860b7",
+    "run_53259e1b8cbdee3c",
+    "run_eac739264b7b9c56"
+  ],
+  "validatedRunIds": [
+    "run_6b4bb339e1b860b7",
+    "run_53259e1b8cbdee3c",
+    "run_eac739264b7b9c56"
+  ],
+  "generatedFindingIds": [
+    "find_ca864c23f10ca51e",
+    "find_a92351bde8c69c6a",
+    "find_b2d254e1771b18ef"
+  ],
+  "generatedBundleIds": [
+    "evb_30ee982eb21a568a",
+    "evb_42885ed784aaf71d",
+    "evb_8ddd0743b2e312a3"
+  ],
+  "generatedReportIds": [
+    "rep_ca864c23f10ca51e",
+    "rep_a92351bde8c69c6a",
+    "rep_b2d254e1771b18ef"
+  ],
+  "synchronizedAt": "2026-10-19T04:41:57.619Z"
+}
