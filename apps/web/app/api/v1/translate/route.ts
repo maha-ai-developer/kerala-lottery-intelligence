@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleAuth } from "google-auth-library";
-import { maskCanonicalTokens, restoreCanonicalTokens } from "../../../../lib/i18n";
+import { maskCanonicalTokens, restoreCanonicalTokens } from "../../../../lib/i18n-shared";
 
 export const dynamic = "force-dynamic";
 
