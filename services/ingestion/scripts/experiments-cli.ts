@@ -17,6 +17,7 @@ import {
   getRegisteredExperiments,
   getRegisteredExperimentById,
   refreshResearchPipeline,
+  synchronizeActiveCorpusResearchArtifacts,
   runSingleExperiment,
   inspectExperimentRun,
   defaultExperimentRepository,
@@ -31,6 +32,7 @@ import {
   type StatisticalValidationArtifact,
   type ResearchFinding
 } from "@kerala-lottery/experiments";
+import { DocumentCacheManager } from "../src/document-cache";
 
 async function main() {
   const args = process.argv.slice(2);
@@ -102,14 +104,23 @@ async function main() {
 
     case "refresh": {
       console.log("\nTriggering continuous research refresh pipeline (idempotent)...");
-      const result = await refreshResearchPipeline();
-      console.log(`Status:        ${result.status}`);
-      console.log(`Corpus:        ${result.corpusVersion}`);
-      console.log(`Dataset:       ${result.datasetVersion}`);
-      console.log(`Executed Runs: ${result.executedRuns.length}`);
-      console.log(`Skipped Runs:  ${result.skippedRuns.length}`);
-      console.log(`Failed Runs:   ${result.failedRuns.length}`);
-      console.log(`Message:       ${result.message}\n`);
+      const syncResult = await synchronizeActiveCorpusResearchArtifacts({
+        force: args.includes("--force")
+      });
+      const cacheMgr = new DocumentCacheManager();
+      cacheMgr.syncCompactIndexAndWebMirror();
+      const result = syncResult.refreshResult;
+      console.log(`Status:            ${result.status}`);
+      console.log(`Corpus:            ${result.corpusVersion} (${syncResult.activeDrawCount} draws / ${syncResult.activeTotalResults} results)`);
+      console.log(`Dataset:           ${result.datasetVersion}`);
+      console.log(`Executed Runs:     ${result.executedRuns.length}`);
+      console.log(`Skipped Runs:      ${result.skippedRuns.length}`);
+      console.log(`Failed Runs:       ${result.failedRuns.length}`);
+      console.log(`Validated Runs:    ${syncResult.validatedRunIds.length}`);
+      console.log(`Findings Updated:  ${syncResult.generatedFindingIds.length}`);
+      console.log(`Evidence Bundles:  ${syncResult.generatedBundleIds.length}`);
+      console.log(`Reports Updated:   ${syncResult.generatedReportIds.length}`);
+      console.log(`Message:           ${result.message}\n`);
       break;
     }
 

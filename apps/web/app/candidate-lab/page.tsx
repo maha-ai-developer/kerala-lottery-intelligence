@@ -408,7 +408,7 @@ export default function CandidateLabPage() {
               {loading ? "Evaluating Candidates..." : "ANALYZE ALL CANDIDATES"}
             </button>
             <span style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>
-              Evaluates {candidates.length} candidates side-by-side against the active 118-draw research corpus (45,218 results).
+              Evaluates {candidates.length} candidates side-by-side against the active 119-draw research corpus (45,600 results).
             </span>
           </div>
         </form>
@@ -689,7 +689,7 @@ export default function CandidateLabPage() {
             }}
           >
             <h2 style={{ fontSize: "1.15rem", fontWeight: 600, marginBottom: "1rem" }}>
-              4. Historical Corpus Comparison ({analysis.provenance?.corpusVersion?.includes("118") ? 118 : 114} Draws / {(analysis.provenance?.corpusVersion?.includes("118") ? 45218 : 43712).toLocaleString()} Winning Results)
+              4. Historical Corpus Comparison ({analysis.provenance?.corpusVersion?.includes("114") ? 114 : analysis.provenance?.corpusVersion?.includes("118") ? 118 : 119} Draws / {(analysis.provenance?.corpusVersion?.includes("114") ? 43712 : analysis.provenance?.corpusVersion?.includes("118") ? 45218 : 45600).toLocaleString()} Winning Results)
             </h2>
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
@@ -975,6 +975,79 @@ export default function CandidateLabPage() {
             >
               <strong>DECISION AUTHORITY:</strong> {analysis.researchInterpretation.globalNotice} The user evaluates
               the trade-offs and retains sole decision authority.
+            </div>
+          </div>
+
+          {/* Personal Decision Guide */}
+          <div
+            style={{
+              background: "var(--bg-surface)",
+              border: "1px solid var(--accent-primary)",
+              borderRadius: "0.75rem",
+              padding: "1.5rem"
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1rem" }}>
+              <span className="badge badge-emerald">PERSONAL DECISION GUIDE</span>
+              <h2 style={{ fontSize: "1.15rem", fontWeight: 600, margin: 0 }}>
+                Transparent Personal Decision Guide (Per Candidate)
+              </h2>
+            </div>
+
+            <div className="validation-summary-grid" style={{ marginBottom: "1rem" }}>
+              {analysis.tradeOffAnalysis.comparisonMatrix.map((t) => {
+                const v = analysis.validationSummaries.find((val) => val.candidateId === t.candidateId);
+                const isValid = v ? v.validation.isValid : true;
+                const needsReview = t.exactHistoricalMatches > 0 || t.descriptiveConsiderations.length > 0;
+                const statusLabel = !isValid
+                  ? "Does not meet the selected criteria"
+                  : needsReview
+                  ? "Review the evidence"
+                  : "Meets the selected validity criteria";
+                return (
+                  <div
+                    key={t.candidateId}
+                    style={{
+                      background: "var(--bg-surface-elevated)",
+                      border: "1px solid var(--border-subtle)",
+                      borderRadius: "0.5rem",
+                      padding: "1rem",
+                      fontSize: "0.83rem"
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
+                      <strong>{t.label} ({t.series} {t.ticketNumber})</strong>
+                      <span
+                        className={`badge ${
+                          !isValid ? "badge-red" : needsReview ? "badge-amber" : "badge-emerald"
+                        }`}
+                      >
+                        {statusLabel}
+                      </span>
+                    </div>
+                    <div style={{ color: "var(--text-secondary)", lineHeight: 1.5 }}>
+                      <div>• Validity: {isValid ? "Valid scheme & series" : v?.validation.errors.join("; ") || "Invalid"}</div>
+                      <div>• Exact Matches: {t.exactHistoricalMatches}</div>
+                      <div>• Parity &amp; Sum: {t.parityBalance}, Sum {t.digitSum} ({t.digitSumPercentile}th percentile)</div>
+                      <div>• Stability: {t.stability}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div
+              style={{
+                background: "rgba(56, 189, 248, 0.08)",
+                border: "1px solid rgba(56, 189, 248, 0.3)",
+                borderRadius: "0.5rem",
+                padding: "0.85rem 1rem",
+                fontSize: "0.85rem",
+                color: "var(--text-primary)",
+                fontWeight: 600
+              }}
+            >
+              Historical results describe the past. They do not establish the probability of winning a future draw.
             </div>
           </div>
 

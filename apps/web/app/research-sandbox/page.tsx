@@ -148,7 +148,7 @@ export default function ResearchSandboxPage() {
         <strong>SCIENTIFIC & RETROSPECTIVE RESEARCH SANDBOX ONLY</strong>
         <p style={{ margin: "0.25rem 0 0 0", fontSize: "0.825rem", color: "var(--text-secondary)" }}>
           This sandbox provides empirical structural validation, feature extraction, and retrospective comparison against
-          the verified 118-draw active research corpus (V1.0 frozen baseline: 114 draws). Lottery draws are independent stochastic physical trials.
+          the verified 119-draw active research corpus (45,600 results; V1.0 frozen baseline: 114 draws). Lottery draws are independent stochastic physical trials.
           Historical feature frequencies provide zero predictive utility, winning probability, or betting recommendations.
         </p>
       </div>
@@ -420,7 +420,7 @@ export default function ResearchSandboxPage() {
                 <div className="mono" style={{ fontSize: "0.9rem", color: "var(--text-secondary)", marginTop: "0.35rem" }}>
                   {analysis.historicalComparison?.temporalCutoffApplied
                     ? analysis.historicalComparison.cutoffDate
-                    : `None (Full ${analysis.historicalComparison?.sampleSizeDraws ?? 118} Draws)`}
+                    : `None (Full ${analysis.historicalComparison?.sampleSizeDraws ?? 119} Draws)`}
                 </div>
                 <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
                   {analysis.historicalComparison?.temporalCutoffApplied ? "Zero Future Leakage" : "Full Corpus Evaluation"}
@@ -998,6 +998,82 @@ export default function ResearchSandboxPage() {
             <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)", margin: 0, lineHeight: 1.6 }}>
               {analysis.researchInterpretation.explanation}
             </p>
+          </div>
+
+          {/* PERSONAL DECISION GUIDE */}
+          <div
+            style={{
+              background: "var(--bg-surface)",
+              border: "1px solid var(--accent-primary)",
+              borderRadius: "0.75rem",
+              padding: "1.5rem"
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.75rem", marginBottom: "1rem" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <span className="badge badge-emerald">PERSONAL DECISION GUIDE</span>
+                <h2 style={{ fontSize: "1.25rem", fontWeight: 700, margin: 0 }}>Transparent Personal Decision Guide</h2>
+              </div>
+              <span
+                className={`badge ${
+                  !analysis.validation.isValid
+                    ? "badge-red"
+                    : (analysis.historicalComparison?.exactTicketMatch.matchCount ?? 0) > 0 ||
+                      (analysis.featureProfile && (analysis.featureProfile.structural.repeatedAdjacentPairCount >= 2 || analysis.featureProfile.structural.isPalindrome))
+                    ? "badge-amber"
+                    : "badge-emerald"
+                }`}
+                style={{ fontSize: "0.85rem", padding: "0.35rem 0.75rem" }}
+              >
+                {!analysis.validation.isValid
+                  ? "Does not meet the selected criteria"
+                  : (analysis.historicalComparison?.exactTicketMatch.matchCount ?? 0) > 0 ||
+                    (analysis.featureProfile && (analysis.featureProfile.structural.repeatedAdjacentPairCount >= 2 || analysis.featureProfile.structural.isPalindrome))
+                  ? "Review the evidence"
+                  : "Meets the selected validity criteria"}
+              </span>
+            </div>
+
+            <div className="grid-2" style={{ gap: "0.75rem", marginBottom: "1rem", fontSize: "0.85rem" }}>
+              <div style={{ background: "var(--bg-surface-elevated)", padding: "0.75rem", borderRadius: "0.5rem", border: "1px solid var(--border-subtle)" }}>
+                <strong>1. Structural Validity:</strong>{" "}
+                {analysis.validation.isValid
+                  ? `Valid 6-digit number (${analysis.input.ticketNumber}) and valid series (${analysis.input.series}) for ${analysis.validation.resolvedLottery?.name || analysis.input.lotteryCode}.`
+                  : `Invalid configuration: ${analysis.validation.errors.join("; ") || "Does not match scheme rules"}.`}
+              </div>
+              <div style={{ background: "var(--bg-surface-elevated)", padding: "0.75rem", borderRadius: "0.5rem", border: "1px solid var(--border-subtle)" }}>
+                <strong>2. Exact Historical Appearance:</strong>{" "}
+                {(analysis.historicalComparison?.exactTicketMatch.matchCount ?? 0) > 0
+                  ? `Observed ${analysis.historicalComparison?.exactTicketMatch.matchCount} time(s) in the ${analysis.historicalComparison?.sampleSizeDraws ?? 119}-draw corpus.`
+                  : `Unobserved (0 exact full-ticket appearances across ${analysis.historicalComparison?.sampleSizeDraws ?? 119} draws).`}
+              </div>
+              <div style={{ background: "var(--bg-surface-elevated)", padding: "0.75rem", borderRadius: "0.5rem", border: "1px solid var(--border-subtle)" }}>
+                <strong>3. Ending Digit &amp; Suffix Context:</strong>{" "}
+                {analysis.historicalComparison
+                  ? `Last digit "${analysis.historicalComparison.lastDigitComparison.inputDigit}" observed ${(analysis.historicalComparison.lastDigitComparison.empiricalFrequency * 100).toFixed(2)}% (expected 10.00%); 4-digit suffix "${analysis.historicalComparison.suffixComparisons.suffix4.suffix}" observed ${analysis.historicalComparison.suffixComparisons.suffix4.observedCount} time(s).`
+                  : "Unavailable for invalid ticket format."}
+              </div>
+              <div style={{ background: "var(--bg-surface-elevated)", padding: "0.75rem", borderRadius: "0.5rem", border: "1px solid var(--border-subtle)" }}>
+                <strong>4. Pattern &amp; Parity Summary:</strong>{" "}
+                {analysis.featureProfile
+                  ? `Digit sum ${analysis.featureProfile.digitSum} (${analysis.historicalComparison?.digitSumComparison.empiricalPercentile ?? 50}th percentile), ${analysis.featureProfile.evenDigitCount}E/${analysis.featureProfile.oddDigitCount}O parity, ${analysis.featureProfile.uniqueDigitCount} unique digits.`
+                  : "Unavailable for invalid ticket format."}
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: "rgba(56, 189, 248, 0.08)",
+                border: "1px solid rgba(56, 189, 248, 0.3)",
+                borderRadius: "0.5rem",
+                padding: "0.85rem 1rem",
+                fontSize: "0.85rem",
+                color: "var(--text-primary)",
+                fontWeight: 600
+              }}
+            >
+              Historical results describe the past. They do not establish the probability of winning a future draw.
+            </div>
           </div>
 
           {/* SECTION H: METHODOLOGICAL LIMITATIONS */}

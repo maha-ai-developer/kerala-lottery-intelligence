@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useI18n } from "../lib/i18n";
 
 interface StatsSummary {
   researchDraws: number;
@@ -12,8 +13,13 @@ interface StatsSummary {
   districtsCount: number;
   prodDraws: number;
   prodWinningResults: number;
+  frozenV1Draws: number;
+  frozenV1Results: number;
   totalSchemes: number;
   registeredExperiments: number;
+  corpusVersion: string;
+  corpusId: string;
+  latestDrawDate: string;
 }
 
 interface DrawItem {
@@ -98,17 +104,23 @@ const LOTTERY_SCHEMES = [
 ];
 
 export default function OverviewPage() {
+  const { t } = useI18n();
   const [stats, setStats] = useState<StatsSummary>({
-    researchDraws: 118,
-    researchWinningResults: 45218,
-    researchFullTickets: 1714,
-    researchSuffixes: 43504,
+    researchDraws: 119,
+    researchWinningResults: 45600,
+    researchFullTickets: 1728,
+    researchSuffixes: 43872,
     geoObservations: 380,
     districtsCount: 14,
-    prodDraws: 100,
-    prodWinningResults: 38416,
+    prodDraws: 119,
+    prodWinningResults: 45600,
+    frozenV1Draws: 114,
+    frozenV1Results: 43712,
     totalSchemes: 16,
-    registeredExperiments: 3
+    registeredExperiments: 3,
+    corpusVersion: "active-research-119draws",
+    corpusId: "corpus_2dd9b930c32ea047",
+    latestDrawDate: "18/10/2026"
   });
   const [recentDraws, setRecentDraws] = useState<DrawItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -186,19 +198,34 @@ export default function OverviewPage() {
 
         if (statsRes.ok) {
           const statsJson = await statsRes.json();
-          const pop = statsJson.data?.population || {};
+          const payload = statsJson.data || statsJson;
+          const pop = payload.population || payload.corpusSummary || {};
+          const active = payload.activeCorpus || {};
           setStats((prev) => ({
             ...prev,
-            researchDraws: pop.totalDraws || 118,
-            researchWinningResults: pop.totalResults || 45218,
-            researchFullTickets: pop.fullTicketCount || 1714,
-            researchSuffixes: pop.suffixCount || 43504
+            researchDraws: pop.totalDraws || active.draws || 119,
+            researchWinningResults: pop.totalResults || active.totalResults || 45600,
+            researchFullTickets: pop.fullTicketCount || 1728,
+            researchSuffixes: pop.suffixCount || 43872,
+            corpusVersion: payload.corpusVersion || active.version || "active-research-119draws",
+            corpusId: payload.corpusId || active.corpusId || "corpus_2dd9b930c32ea047",
+            latestDrawDate: payload.dateRange?.latest || active.latestDrawDate || "18/10/2026"
           }));
         }
 
         if (drawsRes.ok) {
           const drawsJson = await drawsRes.json();
-          setRecentDraws(drawsJson.data || []);
+          const rawDraws = drawsJson.data || drawsJson.items || [];
+          setRecentDraws(
+            rawDraws.map((d: any) => ({
+              ...d,
+              id: d.id || d.drawId,
+              lotteryName: d.lotteryName || d.lotteryCode,
+              totalResults: d.totalResults ?? 382,
+              sourceDocumentSha256: d.sourceDocumentSha256 || "",
+              prizeSchemeId: d.prizeSchemeId || d.schemeVersionId || ""
+            }))
+          );
         }
       } catch (err) {
         console.error("Failed to load overview data:", err);
@@ -287,10 +314,11 @@ export default function OverviewPage() {
         });
         const res = await fetch(`/api/v1/research-sandbox?${params.toString()}`);
         const json = await res.json();
-        if (!res.ok || json.status !== "success") {
-          setFormValidationError(json.message || "Analysis request failed.");
+        const payload = json.data || json;
+        if (!res.ok || payload.error) {
+          setFormValidationError(payload.message || json.message || "Analysis request failed.");
         } else {
-          setSingleEvidence(json.data);
+          setSingleEvidence(payload);
           const key = `${singleLottery}:${singleSeries.trim().toUpperCase()}:${singleNumber.trim()}`;
           setShortlistDecisions((prev) => ({ ...prev, [key]: prev[key] || "KEEP" }));
         }
@@ -323,12 +351,13 @@ export default function OverviewPage() {
           .join(",");
         const res = await fetch(`/api/v1/candidate-lab?candidates=${serialized}`);
         const json = await res.json();
-        if (!res.ok || json.status !== "success") {
-          setFormValidationError(json.message || "Candidate comparison failed.");
+        const payload = json.data || json;
+        if (!res.ok || payload.error) {
+          setFormValidationError(payload.message || json.message || "Candidate comparison failed.");
         } else {
-          setMultiEvidence(json.data);
+          setMultiEvidence(payload);
           const nextDecisions: Record<string, ShortlistStatus> = { ...shortlistDecisions };
-          for (const item of json.data.validationSummaries || []) {
+          for (const item of payload.validations || payload.validationSummaries || []) {
             if (!nextDecisions[item.candidateId]) {
               nextDecisions[item.candidateId] = "KEEP";
             }
@@ -389,7 +418,7 @@ export default function OverviewPage() {
       const res = await fetch(`/api/v1/search?q=${encodeURIComponent(searchQuery.trim())}`);
       if (res.ok) {
         const json = await res.json();
-        setSearchResults(json.data || []);
+        setSearchResults(json.data || json.results || []);
       }
     } catch (err) {
       console.error("Search error:", err);
@@ -399,35 +428,130 @@ export default function OverviewPage() {
   };
 
   const latestCorpusDraw = recentDraws.length > 0 ? recentDraws[0] : null;
+  const refreshPendingCount = catchUpReport?.counts?.newEligible ?? 0;
 
   return (
     <div className="container" style={{ padding: "1.75rem 1.25rem" }}>
       {/* Scientific Notice Banner */}
       <div className="scientific-notice" style={{ marginBottom: "1.5rem" }}>
-        <strong>SCIENTIFIC & DESCRIPTIVE RESEARCH PLATFORM ONLY — V1.0 CLOSED RELEASE</strong>
+        <strong>SCIENTIFIC & DESCRIPTIVE RESEARCH PLATFORM — VERIFIED OFFICIAL ARCHIVE</strong>
         <p style={{ margin: "0.25rem 0 0 0", fontSize: "0.825rem", color: "var(--text-secondary)" }}>
           Every number and observation on this platform is cryptographically connected to its Government Gazette result PDF,
-          prize scheme, rule context, and statistical provenance. Lottery draws are independent physical trials.
-          Historical results describe the past and do not establish a candidate&apos;s probability of winning a future draw.
+          prize scheme, rule context, and statistical provenance. {t("decision.mandatoryNotice")}
         </p>
       </div>
 
       {/* Hero Header */}
-      <div style={{ marginBottom: "1.75rem" }}>
+      <div style={{ marginBottom: "1.5rem" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", marginBottom: "0.5rem", flexWrap: "wrap" }}>
           <h1 style={{ fontSize: "1.65rem", fontWeight: 700, margin: 0 }}>
-            Kerala State Lottery Intelligence Platform
+            {t("home.heroTitle")}
           </h1>
-          <span className="badge badge-emerald">V1.0 Closed Release</span>
-          <span className="badge badge-blue">Guided 3-Step Workflow</span>
-          <span className="badge badge-yellow">PROD Boundary Isolated</span>
+          <span className="badge badge-emerald">Active Corpus: {stats.researchDraws} Draws</span>
+          <span className="badge badge-blue">{t("home.heroBadge")}</span>
         </div>
         <p style={{ color: "var(--text-secondary)", fontSize: "0.95rem", margin: 0, maxWidth: "860px" }}>
-          Check official published results, enter one or more candidate numbers, and review clear historical evidence from{" "}
-          <strong>{stats.researchDraws}</strong> verified draws and{" "}
-          <strong>{stats.researchWinningResults.toLocaleString()}</strong> winning results to make an informed personal decision.
+          {t("home.heroSubtitle")}{" "}
+          Currently synchronized with <strong>{stats.researchDraws}</strong> verified draws and{" "}
+          <strong>{stats.researchWinningResults.toLocaleString()}</strong> winning results (Frozen V1.0 Baseline preserved at{" "}
+          <strong>{stats.frozenV1Draws}</strong> draws / <strong>{stats.frozenV1Results.toLocaleString()}</strong> results).
         </p>
       </div>
+
+      {/* =====================================================================
+          MAIN DASHBOARD STATUS BAR (5 KEY QUESTIONS)
+         ===================================================================== */}
+      <section
+        aria-label="Main Dashboard Status Summary"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
+          gap: "0.85rem",
+          marginBottom: "1.75rem"
+        }}
+      >
+        {/* 1. Latest Verified Result */}
+        <div className="stat-card" style={{ borderLeft: "3px solid var(--accent-emerald)" }}>
+          <div className="stat-label">{t("home.status.latestVerified")}</div>
+          <div className="stat-value" style={{ fontSize: "1.1rem", color: "var(--accent-emerald)" }}>
+            {latestCorpusDraw
+              ? `${latestCorpusDraw.lotteryName} (${latestCorpusDraw.drawNumber})`
+              : "SAMRUDHI (SM-77th)"}
+          </div>
+          <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.2rem" }}>
+            Date: <strong>{latestCorpusDraw?.drawDate || "18/10/2026"}</strong> &bull;{" "}
+            <Link
+              href={latestCorpusDraw ? `/draws/${latestCorpusDraw.id}` : "/draws/draw_SM-77th"}
+              style={{ color: "var(--accent-cyan)", textDecoration: "underline" }}
+            >
+              Inspect Draw
+            </Link>
+          </div>
+        </div>
+
+        {/* 2. Today's Scheduled Lottery & Publication State */}
+        <div className="stat-card" style={{ borderLeft: "3px solid var(--accent-blue)" }}>
+          <div className="stat-label">{t("home.status.todayScheduled")}</div>
+          <div className="stat-value" style={{ fontSize: "1.05rem", color: "var(--accent-blue)" }}>
+            {catchUpReport?.todaySchedule?.lotteryName
+              ? `${catchUpReport.todaySchedule.lotteryName} (${catchUpReport.todaySchedule.drawNumber || catchUpReport.todaySchedule.lotteryCode})`
+              : officialCheck?.todaySchedule?.lotteryName
+                ? `${officialCheck.todaySchedule.lotteryName} (${officialCheck.todaySchedule.drawNumber || officialCheck.todaySchedule.lotteryCode})`
+                : "Daily Schedule (3:00 PM IST)"}
+          </div>
+          <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.2rem" }}>
+            State:{" "}
+            <strong>
+              {catchUpReport?.todayStatus?.state ||
+                officialCheck?.discoveryStatus ||
+                (checkingOfficial ? "Checking..." : "Scheduled (15:00–16:30 IST)")}
+            </strong>
+          </div>
+        </div>
+
+        {/* 3. When Official Sources Were Last Checked */}
+        <div className="stat-card" style={{ borderLeft: "3px solid var(--accent-cyan)" }}>
+          <div className="stat-label">{t("home.status.lastChecked")}</div>
+          <div className="stat-value mono" style={{ fontSize: "0.95rem", color: "var(--accent-cyan)" }}>
+            {catchUpReport?.checkedAtIst ||
+              officialCheck?.checkedAt ||
+              (checkingOfficial ? "Checking LOTIS..." : "Auto-checked on session open")}
+          </div>
+          <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.2rem" }}>
+            Bounded read-only check ({catchUpReport?.cacheMeta?.cached ? "5m cache" : "live LOTIS"})
+          </div>
+        </div>
+
+        {/* 4. Which Corpus Version Is Used for Current Research */}
+        <div className="stat-card" style={{ borderLeft: "3px solid var(--accent-purple)" }}>
+          <div className="stat-label">{t("home.status.activeCorpus")}</div>
+          <div className="stat-value" style={{ fontSize: "1.05rem", color: "var(--accent-purple)" }}>
+            {stats.researchDraws} Draws ({stats.researchWinningResults.toLocaleString()} Results)
+          </div>
+          <div className="mono" style={{ fontSize: "0.72rem", color: "var(--text-secondary)", marginTop: "0.2rem" }}>
+            {stats.corpusVersion} ({stats.corpusId})
+          </div>
+        </div>
+
+        {/* 5. Is Research Refresh Complete or Pending */}
+        <div className="stat-card" style={{ borderLeft: "3px solid var(--accent-emerald)" }}>
+          <div className="stat-label">{t("home.status.refreshState")}</div>
+          <div
+            className="stat-value"
+            style={{
+              fontSize: "1.05rem",
+              color: refreshPendingCount > 0 ? "var(--accent-amber)" : "var(--accent-emerald)"
+            }}
+          >
+            {refreshPendingCount > 0 ? t("home.status.refreshPending") : t("home.status.refreshComplete")}
+          </div>
+          <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.2rem" }}>
+            {refreshPendingCount > 0
+              ? `${refreshPendingCount} new official draw(s) ready for authorized ingestion`
+              : "Stats, findings, experiments & sandbox synchronized"}
+          </div>
+        </div>
+      </section>
 
       {/* =====================================================================
           GUIDED 3-STEP USER WORKFLOW
@@ -442,7 +566,10 @@ export default function OverviewPage() {
         }}
       >
         {/* -----------------------------------------------------------------
-            STEP 1: CHECK OFFICIAL RESULTS
+            STEP 1 — Check Latest Official Results
+            STEP 2 — Enter Candidate Number(s)
+            STEP 3 — Understand the Evidence & Decide Personally
+            How was this calculated? | personal decision shortlist | Keep in my comparison
            ----------------------------------------------------------------- */}
         <div
           style={{
@@ -461,7 +588,7 @@ export default function OverviewPage() {
                 </span>
               </div>
               <h2 style={{ fontSize: "1.25rem", fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>
-                STEP 1 — Check Latest Official Results
+                {t("home.step1.title")}
               </h2>
               <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)", margin: "0.25rem 0 0 0" }}>
                 Check the latest officially published Kerala State Lotteries result and today&apos;s scheduled draw status, or upload a result PDF directly.
@@ -528,7 +655,7 @@ export default function OverviewPage() {
                     Draw Date: <strong>{officialCheck.latestOfficialResult.drawDate}</strong> &bull; Status:{" "}
                     <strong>
                       {officialCheck.latestOfficialResult.state === "ALREADY_KNOWN"
-                        ? "In Verified DEV Corpus"
+                        ? "In Verified Active Corpus"
                         : "Available on Official Portal"}
                     </strong>
                   </div>
@@ -795,7 +922,7 @@ export default function OverviewPage() {
                 </span>
               </div>
               <h2 style={{ fontSize: "1.25rem", fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>
-                STEP 2 — Enter Candidate Number(s)
+                {t("home.step2.title")}
               </h2>
               <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)", margin: "0.25rem 0 0 0" }}>
                 Select a lottery scheme and enter a single ticket or compare 2 to 10 candidate numbers side by side. Leading zeros (such as <code className="mono">004582</code>) are preserved automatically.
@@ -1110,14 +1237,14 @@ export default function OverviewPage() {
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.35rem" }}>
                 <span className="badge badge-purple">STEP 3 OF 3</span>
                 <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-secondary)" }}>
-                  Plain-Language Historical Evidence & Personal Decision Workspace
+                  Plain-Language Historical Evidence &amp; Personal Decision Workspace
                 </span>
               </div>
               <h2 style={{ fontSize: "1.25rem", fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>
-                STEP 3 — Understand the Evidence & Decide Personally
+                {t("home.step3.title")}
               </h2>
               <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)", margin: "0.25rem 0 0 0" }}>
-                Historical results describe the past and do not establish a candidate&apos;s probability of winning a future draw.
+                {t("notice.nonPredictive")}
               </p>
             </div>
           </div>
@@ -1135,104 +1262,135 @@ export default function OverviewPage() {
             >
               Submit a single ticket or multiple candidates in <strong>Step 2</strong> above to view:
               <ul style={{ margin: "0.5rem 0 0 1.25rem", padding: 0 }}>
-                <li>Rule & series validation against official Kerala State Lottery scheme rules</li>
-                <li>Exact historical prize matches across {stats.researchDraws} verified draws</li>
+                <li>Rule &amp; series validation against official Kerala State Lottery scheme rules</li>
+                <li>Exact historical prize matches across {stats.researchDraws} verified draws ({stats.researchWinningResults.toLocaleString()} winning records)</li>
                 <li>Terminal digit frequency vs expected uniform 10%, digit sum percentile, and odd/even balance</li>
                 <li>2-digit, 3-digit, and 4-digit suffix appearances in the verified corpus</li>
-                <li>Your personal decision shortlist (Keep in comparison, Review again, or Remove)</li>
+                <li>Transparent Personal Decision Guide (Keep in comparison, Review again, or Remove)</li>
               </ul>
             </div>
           ) : singleEvidence ? (
             /* SINGLE CANDIDATE EVIDENCE VIEW */
             <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-              {/* Plain-Language Summary Banner */}
-              <div
-                style={{
-                  background: "var(--bg-surface-elevated)",
-                  border: "1px solid var(--border-subtle)",
-                  borderRadius: "0.6rem",
-                  padding: "1rem"
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                  <div style={{ fontSize: "1.1rem", fontWeight: 700 }} className="mono">
-                    Candidate: {singleEvidence.input.lotteryCode}-{singleEvidence.input.series}-{singleEvidence.input.ticketNumber}
-                  </div>
-                  <span className={`badge ${singleEvidence.validation.isValid ? "badge-emerald" : "badge-red"}`}>
-                    {singleEvidence.validation.isValid ? "VALID SCHEME & SERIES FORMAT" : "VALIDATION WARNING"}
-                  </span>
-                </div>
-                <p style={{ margin: "0 0 0.5rem 0", fontSize: "0.9rem", color: "var(--text-primary)" }}>
-                  {singleEvidence.researchInterpretation?.summary}
-                </p>
-                <p style={{ margin: 0, fontSize: "0.825rem", color: "var(--text-secondary)" }}>
-                  {singleEvidence.researchInterpretation?.explanation}
-                </p>
-              </div>
-
-              {/* 4 Key Evidence Cards */}
-              <div className="grid-4" style={{ gap: "0.85rem" }}>
-                <div className="stat-card">
-                  <div className="stat-label">Exact Full-Ticket Match</div>
-                  <div className="stat-value" style={{ fontSize: "1.25rem" }}>
-                    {singleEvidence.historicalComparison.exactTicketMatch.observedInCorpus
-                      ? `${singleEvidence.historicalComparison.exactTicketMatch.matchCount} Match(es)`
-                      : "0 Matches"}
-                  </div>
-                  <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
-                    Checked across {singleEvidence.historicalComparison.fullTicketSampleSize.toLocaleString()} full winning tickets
-                  </div>
-                  {singleEvidence.historicalComparison.exactTicketMatch.matches?.length > 0 && (
-                    <div style={{ marginTop: "0.4rem", display: "flex", flexWrap: "wrap", gap: "0.35rem" }}>
-                      {singleEvidence.historicalComparison.exactTicketMatch.matches.map((m: any, i: number) => (
-                        <Link
-                          key={i}
-                          href={`/draws/${m.drawId}`}
-                          className="badge badge-emerald"
-                          style={{ textDecoration: "underline" }}
-                        >
-                          {m.drawId} ({m.prizeTierName})
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="stat-card">
-                  <div className="stat-label">Terminal Digit ({singleEvidence.featureProfile?.lastDigit})</div>
-                  <div className="stat-value" style={{ fontSize: "1.25rem" }}>
-                    {(singleEvidence.historicalComparison.lastDigitComparison.empiricalFrequency * 100).toFixed(2)}%
-                  </div>
-                  <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
-                    Expected uniform baseline: <strong>10.00%</strong> ({singleEvidence.historicalComparison.lastDigitComparison.observedCount.toLocaleString()} observed)
-                  </div>
-                </div>
-
-                <div className="stat-card">
-                  <div className="stat-label">Digit Sum & Balance</div>
-                  <div className="stat-value" style={{ fontSize: "1.25rem" }}>
-                    Sum {singleEvidence.featureProfile?.digitSum} ({singleEvidence.featureProfile?.parityBalance})
-                  </div>
-                  <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
-                    Percentile: <strong>{(singleEvidence.historicalComparison.digitSumComparison.empiricalPercentile * 100).toFixed(1)}%</strong> within 0–54 ({singleEvidence.featureProfile?.uniqueDigitCount} unique digits)
-                  </div>
-                </div>
-
-                <div className="stat-card">
-                  <div className="stat-label">Suffix Appearances (2 / 3 / 4-Digit)</div>
-                  <div className="stat-value mono" style={{ fontSize: "1.1rem" }}>
-                    -{singleEvidence.featureProfile?.suffix2}: {singleEvidence.historicalComparison.suffixComparisons.suffix2.observedCount} | -{singleEvidence.featureProfile?.suffix4}: {singleEvidence.historicalComparison.suffixComparisons.suffix4.observedCount}
-                  </div>
-                  <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
-                    3-digit (-{singleEvidence.featureProfile?.suffix3}): {singleEvidence.historicalComparison.suffixComparisons.suffix3.observedCount} appearances in {singleEvidence.historicalComparison.sampleSizeDraws} draws
-                  </div>
-                </div>
-              </div>
-
-              {/* Personal Decision Controls for Single Candidate */}
+              {/* Plain-Language Summary & Validity Criteria Banner */}
               {(() => {
-                const candidateKey = `${singleEvidence.input.lotteryCode}:${singleEvidence.input.series}:${singleEvidence.input.ticketNumber}`;
-                const status = shortlistDecisions[candidateKey] || "KEEP";
+                const isValid = Boolean(singleEvidence.validation?.isValid);
+                const hasWarnings = (singleEvidence.validation?.warnings?.length || 0) > 0;
+                const statusLabel = !isValid
+                  ? "Does not meet the selected criteria"
+                  : hasWarnings
+                    ? "Review the evidence"
+                    : "Meets the selected validity criteria";
+                const statusBadgeClass = !isValid
+                  ? "badge-red"
+                  : hasWarnings
+                    ? "badge-yellow"
+                    : "badge-emerald";
+
+                return (
+                  <div
+                    style={{
+                      background: "var(--bg-surface-elevated)",
+                      border: "1px solid var(--border-subtle)",
+                      borderRadius: "0.6rem",
+                      padding: "1rem"
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem", marginBottom: "0.5rem" }}>
+                      <div style={{ fontSize: "1.1rem", fontWeight: 700 }} className="mono">
+                        Candidate: {singleEvidence.input?.lotteryCode}-{singleEvidence.input?.series}-{singleEvidence.input?.ticketNumber}
+                      </div>
+                      <span className={`badge ${statusBadgeClass}`}>
+                        {statusLabel}
+                      </span>
+                    </div>
+                    <p style={{ margin: "0 0 0.5rem 0", fontSize: "0.9rem", color: "var(--text-primary)" }}>
+                      {singleEvidence.researchInterpretation?.summary}
+                    </p>
+                    <p style={{ margin: 0, fontSize: "0.825rem", color: "var(--text-secondary)" }}>
+                      {singleEvidence.researchInterpretation?.explanation}
+                    </p>
+                    {!isValid && singleEvidence.validation?.errors?.length > 0 && (
+                      <div style={{ marginTop: "0.65rem", padding: "0.6rem 0.85rem", background: "rgba(239, 68, 68, 0.12)", border: "1px solid rgba(239, 68, 68, 0.35)", borderRadius: "0.45rem", fontSize: "0.82rem", color: "#fca5a5" }}>
+                        <strong>Validation Issues:</strong> {singleEvidence.validation.errors.join(" ")}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* 4 Key Evidence Cards (rendered when historicalComparison & featureProfile are present) */}
+              {singleEvidence.historicalComparison && singleEvidence.featureProfile && (
+                <div className="grid-4" style={{ gap: "0.85rem" }}>
+                  <div className="stat-card">
+                    <div className="stat-label">Exact Full-Ticket Match</div>
+                    <div className="stat-value" style={{ fontSize: "1.25rem" }}>
+                      {singleEvidence.historicalComparison.exactTicketMatch?.observedInCorpus
+                        ? `${singleEvidence.historicalComparison.exactTicketMatch.matchCount} Match(es)`
+                        : "0 Matches"}
+                    </div>
+                    <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
+                      Checked across {(singleEvidence.historicalComparison.fullTicketSampleSize ?? 0).toLocaleString()} full winning tickets
+                    </div>
+                    {(singleEvidence.historicalComparison.exactTicketMatch?.matches?.length || 0) > 0 && (
+                      <div style={{ marginTop: "0.4rem", display: "flex", flexWrap: "wrap", gap: "0.35rem" }}>
+                        {singleEvidence.historicalComparison.exactTicketMatch.matches.map((m: any, i: number) => (
+                          <Link
+                            key={i}
+                            href={`/draws/${m.drawId}`}
+                            className="badge badge-emerald"
+                            style={{ textDecoration: "underline" }}
+                          >
+                            {m.drawId} ({m.prizeTierName})
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="stat-card">
+                    <div className="stat-label">Terminal Digit ({singleEvidence.featureProfile.lastDigit})</div>
+                    <div className="stat-value" style={{ fontSize: "1.25rem" }}>
+                      {((singleEvidence.historicalComparison.lastDigitComparison?.empiricalFrequency ?? 0.1) * 100).toFixed(2)}%
+                    </div>
+                    <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
+                      Expected uniform baseline: <strong>10.00%</strong> ({(singleEvidence.historicalComparison.lastDigitComparison?.observedCount ?? 0).toLocaleString()} observed)
+                    </div>
+                  </div>
+
+                  <div className="stat-card">
+                    <div className="stat-label">Digit Sum &amp; Balance</div>
+                    <div className="stat-value" style={{ fontSize: "1.25rem" }}>
+                      Sum {singleEvidence.featureProfile.digitSum} ({singleEvidence.featureProfile.parityBalance})
+                    </div>
+                    <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
+                      Percentile: <strong>{Number(singleEvidence.historicalComparison.digitSumComparison?.empiricalPercentile ?? 50).toFixed(1)}%</strong> within 0–54 ({singleEvidence.featureProfile.uniqueDigitCount} unique digits)
+                    </div>
+                  </div>
+
+                  <div className="stat-card">
+                    <div className="stat-label">Suffix Appearances (2 / 3 / 4-Digit)</div>
+                    <div className="stat-value mono" style={{ fontSize: "1.1rem" }}>
+                      -{singleEvidence.featureProfile.suffix2}: {singleEvidence.historicalComparison.suffixComparisons?.suffix2?.observedCount ?? 0} | -{singleEvidence.featureProfile.suffix4}: {singleEvidence.historicalComparison.suffixComparisons?.suffix4?.observedCount ?? 0}
+                    </div>
+                    <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
+                      3-digit (-{singleEvidence.featureProfile.suffix3}): {singleEvidence.historicalComparison.suffixComparisons?.suffix3?.observedCount ?? 0} appearances in {singleEvidence.historicalComparison.sampleSizeDraws} draws
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Personal Decision Guide for Single Candidate */}
+              {(() => {
+                const candidateKey = `${singleEvidence.input?.lotteryCode}:${singleEvidence.input?.series}:${singleEvidence.input?.ticketNumber}`;
+                const status = shortlistDecisions[candidateKey] || (singleEvidence.validation?.isValid ? "KEEP" : "REVIEW_AGAIN");
+                const guideStatusLabel = !singleEvidence.validation?.isValid
+                  ? "Does not meet the selected criteria"
+                  : status === "KEEP"
+                    ? "Meets the selected validity criteria"
+                    : status === "REVIEW_AGAIN"
+                      ? "Review the evidence"
+                      : "Removed from personal shortlist";
                 return (
                   <div
                     style={{
@@ -1244,16 +1402,18 @@ export default function OverviewPage() {
                       background: "var(--bg-surface-elevated)",
                       border: "1px solid var(--border-subtle)",
                       borderRadius: "0.6rem",
-                      padding: "0.85rem 1rem"
+                      padding: "0.95rem 1.1rem"
                     }}
                   >
-                    <div>
-                      <div style={{ fontSize: "0.85rem", fontWeight: 700 }}>
-                        Your Personal Decision Note for <span className="mono">{candidateKey}</span>:{" "}
-                        <span className="badge badge-blue">{status.replace("_", " ")}</span>
+                    <div style={{ maxWidth: "680px" }}>
+                      <div style={{ fontSize: "0.88rem", fontWeight: 700, display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+                        <span>Personal Decision Guide for <span className="mono">{candidateKey}</span>:</span>
+                        <span className={`badge ${status === "KEEP" && singleEvidence.validation?.isValid ? "badge-emerald" : status === "REVIEW_AGAIN" ? "badge-yellow" : "badge-blue"}`}>
+                          {guideStatusLabel}
+                        </span>
                       </div>
-                      <div style={{ fontSize: "0.78rem", color: "var(--text-secondary)", marginTop: "0.15rem" }}>
-                        Historical results describe the past and do not establish a candidate&apos;s probability of winning a future draw.
+                      <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
+                        {t("notice.nonPredictive")}
                       </div>
                     </div>
                     <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
@@ -1286,7 +1446,7 @@ export default function OverviewPage() {
                 );
               })()}
 
-              {/* Expandable "How was this calculated?" section */}
+              {/* Expandable Advanced Technical & Provenance Details */}
               <details
                 style={{
                   background: "var(--bg-surface-elevated)",
@@ -1296,24 +1456,30 @@ export default function OverviewPage() {
                 }}
               >
                 <summary style={{ cursor: "pointer", fontWeight: 600, fontSize: "0.875rem", color: "var(--accent-cyan)" }}>
-                  How was this calculated? (Dataset scope, confidence intervals & limitations)
+                  {t("label.advancedDetails")} (Dataset scope, confidence intervals &amp; audit hash)
                 </summary>
                 <div style={{ marginTop: "0.75rem", fontSize: "0.825rem", color: "var(--text-secondary)", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                  <div>
-                    <strong>Corpus Scope:</strong> Evaluated against {singleEvidence.historicalComparison.sampleSizeDraws} verified draws and{" "}
-                    {singleEvidence.historicalComparison.sampleSizeResults.toLocaleString()} winning entries ({singleEvidence.historicalComparison.corpusVersion}).
-                  </div>
-                  <div>
-                    <strong>Terminal Digit 95% Wilson Confidence Interval:</strong> [
-                    {(singleEvidence.historicalComparison.lastDigitComparison.wilsonConfidenceInterval95[0] * 100).toFixed(2)}%,{" "}
-                    {(singleEvidence.historicalComparison.lastDigitComparison.wilsonConfidenceInterval95[1] * 100).toFixed(2)}%]
-                  </div>
+                  {singleEvidence.historicalComparison && (
+                    <>
+                      <div>
+                        <strong>Corpus Scope:</strong> Evaluated against {singleEvidence.historicalComparison.sampleSizeDraws} verified draws and{" "}
+                        {(singleEvidence.historicalComparison.sampleSizeResults ?? 0).toLocaleString()} winning entries ({singleEvidence.historicalComparison.corpusVersion}).
+                      </div>
+                      {singleEvidence.historicalComparison.lastDigitComparison?.wilsonConfidenceInterval95 && (
+                        <div>
+                          <strong>Terminal Digit 95% Wilson Confidence Interval:</strong> [
+                          {(singleEvidence.historicalComparison.lastDigitComparison.wilsonConfidenceInterval95[0] * 100).toFixed(2)}%,{" "}
+                          {(singleEvidence.historicalComparison.lastDigitComparison.wilsonConfidenceInterval95[1] * 100).toFixed(2)}%]
+                        </div>
+                      )}
+                    </>
+                  )}
                   <div>
                     <strong>Exposure Limitation:</strong> {singleEvidence.limitations?.exposureLimitation}
                   </div>
                   <div>
                     <strong>Deterministic Audit Hash:</strong>{" "}
-                    <code className="mono">{singleEvidence.deterministicHash}</code>
+                    <code className="mono">{singleEvidence.provenance?.auditSha256 || singleEvidence.deterministicHash}</code>
                   </div>
                 </div>
               </details>
@@ -1336,7 +1502,7 @@ export default function OverviewPage() {
                   {multiEvidence.researchInterpretation?.summary}
                 </p>
                 <p style={{ margin: 0, fontSize: "0.8rem", color: "var(--text-secondary)" }}>
-                  {multiEvidence.seriesComparison?.criticalExposureNotice}
+                  {multiEvidence.seriesComparison?.criticalExposureNotice || t("notice.nonPredictive")}
                 </p>
               </div>
 
@@ -1345,14 +1511,14 @@ export default function OverviewPage() {
                 <table className="research-table">
                   <thead>
                     <tr>
-                      <th>Candidate</th>
+                      <th>Candidate &amp; Status</th>
                       <th>Ticket</th>
                       <th>Exact Matches</th>
                       <th>Terminal Digit Freq</th>
                       <th>Digit Sum (Pct)</th>
-                      <th>Parity & Unique</th>
+                      <th>Parity &amp; Unique</th>
                       <th>4-Digit / 2-Digit Suffix</th>
-                      <th>Personal Shortlist Decision</th>
+                      <th>Personal Decision Guide</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1363,7 +1529,20 @@ export default function OverviewPage() {
                       const feat = (multiEvidence.featureProfiles || []).find(
                         (f: any) => f.candidateId === row.candidateId
                       );
-                      const decision = shortlistDecisions[row.candidateId] || "KEEP";
+                      const valSummary = (multiEvidence.validationSummaries || []).find(
+                        (v: any) => v.candidateId === row.candidateId
+                      );
+                      const isValid = valSummary ? Boolean(valSummary.validation?.isValid) : true;
+                      const isDup = Boolean(valSummary?.isDuplicate);
+                      const decision = shortlistDecisions[row.candidateId] || (isValid && !isDup ? "KEEP" : "REVIEW_AGAIN");
+                      const criteriaLabel = !isValid
+                        ? "Does not meet criteria"
+                        : isDup || decision === "REVIEW_AGAIN"
+                          ? "Review the evidence"
+                          : decision === "KEEP"
+                            ? "Meets validity criteria"
+                            : "Removed from shortlist";
+
                       return (
                         <tr
                           key={row.candidateId}
@@ -1376,14 +1555,16 @@ export default function OverviewPage() {
                             <div style={{ marginTop: "0.2rem" }}>
                               <span
                                 className={`badge ${
-                                  decision === "KEEP"
-                                    ? "badge-emerald"
-                                    : decision === "REVIEW_AGAIN"
-                                      ? "badge-yellow"
-                                      : "badge-blue"
+                                  !isValid
+                                    ? "badge-red"
+                                    : decision === "KEEP" && !isDup
+                                      ? "badge-emerald"
+                                      : decision === "REVIEW_AGAIN" || isDup
+                                        ? "badge-yellow"
+                                        : "badge-blue"
                                 }`}
                               >
-                                {decision.replace("_", " ")}
+                                {criteriaLabel}
                               </span>
                             </div>
                           </td>
@@ -1410,11 +1591,11 @@ export default function OverviewPage() {
                             )}
                           </td>
                           <td>
-                            <strong>{row.terminalDigitFreqPercent}%</strong>
+                            <strong>{Number(row.terminalDigitFreqPercent ?? 10).toFixed(2)}%</strong>
                             <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>vs 10.0% uniform</div>
                           </td>
                           <td>
-                            <strong>{row.digitSum}</strong> ({row.digitSumPercentile}%)
+                            <strong>{row.digitSum}</strong> ({Number(row.digitSumPercentile ?? 50).toFixed(1)}%)
                           </td>
                           <td>
                             <span className="mono">{row.parityBalance}</span>
@@ -1423,7 +1604,7 @@ export default function OverviewPage() {
                             </div>
                           </td>
                           <td className="mono" style={{ fontSize: "0.8rem" }}>
-                            -{feat?.profile?.suffix4}: {hist?.suffix4?.observedCount ?? 0} | -{feat?.profile?.suffix2}: {hist?.suffix2?.observedCount ?? 0}
+                            -{feat?.profile?.suffix4 || "----"}: {hist?.suffix4?.observedCount ?? 0} | -{feat?.profile?.suffix2 || "--"}: {hist?.suffix2?.observedCount ?? 0}
                           </td>
                           <td>
                             <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
@@ -1469,14 +1650,18 @@ export default function OverviewPage() {
                 }}
               >
                 <summary style={{ cursor: "pointer", fontWeight: 600, fontSize: "0.875rem", color: "var(--accent-cyan)" }}>
-                  How was this calculated? (Methodology & dataset scope)
+                  {t("label.advancedDetails")} (Methodology, corpus scope &amp; comparison hash)
                 </summary>
                 <div style={{ marginTop: "0.75rem", fontSize: "0.825rem", color: "var(--text-secondary)", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                   <div>{multiEvidence.tradeOffAnalysis?.nonPredictiveNotice}</div>
                   <div>{multiEvidence.researchInterpretation?.globalNotice}</div>
                   <div>
+                    <strong>Corpus Version:</strong>{" "}
+                    <code className="mono">{multiEvidence.provenance?.corpusVersion || stats.corpusVersion}</code>
+                  </div>
+                  <div>
                     <strong>Deterministic Comparison Hash:</strong>{" "}
-                    <code className="mono">{multiEvidence.deterministicHash}</code>
+                    <code className="mono">{multiEvidence.provenance?.auditSha256 || multiEvidence.deterministicHash}</code>
                   </div>
                 </div>
               </details>
@@ -1485,10 +1670,10 @@ export default function OverviewPage() {
         </div>
       </section>
 
-      {/* Core V1.0 Platform Architecture Status Grid */}
+      {/* Core Platform Corpus & Baseline Summary Grid */}
       <div className="grid-4" style={{ gap: "1rem", marginBottom: "2rem" }}>
         <div className="stat-card" style={{ borderLeft: "3px solid var(--accent-cyan)" }}>
-          <div className="stat-label">Research Corpus (DEV)</div>
+          <div className="stat-label">Active Research Corpus</div>
           <div className="stat-value" style={{ color: "var(--accent-cyan)" }}>
             {stats.researchDraws} Draws
           </div>
@@ -1503,12 +1688,12 @@ export default function OverviewPage() {
             {stats.geoObservations} Observed
           </div>
           <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
-            All {stats.districtsCount} Kerala revenue districts represented (Exposure: UNAVAILABLE)
+            All {stats.districtsCount} Kerala revenue districts represented (Curated 103-draw snapshot)
           </div>
         </div>
 
         <div className="stat-card" style={{ borderLeft: "3px solid var(--accent-purple)" }}>
-          <div className="stat-label">Formal Baselines (9B/9C)</div>
+          <div className="stat-label">Active Research Baselines</div>
           <div className="stat-value" style={{ color: "var(--accent-purple)" }}>
             {stats.registeredExperiments} Registered
           </div>
@@ -1518,12 +1703,12 @@ export default function OverviewPage() {
         </div>
 
         <div className="stat-card" style={{ borderLeft: "3px solid var(--accent-amber)" }}>
-          <div className="stat-label">Production Isolation (PROD)</div>
+          <div className="stat-label">Frozen V1.0 Baseline</div>
           <div className="stat-value" style={{ color: "var(--accent-amber)" }}>
-            {stats.prodDraws} Draws
+            {stats.frozenV1Draws} Draws
           </div>
           <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
-            {stats.prodWinningResults.toLocaleString()} results | Scheduler: <strong>PAUSED</strong>
+            {stats.frozenV1Results.toLocaleString()} results | Cutoff: <strong>13/10/2026</strong>
           </div>
         </div>
       </div>
@@ -1545,7 +1730,7 @@ export default function OverviewPage() {
               <span className="badge badge-emerald">Deterministic Analysis</span>
             </div>
             <h2 style={{ fontSize: "1.35rem", fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>
-              Interactive Research Sandbox & Candidate Comparison Lab
+              Interactive Research Sandbox &amp; Candidate Comparison Lab
             </h2>
             <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem", marginTop: "0.35rem", marginBottom: 0, maxWidth: "780px" }}>
               Open the dedicated Interactive Research Sandbox or the Candidate Comparison Lab for full confidence-interval breakdowns,
@@ -1578,7 +1763,7 @@ export default function OverviewPage() {
         </div>
         <div className="grid-3" style={{ gap: "1rem" }}>
           <Link
-            href="/draws"
+            href="/results"
             style={{
               display: "block",
               background: "var(--bg-surface)",
@@ -1590,10 +1775,10 @@ export default function OverviewPage() {
             }}
           >
             <div style={{ fontWeight: 700, fontSize: "1rem", color: "var(--accent-cyan)", marginBottom: "0.25rem" }}>
-              Historical Draws &rarr;
+              Official Results &amp; Draws &rarr;
             </div>
             <div style={{ fontSize: "0.825rem", color: "var(--text-secondary)" }}>
-              Browse and inspect all historical draws, prize distributions, and verified PDF source documents.
+              Browse all {stats.researchDraws} verified official draws, winning tickets, and official source PDFs.
             </div>
           </Link>
 
@@ -1613,7 +1798,7 @@ export default function OverviewPage() {
               Descriptive Statistics &rarr;
             </div>
             <div style={{ fontSize: "0.825rem", color: "var(--text-secondary)" }}>
-              Empirical marginal digit distributions, chi-square uniformity tests, and Shannon entropy metrics.
+              Empirical marginal digit distributions, chi-square uniformity tests, and Shannon entropy metrics across {stats.researchWinningResults.toLocaleString()} results.
             </div>
           </Link>
 
@@ -1650,7 +1835,7 @@ export default function OverviewPage() {
             }}
           >
             <div style={{ fontWeight: 700, fontSize: "1rem", color: "var(--accent-cyan)", marginBottom: "0.25rem" }}>
-              Findings & Evidence &rarr;
+              Findings &amp; Evidence &rarr;
             </div>
             <div style={{ fontSize: "0.825rem", color: "var(--text-secondary)" }}>
               Peer-reviewable evidence bundles and publication reports tracing claims to verified sources.
@@ -1670,7 +1855,7 @@ export default function OverviewPage() {
             }}
           >
             <div style={{ fontWeight: 700, fontSize: "1rem", color: "var(--accent-emerald)", marginBottom: "0.25rem" }}>
-              Geography & Exposure &rarr;
+              Geography &amp; Exposure &rarr;
             </div>
             <div style={{ fontSize: "0.825rem", color: "var(--text-secondary)" }}>
               Audit of 380 published major-prize observations across 14 revenue districts and exposure limitation analysis.
@@ -1713,7 +1898,7 @@ export default function OverviewPage() {
           <input
             type="text"
             className="search-input"
-            placeholder="Search draws (e.g. BT-73, SM-74), ticket numbers (e.g. 025916, 0276), or SHA-256..."
+            placeholder="Search draws (e.g. SM-77, KR-772, BT-73), ticket numbers (e.g. 025916, 0276), or SHA-256..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -1742,7 +1927,7 @@ export default function OverviewPage() {
             </div>
             {searchResults.length === 0 ? (
               <div style={{ color: "var(--text-secondary)", fontSize: "0.875rem" }}>
-                No records matched &quot;{searchQuery}&quot;. Try a draw code (BT-73), lottery name, or ticket number.
+                No records matched &quot;{searchQuery}&quot;. Try a draw code (SM-77, BT-73), lottery name, or ticket number.
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
@@ -1779,77 +1964,17 @@ export default function OverviewPage() {
         )}
       </div>
 
-      {/* Anchor Case Study Card: BHAGYATHARA BT-73 */}
-      <div
-        style={{
-          background: "var(--bg-surface)",
-          border: "1px solid rgba(56, 189, 248, 0.3)",
-          borderRadius: "0.75rem",
-          padding: "1.5rem",
-          marginBottom: "2rem"
-        }}
-      >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem", marginBottom: "1rem" }}>
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
-              <span className="badge badge-emerald">Real-World Anchor</span>
-              <span className="badge badge-blue">Official Gov Result</span>
-              <span className="mono" style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>28/09/2026</span>
-            </div>
-            <h2 style={{ fontSize: "1.35rem", fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>
-              BHAGYATHARA BT-73 — Complete Provenance Chain
-            </h2>
-            <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem", marginTop: "0.25rem", marginBottom: 0 }}>
-              The canonical benchmark draw used across all verifications. 100% verified against official gazetted PDF.
-            </p>
-          </div>
-          <div style={{ display: "flex", gap: "0.5rem" }}>
-            <Link href="/draws/kl-bt-73-2026-09-28" className="btn btn-primary" style={{ fontSize: "0.85rem" }}>
-              Inspect BT-73 &rarr;
-            </Link>
-            <Link href="/sources/cddb3d4d05c102b98f38050ac1ff297ad15bc442b12087c0505927f7bb1cf3dc" className="btn btn-outline" style={{ fontSize: "0.85rem" }}>
-              Source PDF
-            </Link>
-          </div>
-        </div>
-
-        <div className="grid-3" style={{ fontSize: "0.85rem" }}>
-          <div style={{ background: "var(--bg-surface-elevated)", padding: "0.875rem", borderRadius: "0.5rem", border: "1px solid var(--border-subtle)" }}>
-            <div style={{ color: "var(--text-muted)", fontSize: "0.75rem", textTransform: "uppercase" }}>Source Document SHA-256</div>
-            <div className="mono" style={{ color: "var(--accent-cyan)", fontSize: "0.75rem", wordBreak: "break-all", marginTop: "0.25rem" }}>
-              cddb3d4d05c102b98f38050ac1ff297ad15bc442b12087c0505927f7bb1cf3dc
-            </div>
-          </div>
-          <div style={{ background: "var(--bg-surface-elevated)", padding: "0.875rem", borderRadius: "0.5rem", border: "1px solid var(--border-subtle)" }}>
-            <div style={{ color: "var(--text-muted)", fontSize: "0.75rem", textTransform: "uppercase" }}>Prize Structure</div>
-            <div style={{ marginTop: "0.25rem", fontWeight: 600 }}>
-              8 Tiers + Consolation | 378 Winning Numbers
-            </div>
-            <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.15rem" }}>
-              14 Full Tickets (1st & Consolation) + 364 Suffixes
-            </div>
-          </div>
-          <div style={{ background: "var(--bg-surface-elevated)", padding: "0.875rem", borderRadius: "0.5rem", border: "1px solid var(--border-subtle)" }}>
-            <div style={{ color: "var(--text-muted)", fontSize: "0.75rem", textTransform: "uppercase" }}>Prize Scheme ID</div>
-            <div className="mono" style={{ color: "var(--accent-emerald)", fontSize: "0.8rem", marginTop: "0.25rem" }}>
-              scheme_ver_bt_2025_11_sro1297
-            </div>
-            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "0.15rem" }}>
-              Authority: <span className="badge badge-emerald" style={{ fontSize: "0.68rem" }}>OFFICIAL_SCHEME</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Recent Draws Table */}
       <div style={{ marginBottom: "2rem" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
           <div>
-            <h2 style={{ fontSize: "1.15rem", fontWeight: 700, margin: 0 }}>Recent Verified Draws</h2>
-            <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Showing most recent draws from verified corpus</div>
+            <h2 style={{ fontSize: "1.15rem", fontWeight: 700, margin: 0 }}>Recent Verified Official Draws</h2>
+            <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
+              Showing the latest official draws from the active {stats.researchDraws}-draw verified corpus
+            </div>
           </div>
-          <Link href="/draws" className="btn btn-outline" style={{ fontSize: "0.85rem" }}>
-            View All Draws &rarr;
+          <Link href="/results" className="btn btn-outline" style={{ fontSize: "0.85rem" }}>
+            View All Results &rarr;
           </Link>
         </div>
 
@@ -1857,37 +1982,30 @@ export default function OverviewPage() {
           <table className="research-table">
             <thead>
               <tr>
-                <th>Draw ID</th>
                 <th>Lottery</th>
                 <th>Draw #</th>
                 <th>Draw Date</th>
                 <th>Winning Results</th>
-                <th>Scheme ID</th>
-                <th>Source SHA</th>
+                <th>Official Source PDF</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: "center", padding: "2rem" }}>
+                  <td colSpan={6} style={{ textAlign: "center", padding: "2rem" }}>
                     Loading recent verified draws...
                   </td>
                 </tr>
               ) : recentDraws.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: "center", padding: "2rem" }}>
+                  <td colSpan={6} style={{ textAlign: "center", padding: "2rem" }}>
                     No draws found.
                   </td>
                 </tr>
               ) : (
                 recentDraws.map((d) => (
                   <tr key={d.id}>
-                    <td>
-                      <Link href={`/draws/${d.id}`} className="mono" style={{ color: "var(--accent-cyan)", textDecoration: "none" }}>
-                        {d.id}
-                      </Link>
-                    </td>
                     <td style={{ fontWeight: 600 }}>{d.lotteryName} ({d.lotteryCode})</td>
                     <td><span className="mono">#{d.drawNumber}</span></td>
                     <td>{d.drawDate}</td>
@@ -1897,23 +2015,18 @@ export default function OverviewPage() {
                       </span>
                     </td>
                     <td>
-                      <span className="mono" style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
-                        {d.prizeSchemeId}
-                      </span>
-                    </td>
-                    <td>
                       <Link
                         href={`/sources/${d.sourceDocumentSha256}`}
                         className="mono"
-                        style={{ fontSize: "0.75rem", color: "var(--text-secondary)", textDecoration: "underline" }}
+                        style={{ fontSize: "0.78rem", color: "var(--accent-cyan)", textDecoration: "underline" }}
                         title={d.sourceDocumentSha256}
                       >
-                        {d.sourceDocumentSha256.slice(0, 10)}...
+                        Verified PDF ({d.sourceDocumentSha256.slice(0, 8)}...)
                       </Link>
                     </td>
                     <td>
                       <Link href={`/draws/${d.id}`} className="btn btn-outline" style={{ fontSize: "0.75rem", padding: "0.25rem 0.5rem" }}>
-                        Inspect
+                        View Draw &rarr;
                       </Link>
                     </td>
                   </tr>
@@ -1923,6 +2036,58 @@ export default function OverviewPage() {
           </table>
         </div>
       </div>
+
+      {/* Expandable Advanced Technical & Provenance Details (Benchmark Anchor & Corpus Versions) */}
+      <details
+        style={{
+          background: "var(--bg-surface)",
+          border: "1px solid var(--border-medium)",
+          borderRadius: "0.75rem",
+          padding: "1.15rem 1.35rem",
+          marginBottom: "2rem"
+        }}
+      >
+        <summary style={{ cursor: "pointer", fontWeight: 700, fontSize: "0.95rem", color: "var(--accent-cyan)" }}>
+          {t("label.advancedDetails")} — Corpus Versions, Provenance &amp; Canonical Benchmark (BT-73)
+        </summary>
+        <div style={{ marginTop: "1rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
+          <div className="grid-3" style={{ fontSize: "0.85rem" }}>
+            <div style={{ background: "var(--bg-surface-elevated)", padding: "0.875rem", borderRadius: "0.5rem", border: "1px solid var(--border-subtle)" }}>
+              <div style={{ color: "var(--text-muted)", fontSize: "0.75rem", textTransform: "uppercase" }}>Active Corpus Version</div>
+              <div className="mono" style={{ color: "var(--accent-cyan)", fontSize: "0.85rem", marginTop: "0.25rem" }}>
+                {stats.corpusVersion}
+              </div>
+              <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.15rem" }}>
+                {stats.researchDraws} draws | {stats.researchWinningResults.toLocaleString()} results (through {stats.latestDrawDate})
+              </div>
+            </div>
+            <div style={{ background: "var(--bg-surface-elevated)", padding: "0.875rem", borderRadius: "0.5rem", border: "1px solid var(--border-subtle)" }}>
+              <div style={{ color: "var(--text-muted)", fontSize: "0.75rem", textTransform: "uppercase" }}>Frozen V1.0 Baseline</div>
+              <div className="mono" style={{ color: "var(--accent-amber)", fontSize: "0.85rem", marginTop: "0.25rem" }}>
+                corpus_333b70f1d5e19ec6
+              </div>
+              <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.15rem" }}>
+                {stats.frozenV1Draws} draws | {stats.frozenV1Results.toLocaleString()} results (cutoff 13/10/2026)
+              </div>
+            </div>
+            <div style={{ background: "var(--bg-surface-elevated)", padding: "0.875rem", borderRadius: "0.5rem", border: "1px solid var(--border-subtle)" }}>
+              <div style={{ color: "var(--text-muted)", fontSize: "0.75rem", textTransform: "uppercase" }}>Anchor Case Study: BHAGYATHARA BT-73</div>
+              <div className="mono" style={{ color: "var(--accent-emerald)", fontSize: "0.8rem", marginTop: "0.25rem" }}>
+                scheme_ver_bt_2025_11_sro1297
+              </div>
+              <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.25rem", display: "flex", gap: "0.5rem" }}>
+                <Link href="/draws/kl-bt-73-2026-09-28" style={{ color: "var(--accent-cyan)", textDecoration: "underline" }}>
+                  Inspect BT-73
+                </Link>
+                <span>|</span>
+                <Link href="/sources/cddb3d4d05c102b98f38050ac1ff297ad15bc442b12087c0505927f7bb1cf3dc" style={{ color: "var(--accent-cyan)", textDecoration: "underline" }}>
+                  Source PDF (cddb3d4d...)
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </details>
     </div>
   );
 }

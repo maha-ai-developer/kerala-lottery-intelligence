@@ -1,264 +1,240 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 
-interface DrawItem {
-  id: string;
-  lotteryCode: string;
-  lotteryName: string;
-  drawNumber: number;
-  drawDate: string;
-  totalResults: number;
-  sourceDocumentSha256: string;
-  prizeSchemeId: string;
-  status: string;
-}
-
-function DrawsContent() {
-  const searchParams = useSearchParams();
-  const initialLottery = searchParams.get("lottery") || "";
-
-  const [draws, setDraws] = useState<DrawItem[]>([]);
-  const [lotteryFilter, setLotteryFilter] = useState(initialLottery);
-  const [searchFilter, setSearchFilter] = useState("");
-  const [page, setPage] = useState(1);
-  const [limit] = useState(20);
-  const [total, setTotal] = useState(0);
+export default function DrawsListPage() {
+  const [draws, setDraws] = useState<any[]>([]);
+  const [meta, setMeta] = useState<any>(null);
+  const [corpusMeta, setCorpusMeta] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
+  const [lotteryCode, setLotteryCode] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [page, setPage] = useState(1);
+
   useEffect(() => {
-    async function fetchDraws() {
-      setLoading(true);
-      try {
-        let url = `/api/v1/draws?page=${page}&limit=${limit}`;
-        if (lotteryFilter) {
-          url += `&lottery=${encodeURIComponent(lotteryFilter)}`;
-        }
-        if (searchFilter.trim()) {
-          url += `&search=${encodeURIComponent(searchFilter.trim())}`;
-        }
+    setLoading(true);
+    const params = new URLSearchParams({ page: String(page), pageSize: "20" });
+    if (lotteryCode) params.set("lotteryCode", lotteryCode);
+    if (dateFrom) params.set("dateFrom", dateFrom);
+    if (dateTo) params.set("dateTo", dateTo);
 
-        const res = await fetch(url);
-        if (res.ok) {
-          const json = await res.json();
-          setDraws(json.data || []);
-          setTotal(json.pagination?.total || 0);
-        }
-      } catch (err) {
-        console.error("Error fetching draws:", err);
-      } finally {
+    fetch(`/api/v1/draws?${params.toString()}`)
+      .then((res) => res.json())
+      .then((json) => {
+        const payload = json.data;
+        const items = Array.isArray(payload) ? payload : payload?.items || [];
+        setDraws(items);
+        setMeta(
+          payload && !Array.isArray(payload)
+            ? {
+                page: payload.page ?? page,
+                pageSize: payload.pageSize ?? 20,
+                total: payload.total ?? items.length,
+                totalPages: payload.totalPages ?? 1
+              }
+            : json.meta
+        );
+        if (json.meta) setCorpusMeta(json.meta);
         setLoading(false);
-      }
-    }
-
-    fetchDraws();
-  }, [page, limit, lotteryFilter, searchFilter]);
-
-  const totalPages = Math.ceil(total / limit) || 1;
+      })
+      .catch(() => setLoading(false));
+  }, [lotteryCode, dateFrom, dateTo, page]);
 
   return (
-    <div className="container" style={{ padding: "2rem 1.5rem" }}>
-      {/* Header */}
-      <div style={{ marginBottom: "2rem" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.5rem" }}>
-          <h1 style={{ fontSize: "1.75rem", fontWeight: 700, margin: 0 }}>
-            Verified Lottery Draws
-          </h1>
-          <span className="badge badge-emerald">{total} Total Draws</span>
-          <span className="badge badge-blue">Deterministic Registry</span>
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Draws Archive</h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Browse and filter all {meta?.total || 119} verified official draws in the active research corpus (through{" "}
+            <span className="font-semibold text-slate-700">
+              {corpusMeta?.evaluationCutoffDate || "2026-10-18"}
+            </span>
+            )
+          </p>
         </div>
-        <p style={{ color: "var(--text-secondary)", fontSize: "0.95rem", margin: 0 }}>
-          Browse and filter all 100 historical official draws. Every draw links directly to its cryptographically verified gazetted PDF.
-        </p>
+        <div className="flex items-center gap-2 text-xs font-mono text-slate-500 bg-slate-100 px-3 py-1.5 rounded-md">
+          <span>Total Matched Draws: {meta?.total ?? "..."}</span>
+          {corpusMeta?.corpusVersion && (
+            <span className="border-l border-slate-300 pl-2 text-emerald-700 font-semibold">
+              {corpusMeta.corpusVersion}
+            </span>
+          )}
+        </div>
       </div>
 
-      {/* Filter Controls */}
-      <div
-        style={{
-          display: "flex",
-          gap: "1rem",
-          alignItems: "center",
-          flexWrap: "wrap",
-          marginBottom: "1.5rem",
-          background: "var(--bg-surface)",
-          padding: "1rem 1.25rem",
-          borderRadius: "0.5rem",
-          border: "1px solid var(--border-subtle)"
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-          <label style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>Lottery:</label>
+      {/* Filters */}
+      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-wrap gap-4 items-end">
+        <div>
+          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+            Lottery Scheme
+          </label>
           <select
-            className="select-input"
-            value={lotteryFilter}
+            value={lotteryCode}
             onChange={(e) => {
-              setLotteryFilter(e.target.value);
+              setLotteryCode(e.target.value);
               setPage(1);
             }}
+            aria-label="Lottery Scheme Filter"
+            className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white"
           >
-            <option value="">All Lotteries (9)</option>
-            <option value="BT">Bhagyathara (BT)</option>
-            <option value="KR">Karunya (KR)</option>
-            <option value="KN">Karunya Plus (KN)</option>
-            <option value="FF">Fifty Fifty (FF)</option>
-            <option value="NR">Nirmal (NR)</option>
-            <option value="SS">Sthree Sakthi (SS)</option>
-            <option value="W">Win-Win (W)</option>
-            <option value="AK">Akshaya (AK)</option>
-            <option value="BR">Monsoon Bumper (BR)</option>
+            <option value="">All Schemes (Active Corpus)</option>
+            <option value="SM">SM (Samrudhi)</option>
+            <option value="BT">BT (Bhagyathara)</option>
+            <option value="SS">SS (Sthree Sakthi)</option>
+            <option value="DL">DL (Dhanalakshmi)</option>
+            <option value="KN">KN (Karunya Plus)</option>
+            <option value="SK">SK (Suvarna Keralam)</option>
+            <option value="KR">KR (Karunya)</option>
+            <option value="BR">BR (Bumper)</option>
+            <option value="WW">WW (Win-Win — Historical)</option>
+            <option value="FF">FF (Fifty-Fifty — Historical)</option>
+            <option value="NR">NR (Nirmal — Historical)</option>
+            <option value="AK">AK (Akshaya — Historical)</option>
           </select>
         </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flex: 1, minWidth: "200px" }}>
-          <label style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>Search:</label>
+        <div>
+          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+            Date From
+          </label>
           <input
-            type="text"
-            className="search-input"
-            placeholder="Draw # or Draw ID (e.g. 73 or kl-bt-73)..."
-            value={searchFilter}
+            type="date"
+            value={dateFrom}
             onChange={(e) => {
-              setSearchFilter(e.target.value);
+              setDateFrom(e.target.value);
               setPage(1);
             }}
+            className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600"
           />
         </div>
-
-        {(lotteryFilter || searchFilter) && (
-          <button
-            type="button"
-            className="btn btn-outline"
-            onClick={() => {
-              setLotteryFilter("");
-              setSearchFilter("");
+        <div>
+          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+            Date To
+          </label>
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => {
+              setDateTo(e.target.value);
               setPage(1);
             }}
-            style={{ fontSize: "0.85rem" }}
+            className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600"
+          />
+        </div>
+        {(lotteryCode || dateFrom || dateTo) && (
+          <button
+            onClick={() => {
+              setLotteryCode("");
+              setDateFrom("");
+              setDateTo("");
+              setPage(1);
+            }}
+            className="px-3 py-2 text-xs font-medium text-slate-600 hover:text-slate-900 underline"
           >
             Reset Filters
           </button>
         )}
       </div>
 
-      {/* Table Container */}
-      <div className="table-container" style={{ marginBottom: "1.5rem" }}>
-        <table className="research-table">
-          <thead>
-            <tr>
-              <th>Draw ID</th>
-              <th>Lottery</th>
-              <th>Draw #</th>
-              <th>Draw Date</th>
-              <th>Results Count</th>
-              <th>Prize Scheme ID</th>
-              <th>Source SHA-256</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={8} style={{ textAlign: "center", padding: "3rem" }}>
-                  Loading draws...
-                </td>
+      {/* Table */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                <th className="py-3.5 px-4">Draw Date</th>
+                <th className="py-3.5 px-4">Code</th>
+                <th className="py-3.5 px-4">Draw Number</th>
+                <th className="py-3.5 px-4">Lottery Name</th>
+                <th className="py-3.5 px-4">1st Prize Winner</th>
+                <th className="py-3.5 px-4">Records</th>
+                <th className="py-3.5 px-4 text-right">Action</th>
               </tr>
-            ) : draws.length === 0 ? (
-              <tr>
-                <td colSpan={8} style={{ textAlign: "center", padding: "3rem" }}>
-                  No draws found matching filters.
-                </td>
-              </tr>
-            ) : (
-              draws.map((d) => (
-                <tr key={d.id}>
-                  <td>
-                    <Link href={`/draws/${d.id}`} className="mono" style={{ color: "var(--accent-cyan)", textDecoration: "none", fontWeight: 600 }}>
-                      {d.id}
-                    </Link>
-                  </td>
-                  <td>
-                    <span style={{ fontWeight: 600 }}>{d.lotteryName}</span>{" "}
-                    <span className="mono" style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>({d.lotteryCode})</span>
-                  </td>
-                  <td>
-                    <span className="mono">#{d.drawNumber}</span>
-                  </td>
-                  <td>{d.drawDate}</td>
-                  <td>
-                    <span className="badge badge-emerald">
-                      {d.totalResults} results
-                    </span>
-                  </td>
-                  <td>
-                    <Link href={`/schemes/${d.prizeSchemeId}`} className="mono" style={{ fontSize: "0.75rem", color: "var(--text-secondary)", textDecoration: "none" }}>
-                      {d.prizeSchemeId}
-                    </Link>
-                  </td>
-                  <td>
-                    <Link
-                      href={`/sources/${d.sourceDocumentSha256}`}
-                      className="mono"
-                      style={{ fontSize: "0.75rem", color: "var(--accent-cyan)", textDecoration: "underline" }}
-                      title={d.sourceDocumentSha256}
-                    >
-                      {d.sourceDocumentSha256.slice(0, 10)}...
-                    </Link>
-                  </td>
-                  <td>
-                    <div style={{ display: "flex", gap: "0.35rem" }}>
-                      <Link href={`/draws/${d.id}`} className="btn btn-outline" style={{ fontSize: "0.75rem", padding: "0.25rem 0.5rem" }}>
-                        Inspect
-                      </Link>
-                    </div>
+            </thead>
+            <tbody className="divide-y divide-slate-200 text-sm">
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center text-slate-400">
+                    Loading official draw records...
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              ) : draws.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center text-slate-400">
+                    No draws matched your filter criteria.
+                  </td>
+                </tr>
+              ) : (
+                draws.map((d: any) => {
+                  const drawId = d.drawId || d.id;
+                  return (
+                    <tr key={drawId} className="hover:bg-slate-50 transition-colors">
+                      <td className="py-3 px-4 font-mono text-slate-700">{d.drawDate}</td>
+                      <td className="py-3 px-4">
+                        <span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-xs font-mono font-bold">
+                          {d.lotteryCode}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 font-mono font-medium text-slate-900">
+                        {d.drawNumber}
+                      </td>
+                      <td className="py-3 px-4 text-slate-700">{d.lotteryName}</td>
+                      <td className="py-3 px-4 font-mono text-xs text-emerald-700 font-semibold">
+                        {d.firstPrizeNumber || "—"}
+                        {d.firstPrizeLocation ? (
+                          <span className="text-slate-400 font-normal ml-1">
+                            ({d.firstPrizeLocation})
+                          </span>
+                        ) : null}
+                      </td>
+                      <td className="py-3 px-4 font-mono text-xs text-slate-600">
+                        {d.totalResultsCount ?? "—"}
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <Link
+                          href={`/draws/${drawId}`}
+                          className="text-emerald-700 hover:text-emerald-800 font-medium text-xs bg-emerald-50 px-2.5 py-1.5 rounded-md border border-emerald-200"
+                        >
+                          Inspect Draw →
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
 
-      {/* Pagination Controls */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>
-          Showing Page <strong>{page}</strong> of <strong>{totalPages}</strong> ({total} total draws)
-        </div>
-        <div style={{ display: "flex", gap: "0.5rem" }}>
-          <button
-            type="button"
-            className="btn btn-outline"
-            disabled={page <= 1}
-            onClick={() => setPage(page - 1)}
-            style={{ fontSize: "0.85rem" }}
-          >
-            &larr; Previous
-          </button>
-          <button
-            type="button"
-            className="btn btn-outline"
-            disabled={page >= totalPages}
-            onClick={() => setPage(page + 1)}
-            style={{ fontSize: "0.85rem" }}
-          >
-            Next &rarr;
-          </button>
-        </div>
+        {/* Pagination */}
+        {meta && (
+          <div className="bg-slate-50 px-4 py-3 border-t border-slate-200 flex items-center justify-between">
+            <span className="text-xs text-slate-500">
+              Page <span className="font-semibold text-slate-700">{meta.page}</span> of{" "}
+              <span className="font-semibold text-slate-700">{meta.totalPages}</span>
+            </span>
+            <div className="flex gap-2">
+              <button
+                disabled={page <= 1}
+                onClick={() => setPage((p) => p - 1)}
+                className="px-3 py-1.5 border border-slate-300 rounded-md text-xs font-medium bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              >
+                Previous
+              </button>
+              <button
+                disabled={page >= meta.totalPages}
+                onClick={() => setPage((p) => p + 1)}
+                className="px-3 py-1.5 border border-slate-300 rounded-md text-xs font-medium bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
-  );
-}
-
-export default function DrawsPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="container" style={{ padding: "3rem 1rem", textAlign: "center", color: "var(--text-muted)" }}>
-          Loading draw catalog...
-        </div>
-      }
-    >
-      <DrawsContent />
-    </Suspense>
   );
 }

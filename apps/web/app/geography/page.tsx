@@ -155,7 +155,7 @@ export default function GeographyPage() {
             Milestone 10A • Continuous Research Surface
           </span>
           <span style={{ fontSize: "0.75rem", padding: "0.15rem 0.5rem", borderRadius: "9999px", background: "rgba(16, 185, 129, 0.15)", color: "#10b981", border: "1px solid rgba(16, 185, 129, 0.3)", fontWeight: 600 }}>
-            ACTIVE CORPUS: {dataset?.activeCorpus?.totalDraws ?? 118} DRAWS ({dataset?.activeCorpus?.corpusLabel ?? "active-research-118draws"})
+            ACTIVE CORPUS: {dataset?.activeCorpus?.totalDraws ?? 119} DRAWS ({dataset?.activeCorpus?.corpusLabel ?? "active-research-119draws"})
           </span>
           <span style={{ fontSize: "0.75rem", padding: "0.15rem 0.5rem", borderRadius: "9999px", background: "rgba(56, 189, 248, 0.15)", color: "#38bdf8", border: "1px solid rgba(56, 189, 248, 0.3)", fontWeight: 600 }}>
             EXTRACTION SNAPSHOT: {dataset?.snapshotMetadata?.snapshotVersion ?? "m10a-geography-103draws"}
@@ -168,7 +168,7 @@ export default function GeographyPage() {
           Winning Geography & Ticket Distribution Exposure
         </h1>
         <p style={{ color: "var(--text-secondary)", fontSize: "0.95rem", margin: 0, maxWidth: "900px", lineHeight: 1.5 }}>
-          Ground truth retrospective extraction of published ticket issuing offices from canonical Kerala Government Gazette result PDFs (Milestone 10A {dataset?.drawCount ?? 103}-draw extraction snapshot <code style={{ color: "var(--accent-cyan)" }}>{dataset?.snapshotMetadata?.snapshotVersion ?? "m10a-geography-103draws"}</code>; Active Research Corpus: {dataset?.activeCorpus?.totalDraws ?? 118} draws / {(dataset?.activeCorpus?.totalResults ?? 45218).toLocaleString()} results). Rigorous separation between observed winner occurrences and ticket exposure denominators.
+          Ground truth retrospective extraction of published ticket issuing offices from canonical Kerala Government Gazette result PDFs (Milestone 10A {dataset?.drawCount ?? 103}-draw extraction snapshot <code style={{ color: "var(--accent-cyan)" }}>{dataset?.snapshotMetadata?.snapshotVersion ?? "m10a-geography-103draws"}</code>; Active Research Corpus: {dataset?.activeCorpus?.totalDraws ?? 119} draws / {(dataset?.activeCorpus?.totalResults ?? 45600).toLocaleString()} results). Rigorous separation between observed winner occurrences and ticket exposure denominators.
         </p>
       </div>
 
@@ -209,9 +209,9 @@ export default function GeographyPage() {
         <div style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)", borderRadius: "0.5rem", padding: "1rem" }}>
           <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", textTransform: "uppercase", fontWeight: 600 }}>Active Research Corpus</div>
           <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--accent-emerald)", marginTop: "0.25rem" }}>
-            {dataset?.activeCorpus?.totalDraws ?? 118} <span style={{ fontSize: "0.9rem", fontWeight: 400, color: "var(--text-secondary)" }}>Draws (Latest: {dataset?.activeCorpus?.latestDrawCode ?? "KR-772nd"})</span>
+            {dataset?.activeCorpus?.totalDraws ?? 119} <span style={{ fontSize: "0.9rem", fontWeight: 400, color: "var(--text-secondary)" }}>Draws (Latest: {dataset?.activeCorpus?.latestDrawCode ?? "SM-77th"})</span>
           </div>
-          <div style={{ fontSize: "0.75rem", color: "var(--accent-emerald)", marginTop: "0.25rem" }}>{(dataset?.activeCorpus?.totalResults ?? 45218).toLocaleString()} Active Results • {dataset?.activeCorpus?.corpusLabel ?? "active-research-118draws"}</div>
+          <div style={{ fontSize: "0.75rem", color: "var(--accent-emerald)", marginTop: "0.25rem" }}>{(dataset?.activeCorpus?.totalResults ?? 45600).toLocaleString()} Active Results • {dataset?.activeCorpus?.corpusLabel ?? "active-research-119draws"}</div>
         </div>
 
         <div style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)", borderRadius: "0.5rem", padding: "1rem" }}>

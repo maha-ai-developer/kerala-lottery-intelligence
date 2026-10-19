@@ -182,10 +182,11 @@ export class SourceIngestionService {
           "STORAGE_IDENTITY_MISMATCH"
         );
       }
+      const normDrawId = (id: string) => id.trim().replace(/(st|nd|rd|th)$/i, "").toUpperCase();
       if (
         input.expectedDrawId &&
         meta.customMetadata?.drawId &&
-        meta.customMetadata.drawId !== input.expectedDrawId
+        normDrawId(meta.customMetadata.drawId) !== normDrawId(input.expectedDrawId)
       ) {
         throw new StorageIntegrityError(
           `Existing storage object at '${storagePath}' has drawId '${meta.customMetadata.drawId}', expected '${input.expectedDrawId}'.`,
@@ -302,10 +303,14 @@ export class SourceIngestionService {
         );
       }
     }
+    const cleanDrawId = input.expectedDrawId
+      ? input.expectedDrawId.trim().replace(/(st|nd|rd|th)$/i, "")
+      : "";
     if (
       input.expectedDrawId &&
       existingDoc.title &&
-      !existingDoc.title.includes(input.expectedDrawId)
+      !existingDoc.title.includes(input.expectedDrawId) &&
+      (!cleanDrawId || !existingDoc.title.includes(cleanDrawId))
     ) {
       throw new DocumentIntegrityError(
         `Existing Firestore document '${expectedSha256}' title '${existingDoc.title}' does not match expected draw identity '${input.expectedDrawId}'.`,

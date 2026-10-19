@@ -39,7 +39,7 @@ describe("Milestone V1.0: Multi-Candidate Lab API Route (/api/v1/candidate-lab)"
     expect(json.seriesComparison.seriesItems.length).toBeGreaterThanOrEqual(3);
     expect(json.backtestResults.windows).toHaveLength(4);
     expect(json.tradeOffAnalysis.comparisonMatrix).toHaveLength(3);
-    expect(json.provenance.corpusVersion).toBe("active-research-118draws");
+    expect(json.provenance.corpusVersion).toBe("active-research-119draws");
   });
 
   it("should process valid GET request with JSON payload parameter and return 200", async () => {

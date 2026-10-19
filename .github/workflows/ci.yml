@@ -37,6 +37,9 @@ jobs:
       - name: Run Unit & Invariant Tests
         run: npx vitest run
 
+      - name: Verify Frozen V1.0 Baseline & Active Research Corpus
+        run: npm run verify:v1 && npm run verify:active-corpus
+
       - name: Build Web Application & Services
         run: npm run build
         env:

@@ -11,7 +11,7 @@
  * - Strict non-predictive research boundaries
  */
 
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { LotteryKnowledgeGraph } from "@kerala-lottery/knowledge";
 import {
@@ -41,6 +41,15 @@ import {
   defaultExperimentRepository,
   buildExperimentLineage
 } from "./repository";
+import { validateExperimentRun } from "./validation-engine";
+import {
+  generateResearchFinding,
+  buildEvidenceBundle,
+  verifyEvidenceBundleIntegrity,
+  buildResearchFindingLineage
+} from "./findings-engine";
+import { generatePublicationReport } from "./report-generator";
+import type { StatisticalValidationArtifact } from "./validation-types";
 
 export interface RefreshResearchPipelineOptions {
   cacheDir?: string;
@@ -66,16 +75,48 @@ export interface RefreshResearchResult {
   message: string;
 }
 
+export function resolveGraphsCacheDir(explicitCacheDir?: string): string {
+  const cwd = process.cwd();
+  const candidates = [
+    explicitCacheDir,
+    join(cwd, "data/processed-cache"),
+    join(cwd, "..", "data/processed-cache"),
+    join(cwd, "../..", "data/processed-cache"),
+    join(cwd, "../../..", "data/processed-cache")
+  ].filter((d): d is string => typeof d === "string" && existsSync(join(d, "graphs")));
+
+  return candidates[0] || explicitCacheDir || join(cwd, "data/processed-cache");
+}
+
 /**
  * Loads knowledge graphs from the local processed-cache directory.
  */
 export function loadGraphsFromCache(
-  cacheDir: string = join(process.cwd(), "data/processed-cache"),
+  cacheDir?: string,
   options?: { v1BaselineOnly?: boolean }
 ): LotteryKnowledgeGraph[] {
-  const graphsDir = join(cacheDir, "graphs");
+  const resolvedCacheDir = resolveGraphsCacheDir(cacheDir);
+  const graphsDir = join(resolvedCacheDir, "graphs");
   if (!existsSync(graphsDir)) {
     throw new Error(`Graphs directory not found at: ${graphsDir}`);
+  }
+
+  let validShasFromManifest: Set<string> | null = null;
+  const manifestPath = join(resolvedCacheDir, "manifest.json");
+  if (existsSync(manifestPath)) {
+    try {
+      const manifestRaw = JSON.parse(readFileSync(manifestPath, "utf-8"));
+      if (manifestRaw && manifestRaw.documents && typeof manifestRaw.documents === "object") {
+        const docs = Object.values(manifestRaw.documents) as Array<{ sha256?: string; status?: string }>;
+        if (docs.length > 0) {
+          validShasFromManifest = new Set(
+            docs.filter((d) => d.status === "VALID" && typeof d.sha256 === "string").map((d) => d.sha256!)
+          );
+        }
+      }
+    } catch {
+      validShasFromManifest = null;
+    }
   }
 
   const files = readdirSync(graphsDir).filter((f) => f.endsWith(".json"));
@@ -87,6 +128,9 @@ export function loadGraphsFromCache(
         readFileSync(join(graphsDir, file), "utf-8")
       ) as LotteryKnowledgeGraph;
       if (content && content.documentSha256 && Array.isArray(content.nodes) && Array.isArray(content.edges)) {
+        if (validShasFromManifest && !validShasFromManifest.has(content.documentSha256)) {
+          continue;
+        }
         if (options?.v1BaselineOnly) {
           const drawNode = content.nodes.find((n) => n.type === "Draw");
           const rawDate = String(drawNode?.properties?.drawDate ?? "");
@@ -113,7 +157,7 @@ export function loadGraphsFromCache(
  * Loads and constructs the canonical research corpus from knowledge graphs in cache.
  */
 export function loadCanonicalResearchCorpus(
-  cacheDir: string = join(process.cwd(), "data/processed-cache"),
+  cacheDir?: string,
   options?: { v1BaselineOnly?: boolean }
 ): MultiDrawLotteryCorpus {
   const graphs = loadGraphsFromCache(cacheDir, options);
@@ -364,4 +408,198 @@ export function inspectExperimentRun(
   const lineage = repository.getLineage(runId);
 
   return { run, artifact, lineage };
+}
+
+export interface SynchronizeActiveCorpusResearchResult {
+  refreshResult: RefreshResearchResult;
+  activeCorpusVersion: string;
+  activeDrawCount: number;
+  activeTotalResults: number;
+  validatedRunIds: string[];
+  generatedFindingIds: string[];
+  generatedBundleIds: string[];
+  generatedReportIds: string[];
+}
+
+/**
+ * End-to-end active corpus synchronization pipeline:
+ * 1. Rebuilds canonical MultiDrawLotteryCorpus, FeatureMatrix, and ModelingDataset from active cache.
+ * 2. Executes all eligible registered experiments against the active corpus (idempotent when unchanged).
+ * 3. Computes StatisticalValidationArtifacts against the UniformRandomBaselineRun for each active run.
+ * 4. Generates ResearchFindings, cryptographically verifiable EvidenceBundles, ResearchFindingLineages,
+ *    and PublicationReports for the active corpus while preserving all historical runs and findings.
+ */
+export async function synchronizeActiveCorpusResearchArtifacts(
+  options: RefreshResearchPipelineOptions = {}
+): Promise<SynchronizeActiveCorpusResearchResult> {
+  const repo = options.repository ?? defaultExperimentRepository;
+  const corpus =
+    options.corpus ??
+    (options.graphs ? buildMultiDrawCorpus(options.graphs) : loadCanonicalResearchCorpus(options.cacheDir));
+  const dataset = options.dataset ?? buildResearchModelingDataset(corpus).dataset;
+
+  const refreshResult = await refreshResearchPipeline({
+    ...options,
+    corpus,
+    dataset,
+    repository: repo
+  });
+
+  const activeCorpusVersion = corpus.id;
+  const activeRuns = [...refreshResult.executedRuns, ...refreshResult.skippedRuns].filter(
+    (r) => r.corpusVersion === activeCorpusVersion && r.status === "SUCCEEDED"
+  );
+
+  const validatedRunIds: string[] = [];
+  const generatedFindingIds: string[] = [];
+  const generatedBundleIds: string[] = [];
+  const generatedReportIds: string[] = [];
+
+  if (activeRuns.length > 0) {
+    // 1. Validate all active runs against the canonical null model
+    const validationsByRunId = new Map<string, StatisticalValidationArtifact>();
+    for (const run of activeRuns) {
+      let validation = repo.getValidationByRunId(run.runId);
+      const artifact = repo.getArtifactByRunId(run.runId);
+      if ((!validation || options.force) && artifact) {
+        validation = validateExperimentRun(run, artifact, dataset, {
+          familyId: "EXP_FAMILY_CANONICAL_BASELINES",
+          totalHypothesesInFamily: activeRuns.length
+        });
+        repo.saveValidation(validation);
+      }
+      if (validation) {
+        validationsByRunId.set(run.runId, validation);
+        validatedRunIds.push(run.runId);
+      }
+    }
+
+    // 2. Generate ResearchFindings, EvidenceBundles, FindingLineages, and PublicationReports for each active run
+    for (const run of activeRuns) {
+      const def = getRegisteredExperimentById(run.experimentId);
+      const artifact = repo.getArtifactByRunId(run.runId);
+      const validation = validationsByRunId.get(run.runId);
+
+      if (!def || !artifact || !validation) continue;
+
+      const finding = generateResearchFinding({
+        run,
+        artifact,
+        validation,
+        dataset,
+        corpus,
+        definition: def,
+        claimType: "STATISTICAL_RESULT"
+      });
+
+      const existingFinding = repo.getFinding(finding.findingId);
+      const existingBundle = repo.getEvidenceBundleByFindingId(finding.findingId);
+
+      if (!existingFinding || !existingBundle || options.force) {
+        const evidenceBundle = buildEvidenceBundle({
+          finding,
+          validation,
+          run,
+          artifact,
+          dataset,
+          corpus,
+          definition: def
+        });
+
+        const integrity = verifyEvidenceBundleIntegrity(evidenceBundle, {
+          corpusHash: corpus.corpusHash,
+          datasetHash: dataset.deterministicHash,
+          experimentHash: def.deterministicHash,
+          runHash: run.reproducibilityMetadata.inputFingerprint,
+          resultArtifactHash: artifact.deterministicHash,
+          validationHash: validation.deterministicHash,
+          findingHash: finding.deterministicHash
+        });
+        if (!integrity.valid) {
+          throw new Error(
+            `Evidence bundle integrity check failed for ${finding.findingId}: ${integrity.errors.join("; ")}`
+          );
+        }
+
+        const findingLineage = buildResearchFindingLineage({
+          finding,
+          validation,
+          run,
+          artifact,
+          dataset,
+          corpus,
+          definition: def
+        });
+
+        const report = generatePublicationReport({
+          finding,
+          evidenceBundle,
+          lineage: findingLineage,
+          validation
+        });
+
+        repo.saveFinding(finding);
+        repo.saveEvidenceBundle(evidenceBundle);
+        repo.saveFindingLineage(findingLineage);
+        repo.saveReport(report);
+
+        generatedFindingIds.push(finding.findingId);
+        generatedBundleIds.push(evidenceBundle.evidenceBundleId);
+        generatedReportIds.push(report.reportId);
+      } else {
+        generatedFindingIds.push(existingFinding.findingId);
+        generatedBundleIds.push(existingBundle.evidenceBundleId);
+        const existingReport = repo.getReportByFindingId(existingFinding.findingId);
+        if (existingReport) {
+          generatedReportIds.push(existingReport.reportId);
+        }
+      }
+    }
+  }
+
+  // Persist active-corpus-status.json in experiments directory for deterministic fast lookup
+  try {
+    const resolvedCacheDir = resolveGraphsCacheDir(options.cacheDir);
+    const expDir = join(resolvedCacheDir, "experiments");
+    if (!existsSync(expDir)) {
+      mkdirSync(expDir, { recursive: true });
+    }
+    const statusPayload = {
+      activeCorpusVersion,
+      corpusLabel: `active-research-${corpus.draws.length}draws`,
+      corpusHash: corpus.corpusHash,
+      datasetVersion: dataset.id,
+      featureVersion: dataset.sourceFeatureMatrixId,
+      totalDraws: corpus.draws.length,
+      totalDocuments: corpus.validationReport.totalDocuments,
+      totalResults: corpus.combinedEntities.winningResults.length,
+      fullTicketResults: corpus.validationReport.totalFullTicketResults,
+      suffixResults: corpus.validationReport.totalSuffixResults,
+      dateRange: corpus.validationReport.dateRange,
+      activeRunIds: activeRuns.map((r) => r.runId),
+      validatedRunIds,
+      generatedFindingIds,
+      generatedBundleIds,
+      generatedReportIds,
+      synchronizedAt: new Date().toISOString()
+    };
+    writeFileSync(
+      join(expDir, "active-corpus-status.json"),
+      JSON.stringify(statusPayload, null, 2),
+      "utf-8"
+    );
+  } catch {
+    // Ignore status write error in read-only environments
+  }
+
+  return {
+    refreshResult,
+    activeCorpusVersion,
+    activeDrawCount: corpus.draws.length,
+    activeTotalResults: corpus.combinedEntities.winningResults.length,
+    validatedRunIds,
+    generatedFindingIds,
+    generatedBundleIds,
+    generatedReportIds
+  };
 }

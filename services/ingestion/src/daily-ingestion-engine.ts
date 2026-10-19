@@ -223,6 +223,7 @@ import { CrossDocumentValidator, type BatchValidationReport } from "./cross-docu
 import { DocumentCacheManager } from "./document-cache";
 import { OfficialSourceDiscoveryService } from "./discovery";
 import { DocumentAcquisitionService } from "./acquisition";
+import { synchronizeActiveCorpusResearchArtifacts } from "@kerala-lottery/experiments";
 import type { SourceIngestionService } from "./index";
 
 // ============================================================================
@@ -464,6 +465,7 @@ export interface GraphCacheHydrationResult {
 export class DailyIngestionEngine {
   private readonly sourceDir: string;
   private readonly cacheManager: DocumentCacheManager;
+  private readonly hasCustomCacheDir: boolean;
   public readonly silent: boolean;
   public readonly dryRun: boolean;
   public readonly limit?: number;
@@ -479,6 +481,7 @@ export class DailyIngestionEngine {
 
   constructor(options?: DailyIngestionOptions) {
     this.sourceDir = options?.sourceDir ?? join(process.cwd(), "data/source-documents/lottery-results");
+    this.hasCustomCacheDir = Boolean(options?.cacheDir);
     this.cacheManager = new DocumentCacheManager({ cacheDir: options?.cacheDir });
     this.silent = options?.silent ?? false;
     this.dryRun = options?.dryRun ?? false;
@@ -1700,6 +1703,28 @@ export class DailyIngestionEngine {
     }
 
     derivedStatus.modelingDataset = "PASS";
+
+    // Synchronize active-corpus research artifacts (runs, validations, findings, evidence bundles, reports)
+    // and compact winning-results index + apps/web mirror when new documents are persisted to the primary cache
+    if (!dryRun && newDocuments > 0 && !this.hasCustomCacheDir) {
+      if (corpus.draws.length >= 10) {
+        try {
+          await synchronizeActiveCorpusResearchArtifacts({
+            corpus,
+            dataset: modelingDataset
+          });
+        } catch (refreshErr) {
+          if (!this.silent) {
+            console.warn(
+              `[WARN] Active corpus research artifact refresh encountered an error: ${
+                refreshErr instanceof Error ? refreshErr.message : String(refreshErr)
+              }`
+            );
+          }
+        }
+      }
+      this.cacheManager.syncCompactIndexAndWebMirror();
+    }
 
     // Update candidate audit action to PROMOTED for ingested/validated documents
     let promotedCount = 0;

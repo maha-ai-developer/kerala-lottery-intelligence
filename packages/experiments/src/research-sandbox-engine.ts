@@ -968,7 +968,8 @@ export class ResearchSandboxEngine {
 
     // If validation failed, return error response without calculating features
     if (!validation.isValid) {
-      const fallbackDraws = new Set(this.corpusRecords?.map((r) => r.drawId) || []).size || 104;
+      const records = this.loadCorpusRecords();
+      const fallbackDraws = new Set(records.map((r) => r.drawId)).size || 119;
       return {
         analysisId,
         analysisTimestamp: timestamp,

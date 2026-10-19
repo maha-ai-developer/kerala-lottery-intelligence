@@ -288,12 +288,12 @@ export default function FindingsPage() {
     setTimeout(() => setCopiedReport(false), 2000);
   };
 
-  const activeDraws = corpusMetadata?.activeCorpus.draws ?? 118;
-  const activeResults = corpusMetadata?.activeCorpus.totalResults ?? 45218;
-  const activeVersionLabel = corpusMetadata?.activeCorpus.version ?? "active-research-118draws";
-  const activeCorpusId = corpusMetadata?.activeCorpus.corpusId ?? "corpus_055e805237802b5e";
-  const activeLatestDraw = corpusMetadata?.activeCorpus.latestDrawNumber ?? "KR-772nd";
-  const activeLatestDate = corpusMetadata?.activeCorpus.latestDrawDate ?? "2026-10-17";
+  const activeDraws = corpusMetadata?.activeCorpus.draws ?? 119;
+  const activeResults = corpusMetadata?.activeCorpus.totalResults ?? 45600;
+  const activeVersionLabel = corpusMetadata?.activeCorpus.version ?? "active-research-119draws";
+  const activeCorpusId = corpusMetadata?.activeCorpus.corpusId ?? "corpus_2dd9b930c32ea047";
+  const activeLatestDraw = corpusMetadata?.activeCorpus.latestDrawNumber ?? "SM-77th";
+  const activeLatestDate = corpusMetadata?.activeCorpus.latestDrawDate ?? "2026-10-18";
 
   const v1Draws = corpusMetadata?.v1Baseline.draws ?? 114;
   const v1Results = corpusMetadata?.v1Baseline.totalResults ?? 43712;
@@ -413,7 +413,7 @@ export default function FindingsPage() {
               {activeFindingCount} Baselines
             </div>
             <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
-              {findings.length} Total Across 3 Corpus Versions
+              {findings.length} Total Across 4 Corpus Versions
             </div>
           </div>
           <div style={{ padding: "1rem", borderRadius: "0.5rem", background: "var(--card-bg)", border: "1px solid var(--border-color)" }}>
@@ -467,7 +467,7 @@ export default function FindingsPage() {
             {[
               { id: "ACTIVE_CORPUS", label: `Active Corpus (${activeDraws} Draws)` },
               { id: "FROZEN_V1_BASELINE", label: `Frozen V1.0 (${v1Draws} Draws)` },
-              { id: "HISTORICAL_SNAPSHOT", label: "M9 Initial Snapshot (103 Draws)" },
+              { id: "HISTORICAL_SNAPSHOT", label: "Historical Snapshots (118 & 103 Draws)" },
               { id: "ALL", label: `All Corpus Versions (${findings.length})` }
             ].map((scope) => (
               <button

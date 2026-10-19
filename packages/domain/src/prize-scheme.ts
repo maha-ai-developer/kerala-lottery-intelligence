@@ -384,7 +384,7 @@ export function normalizeLotteryCode(input: string): string {
   if (norm.includes("DHANALEKSHMI") || norm === "DL") return "DL";
   if (norm.includes("KARUNYA PLUS") || norm === "KN") return "KN";
   if (norm.includes("STHREE-SAKTHI") || norm.includes("STHREE SAKTHI") || norm === "SS") return "SS";
-  if (norm.includes("SUVARNA KERALAM") || norm === "SK") return "SK";
+  if (norm.includes("SUVARNA KERALAM") || norm === "SK" || norm === "SW") return "SK";
   if (norm.includes("KARUNYA") && !norm.includes("PLUS") || norm === "KR") return "KR";
   if (norm.includes("SAMRUDHI") || norm === "SM") return "SM";
   if (norm.includes("MONSOON") && norm.includes("BUMPER")) return "MONSOON_BUMPER";

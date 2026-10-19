@@ -919,26 +919,26 @@ describe("Operational Ingestion Console: API & Security Boundary Tests", () => {
       const json = await res.json();
 
       expect(json.success).toBe(true);
-      expect(json.counts.localDocumentCount).toBe(118);
-      expect(json.counts.localGraphCount).toBe(118);
-      expect(json.counts.localManifestCount).toBe(118);
+      expect(json.counts.localDocumentCount).toBe(119);
+      expect(json.counts.localGraphCount).toBe(119);
+      expect(json.counts.localManifestCount).toBe(119);
       expect(json.counts.cloudStorageDocumentCount).toBeNull();
       expect(json.counts.firestoreDocumentCount).toBeNull();
-      expect(json.counts.researchDrawCount).toBe(118);
+      expect(json.counts.researchDrawCount).toBe(119);
       expect(json.counts.prodDrawCount).toBe(100);
       expect(json.operationalGuards.schedulerState).toBe("PAUSED");
       expect(json.operationalGuards.mutationState).toBe("PROD_LOCKED_DEV_ALLOWED");
       expect(json.verification.integrityStatus).toBe("UNVERIFIED");
       expect(json.verification.matchedCount).toBe(0);
-      expect(json.verification.unverifiedCount).toBe(118);
+      expect(json.verification.unverifiedCount).toBe(119);
     });
 
-    it("GET /api/ops/ingestion/storage-integrity?verify=true calculates Storage and Firestore counts independently and returns VERIFIED when all 118 match", async () => {
+    it("GET /api/ops/ingestion/storage-integrity?verify=true calculates Storage and Firestore counts independently and returns VERIFIED when all 119 match", async () => {
       const manifestRaw = JSON.parse(
         readFileSync(join(process.cwd(), "data/processed-cache/manifest.json"), "utf-8")
       );
       const allShas = Object.keys(manifestRaw.documents || {});
-      expect(allShas.length).toBe(118);
+      expect(allShas.length).toBe(119);
 
       setStorageIntegrityDependenciesForTesting({
         isCloudConfigured: () => true,
@@ -951,10 +951,10 @@ describe("Operational Ingestion Console: API & Security Boundary Tests", () => {
       expect(res.status).toBe(200);
       const json = await res.json();
 
-      expect(json.counts.cloudStorageDocumentCount).toBe(118);
-      expect(json.counts.firestoreDocumentCount).toBe(118);
+      expect(json.counts.cloudStorageDocumentCount).toBe(119);
+      expect(json.counts.firestoreDocumentCount).toBe(119);
       expect(json.verification.integrityStatus).toBe("VERIFIED");
-      expect(json.verification.matchedCount).toBe(118);
+      expect(json.verification.matchedCount).toBe(119);
       expect(json.verification.mismatchCount).toBe(0);
     });
 
@@ -978,10 +978,10 @@ describe("Operational Ingestion Console: API & Security Boundary Tests", () => {
       expect(res.status).toBe(200);
       const json = await res.json();
 
-      expect(json.counts.cloudStorageDocumentCount).toBe(117);
-      expect(json.counts.firestoreDocumentCount).toBe(118);
+      expect(json.counts.cloudStorageDocumentCount).toBe(118);
+      expect(json.counts.firestoreDocumentCount).toBe(119);
       expect(json.verification.integrityStatus).toBe("DISCREPANCY_DETECTED");
-      expect(json.verification.matchedCount).toBe(117);
+      expect(json.verification.matchedCount).toBe(118);
       expect(json.verification.mismatchCount).toBe(1);
 
       const discrepancyItem = json.verification.items.find(

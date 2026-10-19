@@ -1,8 +1,8 @@
 {
   "version": "v1.0.0-ingestion-manifest",
   "updatedAt": "2026-10-02T12:00:00.000Z",
-  "totalDocuments": 118,
-  "validDocuments": 118,
+  "totalDocuments": 119,
+  "validDocuments": 119,
   "quarantinedDocuments": 0,
   "documents": {
     "0377f83e53d0ec6b823bb9973220238965bc4059ed5d449e975013eb9db4b4cb": {
@@ -428,7 +428,7 @@
       "fileName": "272-2351-29-09-2026.pdf",
       "canonicalFilename": "272-2351-29-09-2026.pdf",
       "sourceResponseFilename": "SS-539.pdf",
-      "sourceUrl": "http://result.keralalotteries.com/viewlotisresult.php?drawserial=75394",
+      "sourceUrl": "https://result.keralalotteries.com/viewlotisresult.php?drawserial=75394",
       "fileSize": 87255,
       "lotteryName": "STHREE-SAKTHI",
       "lotteryCode": "STHREE-SAKTHI",
@@ -459,7 +459,7 @@
       "fileName": "274-2361-01-10-2026.pdf",
       "canonicalFilename": "274-2361-01-10-2026.pdf",
       "sourceResponseFilename": "KN-643.pdf",
-      "sourceUrl": "http://result.keralalotteries.com/viewlotisresult.php?drawserial=75396",
+      "sourceUrl": "https://result.keralalotteries.com/viewlotisresult.php?drawserial=75396",
       "fileSize": 87200,
       "lotteryName": "KARUNYA PLUS",
       "lotteryCode": "KARUNYA PLUS",
@@ -983,7 +983,7 @@
       "fileName": "273-2356-30-09-2026.pdf",
       "canonicalFilename": "273-2356-30-09-2026.pdf",
       "sourceResponseFilename": "DL-71.pdf",
-      "sourceUrl": "http://result.keralalotteries.com/viewlotisresult.php?drawserial=75395",
+      "sourceUrl": "https://result.keralalotteries.com/viewlotisresult.php?drawserial=75395",
       "fileSize": 263597,
       "lotteryName": "DHANALEKSHMI",
       "lotteryCode": "DHANALEKSHMI",
@@ -1147,6 +1147,23 @@
       "fullTicketCount": 14,
       "suffixCount": 366,
       "ingestedAt": "2026-09-27T03:30:27.405Z",
+      "status": "VALID"
+    },
+    "a0ff6ab5ccaaee907ed1056fa813e6380e427f585b05ca50f0c699a1e0d5af89": {
+      "fileName": "277-2370-18-10-2026.pdf",
+      "canonicalFilename": "277-2370-18-10-2026.pdf",
+      "sourceResponseFilename": "SM-77.pdf",
+      "sourceUrl": "https://www.lotteryagent.kerala.gov.in/results/f56d6199-a088-a85f-3592-c5d8f1bd4c30",
+      "fileSize": 263681,
+      "lotteryName": "SAMRUDHI",
+      "lotteryCode": "SAMRUDHI",
+      "drawNumber": "SM-77th",
+      "drawDate": "18/10/2026",
+      "totalResults": 382,
+      "fullTicketCount": 14,
+      "suffixCount": 368,
+      "ingestedAt": "2026-10-19T04:33:40.609Z",
+      "sha256": "a0ff6ab5ccaaee907ed1056fa813e6380e427f585b05ca50f0c699a1e0d5af89",
       "status": "VALID"
     },
     "a146c6c0584d2ead526b3f9d625c436f17c67fa2bd8000a46993d7e99944d126": {
@@ -1715,14 +1732,14 @@
     "latestDrawNumber": "SS-541st"
   },
   "activeCorpus": {
-    "version": "active-research-118draws",
-    "corpusId": "corpus_055e805237802b5e",
-    "draws": 118,
-    "totalResults": 45218,
-    "fullTicketCount": 1714,
-    "suffixCount": 43504,
+    "version": "active-research-119draws",
+    "corpusId": "corpus_2dd9b930c32ea047",
+    "draws": 119,
+    "totalResults": 45600,
+    "fullTicketCount": 1728,
+    "suffixCount": 43872,
     "earliestDrawDate": "2026-06-19",
-    "latestDrawDate": "2026-10-17",
-    "latestDrawNumber": "KR-772nd"
+    "latestDrawDate": "2026-10-18",
+    "latestDrawNumber": "SM-77th"
   }
 }

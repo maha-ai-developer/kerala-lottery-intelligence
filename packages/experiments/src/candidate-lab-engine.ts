@@ -266,7 +266,7 @@ export class CandidateLabEngine {
       ? corpusRecords.filter((r) => !r.drawIsoDate || r.drawIsoDate <= isoCutoff)
       : corpusRecords;
     const scopedCorpusDrawCount =
-      new Set(scopedCorpusRecords.map((r) => r.drawId)).size || 118;
+      new Set(scopedCorpusRecords.map((r) => r.drawId)).size || 119;
 
     return {
       analysisId,

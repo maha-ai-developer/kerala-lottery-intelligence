@@ -111,24 +111,25 @@ describe("Official Result Catch-Up Workflow & Inventory Verification", () => {
     }) as typeof fetch;
   };
 
-  it("1. Verifies active 118-draw (45,218-result) corpus and preserved V1.0 (114-draw / 43,712-result) baseline", async () => {
+  it("1. Verifies active 119-draw (45,600-result) corpus and preserved V1.0 (114-draw / 43,712-result) baseline", async () => {
     const manifest = JSON.parse(readFileSync(join(cwd, "data/processed-cache/manifest.json"), "utf-8"));
-    expect(Object.keys(manifest.documents || {}).length).toBe(118);
+    expect(Object.keys(manifest.documents || {}).length).toBe(119);
     expect(manifest.v1Baseline).toBeDefined();
     expect(manifest.v1Baseline.draws).toBe(114);
     expect(manifest.v1Baseline.totalResults).toBe(43712);
     expect(manifest.v1Baseline.latestDrawNumber).toBe("SS-541st");
     expect(manifest.activeCorpus).toBeDefined();
-    expect(manifest.activeCorpus.draws).toBe(118);
-    expect(manifest.activeCorpus.totalResults).toBe(45218);
-    expect(manifest.activeCorpus.latestDrawNumber).toBe("KR-772nd");
+    expect(manifest.activeCorpus.draws).toBe(119);
+    expect(manifest.activeCorpus.totalResults).toBe(45600);
+    expect(manifest.activeCorpus.latestDrawNumber).toBe("SM-77th");
 
-    // Verify all 4 newly caught-up draws are accessible via researchService with leading zeros intact
+    // Verify all 5 newly caught-up draws are accessible via researchService with leading zeros intact
     const caughtUpDraws = [
       { id: "draw_DL-73", code: "DL-73rd", sha: "224e4d241ca2f0ae10f7b26a507e13de419890f0fb00a2545a7e691a859ec682", results: 374, sampleZero: "0356" },
       { id: "draw_KN-645", code: "KN-645th", sha: "3a95c86db086ff702a0a53de8844da9cd9e5839757b613ac5ffbcfe6d75292f3", results: 380, sampleZero: "0431" },
       { id: "draw_SK-73", code: "SK-73rd", sha: "289a9f364e4a1e2477317505f817a0365ad047e28c6b3b9572b8c010263e10ec", results: 376, sampleZero: "0356" },
-      { id: "draw_KR-772", code: "KR-772nd", sha: "04cb4771ca0105f69096c9d146f9ab7d5146e726dea4b6574ef3aee97d8cd36a", results: 376, sampleZero: "0945" }
+      { id: "draw_KR-772", code: "KR-772nd", sha: "04cb4771ca0105f69096c9d146f9ab7d5146e726dea4b6574ef3aee97d8cd36a", results: 376, sampleZero: "0945" },
+      { id: "draw_SM-77", code: "SM-77th", sha: "a0ff6ab5ccaaee907ed1056fa813e6380e427f585b05ca50f0c699a1e0d5af89", results: 382, sampleZero: "0110" }
     ];
 
     for (const expected of caughtUpDraws) {
@@ -149,13 +150,14 @@ describe("Official Result Catch-Up Workflow & Inventory Verification", () => {
     const tempSourceDir = mkdtempSync(join(tmpdir(), "catchup-baseline-source-"));
     mkdirSync(join(tempCacheDir, "graphs"), { recursive: true });
 
-    // Create a 114-draw manifest snapshot (excluding the 4 Oct 14-17 draws)
+    // Create a 114-draw manifest snapshot (excluding the 5 Oct 14-18 draws)
     const fullManifest = JSON.parse(readFileSync(join(cwd, "data/processed-cache/manifest.json"), "utf-8"));
     const newShas = new Set([
       "224e4d241ca2f0ae10f7b26a507e13de419890f0fb00a2545a7e691a859ec682",
       "3a95c86db086ff702a0a53de8844da9cd9e5839757b613ac5ffbcfe6d75292f3",
       "289a9f364e4a1e2477317505f817a0365ad047e28c6b3b9572b8c010263e10ec",
-      "04cb4771ca0105f69096c9d146f9ab7d5146e726dea4b6574ef3aee97d8cd36a"
+      "04cb4771ca0105f69096c9d146f9ab7d5146e726dea4b6574ef3aee97d8cd36a",
+      "a0ff6ab5ccaaee907ed1056fa813e6380e427f585b05ca50f0c699a1e0d5af89"
     ]);
     const baselineDocs: Record<string, unknown> = {};
     for (const [sha, doc] of Object.entries(fullManifest.documents || {})) {
@@ -204,7 +206,7 @@ describe("Official Result Catch-Up Workflow & Inventory Verification", () => {
     expect(sm77?.finalDisposition).toBe("UNAVAILABLE");
   });
 
-  it("3. Classifies all 4 draws as ALREADY_INGESTED_BY_SHA256 / ALREADY_PRESENT on idempotent re-run against the 118-draw corpus", async () => {
+  it("3. Classifies all 4 draws as ALREADY_INGESTED_BY_SHA256 / ALREADY_PRESENT on idempotent re-run against the 119-draw corpus", async () => {
     const engine = new OfficialResultCatchUpEngine({
       mode: "DRY_RUN",
       environment: "DEV",
@@ -214,8 +216,8 @@ describe("Official Result Catch-Up Workflow & Inventory Verification", () => {
     const res = await engine.execute();
 
     expect(res.portalReachable).toBe(true);
-    expect(res.lastVerifiedIngestedDraw?.isoDate).toBe("2026-10-17");
-    expect(res.lastVerifiedIngestedDraw?.drawNumber).toBe("KR-772nd");
+    expect(res.lastVerifiedIngestedDraw?.isoDate).toBe("2026-10-18");
+    expect(res.lastVerifiedIngestedDraw?.drawNumber).toBe("SM-77th");
     expect(res.counts.alreadyIngestedBySha256).toBe(4);
     expect(res.counts.newEligible).toBe(0);
     expect(res.counts.ingestedThisRun).toBe(0);

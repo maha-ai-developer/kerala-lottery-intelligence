@@ -10,6 +10,7 @@
  * 4. Quarantined or invalid documents are tracked explicitly.
  */
 
+import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync, copyFileSync } from "node:fs";
 import { join } from "node:path";
 import { normalizeLotteryCode, normalizeDateToIso } from "@kerala-lottery/domain";
@@ -114,6 +115,23 @@ export class DocumentCacheManager {
     };
   }
 
+  public static computeDeterministicCorpusId(docs: IngestedDocumentRecord[]): string {
+    const totalResults = docs.reduce((sum, d) => sum + (d.totalResults || 0), 0);
+    const shas = docs
+      .map((d) => d.sha256)
+      .sort()
+      .join(",");
+    const drawProfiles = docs
+      .map((d) => `${d.sha256}_draw_${d.drawNumber}:${d.totalResults || 0}`)
+      .sort()
+      .join(",");
+    const hash = createHash("sha256")
+      .update(["v1.0.0-multi-draw-corpus", shas, drawProfiles, String(totalResults)].join("||"))
+      .digest("hex")
+      .slice(0, 16);
+    return `corpus_${hash}`;
+  }
+
   private static computeCorpusMetadata(
     docs: IngestedDocumentRecord[],
     versionPrefix = "v1.0-research",
@@ -141,9 +159,11 @@ export class DocumentCacheManager {
       }
     }
 
+    const resolvedCorpusId = corpusId ?? DocumentCacheManager.computeDeterministicCorpusId(docs);
+
     return {
       version: `${versionPrefix}-${docs.length}draws`,
-      ...(corpusId ? { corpusId } : {}),
+      corpusId: resolvedCorpusId,
       draws: docs.length,
       totalResults,
       fullTicketCount,
@@ -182,7 +202,9 @@ export class DocumentCacheManager {
     });
     if (v1Docs.length > 0) {
       const v1CorpusId =
-        v1Docs.length === 114 ? "corpus_981356dd505db164" : undefined;
+        v1Docs.length === 114
+          ? "corpus_981356dd505db164"
+          : DocumentCacheManager.computeDeterministicCorpusId(v1Docs);
       this.manifest.v1Baseline = DocumentCacheManager.computeCorpusMetadata(
         v1Docs,
         "v1.0-research",
@@ -197,12 +219,7 @@ export class DocumentCacheManager {
           return Boolean(iso && iso <= "2026-10-13");
         });
       const activePrefix = isFrozenV1 ? "v1.0-research" : "active-research";
-      const activeCorpusId =
-        isFrozenV1
-          ? "corpus_981356dd505db164"
-          : validDocs.length === 118
-          ? "corpus_055e805237802b5e"
-          : undefined;
+      const activeCorpusId = DocumentCacheManager.computeDeterministicCorpusId(validDocs);
       this.manifest.activeCorpus = DocumentCacheManager.computeCorpusMetadata(
         validDocs,
         activePrefix,
@@ -277,6 +294,13 @@ export class DocumentCacheManager {
         const srcExpDir = join(defaultCacheDir, "experiments");
         const dstExpDir = join(webCacheDir, "experiments");
         if (existsSync(srcExpDir)) {
+          if (!existsSync(dstExpDir)) {
+            mkdirSync(dstExpDir, { recursive: true });
+          }
+          const srcStatusPath = join(srcExpDir, "active-corpus-status.json");
+          if (existsSync(srcStatusPath)) {
+            copyFileSync(srcStatusPath, join(dstExpDir, "active-corpus-status.json"));
+          }
           const subdirs = [
             "runs",
             "artifacts",

@@ -1,0 +1,91 @@
+{
+  "runId": "run_53259e1b8cbdee3c",
+  "experimentId": "EXP-002-EMPIRICAL-BASELINE",
+  "experimentVersion": "1.0.0",
+  "corpusVersion": "corpus_2dd9b930c32ea047",
+  "datasetVersion": "mdset_6b4a4edc3c9edba3",
+  "featureVersion": "fmat_a1ec0cc655d44e01",
+  "modelVersion": "mdef_baseline_empirical_ee8753a60fcfd442",
+  "status": "SUCCEEDED",
+  "startedAt": "2026-10-19T04:35:04.037Z",
+  "completedAt": "2026-10-19T04:35:39.204Z",
+  "metrics": {
+    "accuracy": 0.10652270703472841,
+    "balancedAccuracy": 0.1,
+    "logLoss": 2.3026976702515896,
+    "sampleSize": 8984
+  },
+  "evaluationWindow": {
+    "trainDrawCount": 96,
+    "testDrawCount": 23,
+    "trainRowCount": 36616,
+    "testRowCount": 8984,
+    "trainDateRange": {
+      "earliest": "19/06/2026",
+      "latest": "24/09/2026",
+      "earliestIso": "2026-06-19",
+      "latestIso": "2026-09-24"
+    },
+    "testDateRange": {
+      "earliest": "25/09/2026",
+      "latest": "18/10/2026",
+      "earliestIso": "2026-09-25",
+      "latestIso": "2026-10-18"
+    }
+  },
+  "reproducibilityMetadata": {
+    "seed": 42,
+    "codeVersion": "9B.1.0-continuous-research",
+    "inputFingerprint": "578f4260c3caf6bb",
+    "parameters": {
+      "smoothing": "EPSILON_CLIPPED_1E_15",
+      "tieBreaking": "LEXICOGRAPHICAL_ASCENDING",
+      "seed": 42,
+      "trainDrawCount": 96,
+      "testDrawCount": 23,
+      "modelParameters": {
+        "modelType": "EMPIRICAL",
+        "allowedValues": [
+          "0",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8",
+          "9"
+        ],
+        "kClasses": 10,
+        "tieBreakingStrategy": "LEXICOGRAPHICAL_ASCENDING",
+        "zeroProbabilityPolicy": "CLIPPED_EPSILON_1E_15",
+        "epsilon": 1e-15,
+        "fittedClassFrequencies": {
+          "0": 0.10410749399169762,
+          "1": 0.09514966135022941,
+          "2": 0.09981975092855583,
+          "3": 0.09829036486781735,
+          "4": 0.09362027528949093,
+          "5": 0.1000655451168888,
+          "6": 0.0992462311557789,
+          "7": 0.10596460563688005,
+          "8": 0.10014747651299978,
+          "9": 0.10358859514966134
+        },
+        "majorityClass": "7",
+        "trainingRowCount": 36616
+      }
+    },
+    "evaluationFormulae": {
+      "accuracy": "correct_predictions / total_samples",
+      "balancedAccuracy": "mean_recall_across_classes",
+      "logLoss": "-1/N * sum(log(max(eps, min(1-eps, p_observed))))"
+    },
+    "runtimeEnvironment": {
+      "nodeVersion": "v22.23.2",
+      "platform": "linux"
+    }
+  },
+  "descriptiveOnly": true
+}

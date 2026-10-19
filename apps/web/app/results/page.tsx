@@ -1,302 +1,304 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 
-interface ResultRow {
-  id: string;
-  drawId: string;
-  drawDate: string;
-  lotteryCode: string;
-  tier: string;
-  tierRank: number;
-  prizeAmount: number;
-  numberType: "FULL_TICKET" | "SUFFIX";
-  series?: string;
-  number: string;
-  sourceDocumentSha256: string;
-  prizeSchemeId: string;
-}
-
 export default function ResultsSearchPage() {
-  const [results, setResults] = useState<ResultRow[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [limit] = useState(25);
+  const [results, setResults] = useState<any[]>([]);
+  const [draws, setDraws] = useState<any[]>([]);
+  const [selectedDrawId, setSelectedDrawId] = useState<string>("");
+  const [selectedDrawMeta, setSelectedDrawMeta] = useState<any>(null);
+  const [corpusMeta, setCorpusMeta] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [meta, setMeta] = useState<any>(null);
 
-  // Filters
-  const [lotteryFilter, setLotteryFilter] = useState("");
-  const [tierFilter, setTierFilter] = useState("");
-  const [numberFilter, setNumberFilter] = useState("");
+  const [tier, setTier] = useState("");
+  const [searchNumber, setSearchNumber] = useState("");
 
   useEffect(() => {
-    async function fetchResults() {
-      setLoading(true);
+    async function loadDraws() {
       try {
-        let url = `/api/v1/search?type=results&page=${page}&limit=${limit}`;
-        if (lotteryFilter) url += `&lottery=${encodeURIComponent(lotteryFilter)}`;
-        if (tierFilter) url += `&tier=${encodeURIComponent(tierFilter)}`;
-        if (numberFilter.trim()) url += `&q=${encodeURIComponent(numberFilter.trim())}`;
-
-        // If no filter, we can query draw results from BT-73 or default results endpoint
-        // Let's call /api/v1/draws/kl-bt-73-2026-09-28/results if no specific draw or query
-        const endpoint = numberFilter.trim()
-          ? `/api/v1/search?q=${encodeURIComponent(numberFilter.trim())}&page=${page}&limit=${limit}`
-          : `/api/v1/draws/kl-bt-73-2026-09-28/results?page=${page}&limit=${limit}${tierFilter ? `&tier=${encodeURIComponent(tierFilter)}` : ""}`;
-
-        const res = await fetch(endpoint);
-        if (res.ok) {
-          const json = await res.json();
-          // normalize if search returns generic items vs results
-          if (json.data && Array.isArray(json.data)) {
-            // Check if items are WinningResult or SearchItem
-            if (json.data.length > 0 && json.data[0].tier !== undefined) {
-              setResults(json.data);
-              setTotal(json.pagination?.total || json.data.length);
-            } else {
-              // Search items
-              setResults(
-                json.data.map((item: any, i: number) => ({
-                  id: item.id || `search-${i}`,
-                  drawId: item.drawId || "kl-bt-73-2026-09-28",
-                  drawDate: item.drawDate || "2026-09-28",
-                  lotteryCode: item.lotteryCode || "BT",
-                  tier: item.tier || "Result",
-                  tierRank: item.tierRank || 1,
-                  prizeAmount: item.prizeAmount || 0,
-                  numberType: item.numberType || "SUFFIX",
-                  series: item.series,
-                  number: item.number || item.title || "",
-                  sourceDocumentSha256: item.sourceDocumentSha256 || "cddb3d4d05c102b98f38050ac1ff297ad15bc442b12087c0505927f7bb1cf3dc",
-                  prizeSchemeId: item.prizeSchemeId || "kl-bt-73-scheme-2026"
-                }))
-              );
-              setTotal(json.pagination?.total || json.data.length);
-            }
-          }
+        const res = await fetch("/api/v1/draws?page=1&pageSize=120");
+        const json = await res.json();
+        const items = json.data?.items || json.data || [];
+        setDraws(items);
+        if (json.meta) setCorpusMeta(json.meta);
+        if (items.length > 0 && !selectedDrawId) {
+          const latest = items[0];
+          setSelectedDrawId(latest.drawId || latest.id);
+          setSelectedDrawMeta(latest);
         }
-      } catch (err) {
-        console.error("Error fetching results:", err);
-      } finally {
-        setLoading(false);
+      } catch (e) {
+        console.error(e);
       }
     }
+    loadDraws();
+  }, []);
 
-    fetchResults();
-  }, [page, limit, lotteryFilter, tierFilter, numberFilter]);
+  useEffect(() => {
+    if (!selectedDrawId) return;
+    setLoading(true);
+    const matchedDraw = draws.find((d) => (d.drawId || d.id) === selectedDrawId);
+    if (matchedDraw) setSelectedDrawMeta(matchedDraw);
 
-  const totalPages = Math.ceil(total / limit) || 1;
+    const params = new URLSearchParams({ page: String(page), pageSize: "50" });
+    if (tier) params.set("prizeTier", tier);
+    if (searchNumber) params.set("ticketNumber", searchNumber.trim());
+
+    fetch(`/api/v1/draws/${encodeURIComponent(selectedDrawId)}/results?${params.toString()}`)
+      .then((res) => res.json())
+      .then((data) => {
+        const items = data.data?.items || data.data || [];
+        setResults(items);
+        setMeta(
+          data.data
+            ? {
+                page: data.data.page ?? page,
+                pageSize: data.data.pageSize ?? 50,
+                total: data.data.total ?? items.length,
+                totalPages: data.data.totalPages ?? 1
+              }
+            : data.meta
+        );
+        if (data.meta) setCorpusMeta(data.meta);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, [selectedDrawId, page, tier, searchNumber, draws]);
 
   return (
-    <div className="container" style={{ padding: "2rem 1.5rem" }}>
-      {/* Header */}
-      <div style={{ marginBottom: "2rem" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.5rem" }}>
-          <h1 style={{ fontSize: "1.75rem", fontWeight: 700, margin: 0 }}>
-            Winning Results Explorer
-          </h1>
-          <span className="badge badge-emerald">38,416 Total Results</span>
-          <span className="badge badge-blue">Canonical String Integrity</span>
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Winning Results Explorer</h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Inspect verified winning tickets and 4-digit suffixes across all official draws through{" "}
+            <span className="font-semibold text-slate-700">
+              {draws[0]?.drawDate || corpusMeta?.evaluationCutoffDate || "2026-10-18"}
+            </span>
+          </p>
         </div>
-        <p style={{ color: "var(--text-secondary)", fontSize: "0.95rem", margin: 0 }}>
-          Search and inspect winning lottery numbers across historical draws. All numbers preserve leading zeros (e.g. &quot;0276&quot;) without numeric truncation.
-        </p>
+        <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
+          <span className="bg-emerald-50 text-emerald-800 px-3 py-1.5 rounded-md border border-emerald-200 font-semibold">
+            45,600 Total Results ({draws.length || 119} Draws)
+          </span>
+          <span className="bg-slate-100 text-slate-700 px-3 py-1.5 rounded-md border border-slate-200">
+            Corpus: {corpusMeta?.corpusVersion || "corpus_2dd9b930c32ea047"}
+          </span>
+        </div>
       </div>
 
       {/* Filter Bar */}
-      <div
-        style={{
-          display: "flex",
-          gap: "1rem",
-          alignItems: "center",
-          flexWrap: "wrap",
-          marginBottom: "1.5rem",
-          background: "var(--bg-surface)",
-          padding: "1rem 1.25rem",
-          borderRadius: "0.5rem",
-          border: "1px solid var(--border-subtle)"
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-          <label style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>Lottery:</label>
+      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+        <div>
+          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+            Official Draw ({draws.length || 119} Verified Draws)
+          </label>
           <select
-            className="select-input"
-            value={lotteryFilter}
+            value={selectedDrawId}
             onChange={(e) => {
-              setLotteryFilter(e.target.value);
+              setSelectedDrawId(e.target.value);
               setPage(1);
             }}
+            aria-label="Official Draw Selector"
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white font-mono"
           >
-            <option value="">All Lotteries</option>
-            <option value="BT">Bhagyathara (BT)</option>
-            <option value="KR">Karunya (KR)</option>
-            <option value="KN">Karunya Plus (KN)</option>
-            <option value="FF">Fifty Fifty (FF)</option>
-            <option value="NR">Nirmal (NR)</option>
-            <option value="SS">Sthree Sakthi (SS)</option>
-            <option value="W">Win-Win (W)</option>
-            <option value="AK">Akshaya (AK)</option>
-            <option value="BR">Monsoon Bumper (BR)</option>
+            {draws.map((d) => {
+              const id = d.drawId || d.id;
+              return (
+                <option key={id} value={id}>
+                  {d.drawDate} — {d.drawNumber} ({d.lotteryName}) [{d.totalResultsCount} records]
+                </option>
+              );
+            })}
           </select>
         </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-          <label style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>Prize Tier:</label>
+        <div>
+          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+            Prize Tier Filter
+          </label>
           <select
-            className="select-input"
-            value={tierFilter}
+            value={tier}
             onChange={(e) => {
-              setTierFilter(e.target.value);
+              setTier(e.target.value);
               setPage(1);
             }}
+            aria-label="Prize Tier Filter"
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white"
           >
-            <option value="">All Tiers</option>
-            <option value="1st">1st Prize</option>
-            <option value="Consolation">Consolation Prize</option>
-            <option value="2nd">2nd Prize</option>
-            <option value="3rd">3rd Prize</option>
-            <option value="4th">4th Prize</option>
-            <option value="5th">5th Prize</option>
-            <option value="6th">6th Prize</option>
-            <option value="7th">7th Prize</option>
-            <option value="8th">8th Prize</option>
+            <option value="">All Prize Tiers</option>
+            <option value="1st Prize">1st Prize</option>
+            <option value="Consolation Prize">Consolation Prize</option>
+            <option value="2nd Prize">2nd Prize</option>
+            <option value="3rd Prize">3rd Prize</option>
+            <option value="4th Prize">4th Prize</option>
+            <option value="5th Prize">5th Prize</option>
+            <option value="6th Prize">6th Prize</option>
+            <option value="7th Prize">7th Prize</option>
+            <option value="8th Prize">8th Prize</option>
+            <option value="9th Prize">9th Prize</option>
           </select>
         </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flex: 1, minWidth: "220px" }}>
-          <label style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>Ticket / Suffix #:</label>
+        <div>
+          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+            Search Ticket Number or 4-Digit Suffix
+          </label>
           <input
             type="text"
-            className="search-input"
-            placeholder="Search digits (e.g. 0276, 75382, 1234)..."
-            value={numberFilter}
+            placeholder="e.g. 4660 or SX 246140 (preserves leading zeroes)"
+            value={searchNumber}
             onChange={(e) => {
-              setNumberFilter(e.target.value);
+              setSearchNumber(e.target.value);
               setPage(1);
             }}
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-600"
           />
         </div>
-
-        {(tierFilter || numberFilter) && (
-          <button
-            type="button"
-            className="btn btn-outline"
-            onClick={() => {
-              setTierFilter("");
-              setNumberFilter("");
-              setPage(1);
-            }}
-            style={{ fontSize: "0.85rem" }}
-          >
-            Clear
-          </button>
-        )}
       </div>
 
-      {/* Results Table */}
-      <div className="table-container" style={{ marginBottom: "1.5rem" }}>
-        <table className="research-table">
-          <thead>
-            <tr>
-              <th>Draw ID</th>
-              <th>Draw Date</th>
-              <th>Tier</th>
-              <th>Prize (₹)</th>
-              <th>Type</th>
-              <th>Series</th>
-              <th>Winning Number</th>
-              <th>Canonical String</th>
-              <th>Source SHA</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={9} style={{ textAlign: "center", padding: "3rem" }}>
-                  Loading winning results...
-                </td>
+      {/* Selected Draw Provenance Strip */}
+      {selectedDrawMeta && (
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded text-xs font-bold font-mono">
+                {selectedDrawMeta.lotteryCode}
+              </span>
+              <span className="font-bold text-slate-900">
+                {selectedDrawMeta.lotteryName} — {selectedDrawMeta.drawNumber}
+              </span>
+              <span className="text-xs text-slate-500 font-mono">
+                Draw Date: {selectedDrawMeta.drawDate}
+              </span>
+            </div>
+            <p className="text-xs text-slate-600 font-mono">
+              1st Prize Winner:{" "}
+              <span className="font-bold text-emerald-700">
+                {selectedDrawMeta.firstPrizeNumber || "N/A"}
+              </span>{" "}
+              ({selectedDrawMeta.firstPrizeLocation || "Location N/A"}) • Total Records:{" "}
+              <span className="font-semibold">{selectedDrawMeta.totalResultsCount}</span>
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Link
+              href={`/draws/${selectedDrawMeta.drawId || selectedDrawMeta.id}`}
+              className="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-emerald-700 hover:bg-emerald-50 transition-colors"
+            >
+              Open Full Draw & Provenance Details →
+            </Link>
+          </div>
+        </div>
+      )}
+
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                <th className="py-3.5 px-4">Draw</th>
+                <th className="py-3.5 px-4">Prize Tier</th>
+                <th className="py-3.5 px-4">Prize Amount (INR)</th>
+                <th className="py-3.5 px-4">Record Type</th>
+                <th className="py-3.5 px-4">Series</th>
+                <th className="py-3.5 px-4">Winning Number / Suffix</th>
               </tr>
-            ) : results.length === 0 ? (
-              <tr>
-                <td colSpan={9} style={{ textAlign: "center", padding: "3rem" }}>
-                  No results matched query.
-                </td>
-              </tr>
-            ) : (
-              results.map((r, i) => (
-                <tr key={i}>
-                  <td>
-                    <Link href={`/draws/${r.drawId}`} className="mono" style={{ color: "var(--accent-cyan)", textDecoration: "none" }}>
-                      {r.drawId}
-                    </Link>
-                  </td>
-                  <td>{r.drawDate}</td>
-                  <td>
-                    <span className="badge badge-blue">{r.tier}</span>
-                  </td>
-                  <td style={{ fontWeight: 600 }}>
-                    ₹{r.prizeAmount ? r.prizeAmount.toLocaleString("en-IN") : "—"}
-                  </td>
-                  <td>
-                    <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{r.numberType}</span>
-                  </td>
-                  <td>
-                    {r.series ? <span className="mono ticket-series">{r.series}</span> : <span style={{ color: "var(--text-muted)" }}>—</span>}
-                  </td>
-                  <td>
-                    <span className="ticket-num">
-                      {r.series && <span className="ticket-series">{r.series}</span>}
-                      <span className="ticket-digits">{r.number}</span>
-                    </span>
-                  </td>
-                  <td>
-                    <span className="mono" style={{ color: "var(--accent-emerald)", fontSize: "0.85rem" }}>
-                      &quot;{r.number}&quot;
-                    </span>
-                  </td>
-                  <td>
-                    <Link
-                      href={`/sources/${r.sourceDocumentSha256}`}
-                      className="mono"
-                      style={{ fontSize: "0.75rem", color: "var(--text-muted)", textDecoration: "underline" }}
-                      title={r.sourceDocumentSha256}
-                    >
-                      {r.sourceDocumentSha256.slice(0, 8)}...
-                    </Link>
+            </thead>
+            <tbody className="divide-y divide-slate-200 text-sm">
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="py-12 text-center text-slate-400">
+                    Loading official winning results...
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              ) : results.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-12 text-center text-slate-400">
+                    No winning results matched your filter criteria in this draw.
+                  </td>
+                </tr>
+              ) : (
+                results.map((r: any, idx: number) => {
+                  const tierLabel = r.prizeTierName || r.tier || "Prize";
+                  const amountVal = Number(r.amount ?? r.prizeAmount ?? 0);
+                  const isSuffixRecord =
+                    typeof r.isSuffix === "boolean"
+                      ? r.isSuffix
+                      : r.numberType === "SUFFIX";
+                  const winningNumberStr = String(
+                    r.canonicalNumber ?? r.number ?? ""
+                  );
+                  return (
+                    <tr key={r.id || idx} className="hover:bg-slate-50 transition-colors">
+                      <td className="py-3 px-4 font-mono text-xs text-slate-600">
+                        <Link
+                          href={`/draws/${r.drawId || selectedDrawId}`}
+                          className="text-emerald-700 hover:underline font-semibold"
+                        >
+                          {r.drawNumber || selectedDrawMeta?.drawNumber}
+                        </Link>
+                        <div className="text-[11px] text-slate-400">
+                          {r.drawDate || selectedDrawMeta?.drawDate}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 font-semibold text-slate-800">
+                        {tierLabel}
+                      </td>
+                      <td className="py-3 px-4 font-mono text-slate-600">
+                        ₹{amountVal.toLocaleString("en-IN")}
+                      </td>
+                      <td className="py-3 px-4">
+                        <span
+                          className={`px-2 py-0.5 rounded text-xs font-mono font-medium ${
+                            !isSuffixRecord
+                              ? "bg-purple-50 text-purple-700 border border-purple-200"
+                              : "bg-slate-100 text-slate-600"
+                          }`}
+                        >
+                          {isSuffixRecord ? "4-DIGIT SUFFIX" : "FULL TICKET"}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 font-mono text-slate-500">
+                        {r.series || "—"}
+                      </td>
+                      <td className="py-3 px-4 font-mono font-bold text-slate-900 tracking-wider">
+                        {winningNumberStr}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
 
-      {/* Pagination */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>
-          Showing Page <strong>{page}</strong> of <strong>{totalPages}</strong> ({total} total results)
-        </div>
-        <div style={{ display: "flex", gap: "0.5rem" }}>
-          <button
-            type="button"
-            className="btn btn-outline"
-            disabled={page <= 1}
-            onClick={() => setPage(page - 1)}
-            style={{ fontSize: "0.85rem" }}
-          >
-            &larr; Previous
-          </button>
-          <button
-            type="button"
-            className="btn btn-outline"
-            disabled={page >= totalPages}
-            onClick={() => setPage(page + 1)}
-            style={{ fontSize: "0.85rem" }}
-          >
-            Next &rarr;
-          </button>
-        </div>
+        {/* Pagination */}
+        {meta && (
+          <div className="bg-slate-50 px-4 py-3 border-t border-slate-200 flex items-center justify-between">
+            <span className="text-xs text-slate-500">
+              Page <span className="font-semibold text-slate-700">{meta.page}</span> of{" "}
+              <span className="font-semibold text-slate-700">{meta.totalPages}</span>{" "}
+              ({meta.total} records in selected draw)
+            </span>
+            <div className="flex gap-2">
+              <button
+                disabled={page <= 1}
+                onClick={() => setPage((p) => p - 1)}
+                className="px-3 py-1.5 border border-slate-300 rounded-md text-xs font-medium bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              >
+                Previous
+              </button>
+              <button
+                disabled={page >= meta.totalPages}
+                onClick={() => setPage((p) => p + 1)}
+                className="px-3 py-1.5 border border-slate-300 rounded-md text-xs font-medium bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

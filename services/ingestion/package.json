@@ -10,7 +10,8 @@
     "@kerala-lottery/validation": "*",
     "@kerala-lottery/data": "*",
     "@kerala-lottery/knowledge": "*",
-    "@kerala-lottery/statistics": "*"
+    "@kerala-lottery/statistics": "*",
+    "@kerala-lottery/experiments": "*"
   },
   "scripts": {
     "cache:hydrate": "npx tsx scripts/daily-ingestion.ts --hydrate-cache",

@@ -302,6 +302,14 @@ export default function ExperimentsPage() {
 
   const safeRuns = Array.isArray(runs) ? runs : [];
   const safeRegistry = Array.isArray(registry) ? registry : [];
+  const activeCorpusRuns = safeRuns.filter((r) => r && r.isCurrentActiveCorpus);
+  const latestActiveRun = activeCorpusRuns[0] ?? safeRuns[0] ?? null;
+  const activeDrawCount = latestActiveRun?.drawCount ?? 119;
+  const activeTotalResults = latestActiveRun?.totalResults ?? 45600;
+  const activeCorpusLabel = latestActiveRun?.corpusLabel ?? `active-research-${activeDrawCount}draws`;
+  const activeCorpusHash = latestActiveRun?.corpusVersion ?? "corpus_2dd9b930c32ea047";
+  const activeCutoffDate = latestActiveRun?.evaluationWindow?.testDateRange?.latest ?? "2026-10-18";
+
   const filteredRuns = safeRuns.filter((r) => {
     if (!r) return false;
     if (filterExperiment !== "ALL" && r.experimentId !== filterExperiment) return false;
@@ -330,18 +338,79 @@ export default function ExperimentsPage() {
       )}
 
       {/* Header */}
-      <div style={{ marginBottom: "2rem" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.5rem" }}>
+      <div style={{ marginBottom: "1.5rem" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.5rem", flexWrap: "wrap" }}>
           <h1 style={{ fontSize: "1.75rem", fontWeight: 700, margin: 0 }}>
             Continuous Research & Experimentation
           </h1>
-          <span className="badge badge-emerald">Milestone 9B</span>
-          <span className="badge badge-blue">Deterministic Provenance</span>
+          <span className="badge badge-emerald">Active Corpus Synchronized ({activeDrawCount} Draws)</span>
+          <span className="badge badge-blue">Engine: {latestActiveRun?.reproducibilityMetadata?.codeVersion ?? "v1.0.0-m9b"}</span>
           <span className="badge badge-purple">Temporal Leakage Protected</span>
         </div>
         <p style={{ color: "var(--text-secondary)", fontSize: "0.95rem", margin: 0 }}>
           Automated scientific research pipeline: Canonical Corpus → Feature Refresh → Modeling Dataset → Baseline Execution → Versioned Lineage DAG.
+          Historical Milestone 9B/9D snapshots (103, 114, and 118 draws) are preserved as immutable historical records alongside the current {activeDrawCount}-draw active evaluation.
         </p>
+      </div>
+
+      {/* Active Experiment Engine & Corpus Status Banner */}
+      <div
+        className="grid-4"
+        style={{
+          gap: "1rem",
+          marginBottom: "2rem"
+        }}
+      >
+        <div style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)", borderRadius: "0.6rem", padding: "1rem" }}>
+          <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>
+            Current Experiment Engine
+          </div>
+          <div className="mono" style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--accent-cyan)", marginTop: "0.25rem" }}>
+            {latestActiveRun?.reproducibilityMetadata?.codeVersion ?? "v1.0.0-m9b"}
+          </div>
+          <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.2rem" }}>
+            Deterministic Mulberry32 (Seed {latestActiveRun?.reproducibilityMetadata?.seed ?? 42}) • Chronological Walk-Forward
+          </div>
+        </div>
+
+        <div style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)", borderRadius: "0.6rem", padding: "1rem" }}>
+          <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>
+            Active Research Corpus
+          </div>
+          <div className="mono" style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--accent-emerald)", marginTop: "0.25rem" }}>
+            {activeCorpusLabel}
+          </div>
+          <div className="mono" style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.2rem" }}>
+            {activeCorpusHash} • {activeDrawCount} draws / {activeTotalResults.toLocaleString()} results
+          </div>
+        </div>
+
+        <div style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)", borderRadius: "0.6rem", padding: "1rem" }}>
+          <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>
+            Most Recent Completed Run
+          </div>
+          <div className="mono" style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--text-primary)", marginTop: "0.25rem" }}>
+            {latestActiveRun?.runId ?? "run_6b4bb339e1b860b7"}
+          </div>
+          <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.2rem" }}>
+            {latestActiveRun?.experimentId ?? "exp_markov_first_order_v1"} • Acc: {latestActiveRun?.metrics ? `${(latestActiveRun.metrics.accuracy * 100).toFixed(2)}%` : "9.94%"} (LogLoss {latestActiveRun?.metrics ? latestActiveRun.metrics.logLoss.toFixed(4) : "2.3037"})
+          </div>
+        </div>
+
+        <div style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)", borderRadius: "0.6rem", padding: "1rem" }}>
+          <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>
+            Evaluation Cutoff & Status
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.25rem" }}>
+            <span className="badge badge-emerald">{latestActiveRun?.status ?? "SUCCEEDED"}</span>
+            <span className="mono" style={{ fontSize: "1rem", fontWeight: 700 }}>
+              {activeCutoffDate}
+            </span>
+          </div>
+          <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.2rem" }}>
+            {activeCorpusRuns.length} Active Baselines Evaluated • {safeRuns.length} Total Versioned Runs
+          </div>
+        </div>
       </div>
 
       {loading ? (
@@ -449,9 +518,9 @@ export default function ExperimentsPage() {
                   }}
                 >
                   <option value="ALL">All Corpus Versions ({safeRuns.length})</option>
-                  <option value="ACTIVE">Active Corpus — 118 Draws</option>
+                  <option value="ACTIVE">Active Corpus — {activeDrawCount} Draws</option>
                   <option value="V1_BASELINE">Frozen V1.0 Baseline — 114 Draws</option>
-                  <option value="HISTORICAL">Historical M9 Snapshot — 103 Draws</option>
+                  <option value="HISTORICAL">Historical Snapshots — 118 & 103 Draws</option>
                 </select>
                 <span style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>Experiment:</span>
                 <select

@@ -554,7 +554,8 @@ export class FirebaseStorageService implements StorageService {
         }
         const expectedDrawId = metadata.customMetadata?.drawId;
         const actualDrawId = existingMeta.customMetadata?.drawId;
-        if (expectedDrawId && actualDrawId && actualDrawId !== expectedDrawId) {
+        const normDrawId = (id: string) => id.trim().replace(/(st|nd|rd|th)$/i, "").toUpperCase();
+        if (expectedDrawId && actualDrawId && normDrawId(actualDrawId) !== normDrawId(expectedDrawId)) {
           throw new StorageIntegrityError(
             `Existing storage object at '${cleanPath}' drawId '${actualDrawId}' does not match expected '${expectedDrawId}'.`,
             cleanPath,

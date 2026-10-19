@@ -79,11 +79,17 @@ function parseCandidatesFromQuery(searchParams: URLSearchParams): CandidateLabTi
           ticketNumber: parts[3]!.trim()
         });
       } else {
+        let decodedLabel = parts[3]!.trim();
+        try {
+          decodedLabel = decodeURIComponent(decodedLabel);
+        } catch {
+          // keep raw if not URI-encoded
+        }
         candidates.push({
           lotteryCode: parts[0]!.trim(),
           series: parts[1]!.trim(),
           ticketNumber: parts[2]!.trim(),
-          userLabel: parts[3]!.trim()
+          userLabel: decodedLabel
         });
       }
     }
